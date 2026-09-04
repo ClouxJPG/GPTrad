@@ -1,1 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GPTrad — Radar</title>
 
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #070a0f;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#radar {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #070a0f;
+}
+
+.ui {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.panel {
+    pointer-events: auto;
+    background: rgba(8, 11, 17, .88);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 8px 35px rgba(0,0,0,.35);
+}
+
+.header {
+    position: absolute;
+    top: calc(10px + env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.logo {
+    padding: 10px 14px;
+    border-radius: 16px;
+}
+
+.logo-title {
+    font-size: 17px;
+    font-weight: 800;
+}
+
+.logo-sub {
+    margin-top: 2px;
+    color: #8d98a8;
+    font-size: 11px;
+}
+
+.buttons {
+    display: flex;
+    gap: 7px;
+}
+
+button {
+    border: 1px solid rgba(255,255,255,.13);
+    background: rgba(8,11,17,.9);
+    color: white;
+    border-radius: 14px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0 13px;
+    font-size: 16px;
+    font-weight: 700;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.3);
+}
+
+button:active {
+    transform: scale(.94);
+}
+
+.bottom {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+}
+
+.status {
+    padding: 9px 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    color: #aeb8c5;
+}
+
+.status b {
+    color: white;
+}
+
+.loading {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #070a0f;
+    transition: opacity .4s;
+}
+
+.loading.hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader-box {
+    text-align: center;
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.12);
+    border-top-color: white;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loader-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.loader-sub {
+    margin-top: 5px;
+    color: #7f8998;
+    font-size: 12px;
+}
+
+.help {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.62);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+}
+
+.help.open {
+    display: flex;
+}
+
+.help-card {
+    width: min(430px, 100%);
+    padding: 21px;
+    border-radius: 21px;
+    background: #11161e;
+    border: 1px solid rgba(255,255,255,.13);
+    box-shadow: 0 20px 80px rgba(0,0,0,.6);
+}
+
+.help-card h2 {
+    margin: 0 0 12px;
+}
+
+.help-card p {
+    color: #b4becb;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.close {
+    width: 100%;
+    margin-top: 10px;
+}
+
+@media (min-width: 800px) {
+    .header {
+        top: 16px;
+        left: 16px;
+        right: 16px;
+    }
+
+    .bottom {
+        bottom: 16px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<iframe
+    id="radar"
+    src="https://www.nowcast.ru/demo/viz/"
+    title="GPTrad Radar"
+    allow="fullscreen"
+    referrerpolicy="strict-origin-when-cross-origin">
+</iframe>
+
+<div class="ui">
+
+    <div class="header">
+
+        <div class="panel logo">
+            <div class="logo-title">GPTrad</div>
+            <div class="logo-sub">
+                Real Radar · Russia
+            </div>
+        </div>
+
+        <div class="buttons">
+
+            <button id="reload" aria-label="Обновить">
+                ↻
+            </button>
+
+            <button id="info" aria-label="Информация">
+                ?
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="bottom">
+
+        <div class="panel status">
+            <b>RADAR</b>
+            &nbsp;·&nbsp;
+            Nowcast
+            &nbsp;·&nbsp;
+            <span id="time">--:--</span>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="loading" id="loading">
+
+    <div class="loader-box">
+
+        <div class="spinner"></div>
+
+        <div class="loader-title">
+            GPTrad
+        </div>
+
+        <div class="loader-sub">
+            Загрузка радиолокационной карты…
+        </div>
+
+    </div>
+
+</div>
+
+<div class="help" id="help">
+
+    <div class="help-card">
+
+        <h2>GPTrad</h2>
+
+        <p>
+            Радиолокационная карта работает через
+            открытый интерфейс Nowcast.
+        </p>
+
+        <p>
+            Внутри карты доступны её собственные
+            масштабирование и временное управление.
+        </p>
+
+        <p>
+            Данные являются радиолокационными
+            наблюдениями, а не прогнозом модели.
+        </p>
+
+        <button class="close" id="close">
+            Закрыть
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+const radar = document.getElementById("radar");
+const loading = document.getElementById("loading");
+const help = document.getElementById("help");
+const time = document.getElementById("time");
+
+let loadTimer;
+
+function startLoading() {
+
+    loading.classList.remove("hide");
+
+    clearTimeout(loadTimer);
+
+    loadTimer = setTimeout(() => {
+        loading.classList.add("hide");
+    }, 12000);
+}
+
+radar.addEventListener("load", () => {
+
+    clearTimeout(loadTimer);
+
+    setTimeout(() => {
+        loading.classList.add("hide");
+    }, 500);
+
+});
+
+document.getElementById("reload").addEventListener("click", () => {
+
+    startLoading();
+
+    radar.src =
+        "https://www.nowcast.ru/demo/viz/?t=" +
+        Date.now();
+
+});
+
+document.getElementById("info").addEventListener("click", () => {
+
+    help.classList.add("open");
+
+});
+
+document.getElementById("close").addEventListener("click", () => {
+
+    help.classList.remove("open");
+
+});
+
+help.addEventListener("click", (event) => {
+
+    if (event.target === help) {
+        help.classList.remove("open");
+    }
+
+});
+
+function updateTime() {
+
+    const now = new Date();
+
+    time.textContent =
+        now.toLocaleTimeString("ru-RU", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+}
+
+updateTime();
+setInterval(updateTime, 1000);
+
+startLoading();
+
+</script>
+
+</body>
+</html>
