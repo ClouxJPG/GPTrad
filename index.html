@@ -36,6 +36,10 @@ body {
   background: #d9d9d9;
 }
 
+/* =========================================================
+   TOPBAR
+========================================================= */
+
 .topbar {
   position: fixed;
   z-index: 1000;
@@ -172,6 +176,144 @@ body {
 
 .layer-row span {
   flex: 1;
+}
+
+/* =========================================================
+   LIGHTNING ROW
+========================================================= */
+
+.lightning-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.lightning-main {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lightning-main input {
+  width: 16px;
+  height: 16px;
+  margin: 0 8px 0 0;
+  accent-color: white;
+  flex: 0 0 auto;
+}
+
+.lightning-main-label {
+  flex: 1;
+  font-size: 13px;
+}
+
+.lightning-chevron {
+  width: 22px;
+  text-align: center;
+  font-size: 16px;
+  opacity: .55;
+  transition: transform .22s ease;
+}
+
+.lightning-row.open .lightning-chevron {
+  transform: rotate(180deg);
+}
+
+/* =========================================================
+   LIGHTNING SETTINGS
+========================================================= */
+
+.lightning-settings {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 4px 0 24px;
+  transform: translateY(-5px);
+  transition:
+    max-height .25s ease,
+    opacity .18s ease,
+    padding .25s ease,
+    transform .25s ease;
+}
+
+.lightning-row.open .lightning-settings {
+  max-height: 240px;
+  opacity: 1;
+  padding-top: 7px;
+  padding-bottom: 4px;
+  transform: translateY(0);
+}
+
+.lightning-setting-title {
+  font-size: 10px;
+  opacity: .5;
+  margin-bottom: 7px;
+}
+
+.lightning-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lightning-mode {
+  display: flex;
+  align-items: center;
+  min-height: 27px;
+  font-size: 11px;
+  opacity: .9;
+  cursor: pointer;
+}
+
+.lightning-mode input {
+  width: 14px;
+  height: 14px;
+  margin: 0 7px 0 0;
+  accent-color: #ffd83d;
+}
+
+.lightning-control {
+  margin-top: 8px;
+}
+
+.lightning-control-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  opacity: .65;
+  margin-bottom: 4px;
+}
+
+#lightningSizeValue {
+  opacity: .9;
+}
+
+#lightningSize {
+  width: 100%;
+  height: 18px;
+  margin: 0;
+}
+
+.lightning-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 10px;
+  opacity: .65;
+}
+
+#lightningColor {
+  width: 38px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
 }
 
 /* =========================================================
@@ -433,6 +575,32 @@ body {
 }
 
 /* =========================================================
+   LIGHTNING VISUALS
+========================================================= */
+
+.lightning-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.lightning-icon svg {
+  display: block;
+  overflow: visible;
+}
+
+.lightning-bolt {
+  filter:
+    drop-shadow(0 0 2px rgba(0,0,0,.65));
+}
+
+.lightning-flash {
+  filter:
+    drop-shadow(0 0 2px rgba(0,0,0,.65));
+}
+
+/* =========================================================
    LEAFLET
 ========================================================= */
 
@@ -541,20 +709,123 @@ body {
   <div class="panel-section">
 
     <div class="panel-label">
-      Движение
+      Грозопеленгатор
     </div>
 
-    <label class="layer-row">
+    <div id="lightningRow" class="lightning-row">
 
-      <input
-        id="vectorToggle"
-        type="checkbox"
-        checked
+      <div
+        id="lightningMain"
+        class="lightning-main"
       >
 
-      <span>Векторы движения</span>
+        <input
+          id="lightningToggle"
+          type="checkbox"
+        >
 
-    </label>
+        <span class="lightning-main-label">
+          Молнии
+        </span>
+
+        <span class="lightning-chevron">
+         ⌄
+        </span>
+
+      </div>
+
+      <div
+        id="lightningSettings"
+        class="lightning-settings"
+      >
+
+        <div class="lightning-setting-title">
+          Настройки молний
+        </div>
+
+        <div class="lightning-modes">
+
+          <label class="lightning-mode">
+
+            <input
+              type="radio"
+              name="lightningMode"
+              value="bolt"
+              checked
+            >
+
+            <span>Молнии</span>
+
+          </label>
+
+          <label class="lightning-mode">
+
+            <input
+              type="radio"
+              name="lightningMode"
+              value="dot"
+            >
+
+            <span>Точки</span>
+
+          </label>
+
+          <label class="lightning-mode">
+
+            <input
+              type="radio"
+              name="lightningMode"
+              value="flash"
+            >
+
+            <span>Вспышки</span>
+
+          </label>
+
+        </div>
+
+        <div class="lightning-control">
+
+          <div class="lightning-control-head">
+
+            <span>
+              Размер
+            </span>
+
+            <span id="lightningSizeValue">
+              6
+            </span>
+
+          </div>
+
+          <input
+            id="lightningSize"
+            type="range"
+            min="3"
+            max="14"
+            value="6"
+            step="1"
+          >
+
+        </div>
+
+        <div class="lightning-color-row">
+
+          <span>
+            Цвет
+          </span>
+
+          <input
+            id="lightningColor"
+            type="color"
+            value="#FFD83D"
+          >
+
+        </div>
+
+      </div>
+
+    </div>
 
   </div>
 
@@ -694,12 +965,8 @@ body {
 ========================================================= */
 
 const WMS_URL = "/baltrad_wsgi";
-const VECTOR_URL = "/vector_wsgi";
 
 const TARGET_LAYER = "bufr_dbz1";
-
-const VECTOR_TITLE =
-  "bufr_dbz1,bufr_novosib_dbz1,bufr_vlad_dbz1";
 
 const FRAME_STEP =
   10 * 60 * 1000;
@@ -709,6 +976,34 @@ const MAX_FRAMES = 32;
 const INITIAL_PRELOAD = 14;
 
 const PRELOAD_CONCURRENCY = 2;
+
+/* =========================================================
+   EUMETSAT
+========================================================= */
+
+const EUMETSAT_WMS =
+  "https://view.eumetsat.int/geoserver/wms";
+
+const LIGHTNING_LAYER =
+  "mtg_fd:li_afa";
+
+/*
+ * LI AFA имеет 5-минутный шаг.
+ */
+
+const LIGHTNING_STEP =
+  5 * 60 * 1000;
+
+/*
+ * Сколько пикселей пропускаем
+ * при анализе изображения.
+ *
+ * Чем больше значение —
+ * тем меньше маркеров.
+ */
+
+const LIGHTNING_GRID =
+  8;
 
 /* =========================================================
    MAP
@@ -732,6 +1027,26 @@ L.tileLayer(
 ).addTo(map);
 
 /* =========================================================
+   LIGHTNING PANE
+========================================================= */
+
+/*
+ * Radar image находится в стандартном
+ * overlayPane (~400).
+ *
+ * Молнии ставим выше него (~450),
+ * но весь интерфейс имеет z-index 1000+.
+ */
+
+map.createPane(
+  "lightningPane"
+);
+
+map.getPane(
+  "lightningPane"
+).style.zIndex = 450;
+
+/* =========================================================
    STATE
 ========================================================= */
 
@@ -743,8 +1058,6 @@ let currentRadarLayer = null;
 
 let radarRequestId = 0;
 
-let vectorRequestId = 0;
-
 let playing = false;
 
 let playTimer = null;
@@ -755,11 +1068,33 @@ const radarCache = new Map();
 
 let preloadStarted = false;
 
+let radarOpacity = 0.72;
+
 /* =========================================================
-   RADAR OPACITY
+   LIGHTNING STATE
 ========================================================= */
 
-let radarOpacity = 0.72;
+const LIGHTNING_STORAGE =
+  "gptrad_lightning_settings_v1";
+
+let lightningSettings = {
+
+  mode: "bolt",
+
+  color: "#FFD83D",
+
+  size: 6
+
+};
+
+let lightningRequestId = 0;
+
+let lightningLoading = false;
+
+let lightningLastKey = "";
+
+const lightningLayer =
+  L.layerGroup();
 
 /* =========================================================
    DOM
@@ -776,9 +1111,6 @@ const panelClose =
 
 const radarToggle =
   document.getElementById("radarToggle");
-
-const vectorToggle =
-  document.getElementById("vectorToggle");
 
 const statusEl =
   document.getElementById("status");
@@ -831,29 +1163,194 @@ const opacitySlider =
 const opacityValue =
   document.getElementById("opacityValue");
 
+/* Lightning */
+
+const lightningRow =
+  document.getElementById(
+    "lightningRow"
+  );
+
+const lightningMain =
+  document.getElementById(
+    "lightningMain"
+  );
+
+const lightningToggle =
+  document.getElementById(
+    "lightningToggle"
+  );
+
+const lightningSize =
+  document.getElementById(
+    "lightningSize"
+  );
+
+const lightningSizeValue =
+  document.getElementById(
+    "lightningSizeValue"
+  );
+
+const lightningColor =
+  document.getElementById(
+    "lightningColor"
+  );
+
+/* =========================================================
+   LOAD LIGHTNING SETTINGS
+========================================================= */
+
+function loadLightningSettings() {
+
+  try {
+
+    const saved =
+      localStorage.getItem(
+        LIGHTNING_STORAGE
+      );
+
+    if (!saved) {
+
+      return;
+
+    }
+
+    const parsed =
+      JSON.parse(saved);
+
+    if (
+      parsed &&
+      typeof parsed === "object"
+    ) {
+
+      if (
+        parsed.mode === "bolt" ||
+        parsed.mode === "dot" ||
+        parsed.mode === "flash"
+      ) {
+
+        lightningSettings.mode =
+          parsed.mode;
+
+      }
+
+      if (
+        typeof parsed.color === "string" &&
+        /^#[0-9a-f]{6}$/i.test(
+          parsed.color
+        )
+      ) {
+
+        lightningSettings.color =
+          parsed.color;
+
+      }
+
+      if (
+        Number.isFinite(
+          Number(parsed.size)
+        )
+      ) {
+
+        lightningSettings.size =
+          Math.max(
+            3,
+            Math.min(
+              14,
+              Number(parsed.size)
+            )
+          );
+
+      }
+    }
+
+  } catch (error) {
+
+    console.warn(
+      "Lightning settings error:",
+      error
+    );
+
+  }
+}
+
+function saveLightningSettings() {
+
+  try {
+
+    localStorage.setItem(
+      LIGHTNING_STORAGE,
+      JSON.stringify(
+        lightningSettings
+      )
+    );
+
+  } catch (_) {}
+
+}
+
+function applyLightningSettingsToUI() {
+
+  lightningColor.value =
+    lightningSettings.color;
+
+  lightningSize.value =
+    lightningSettings.size;
+
+  lightningSizeValue.textContent =
+    lightningSettings.size;
+
+  const radio =
+    document.querySelector(
+      'input[name="lightningMode"][value="' +
+      lightningSettings.mode +
+      '"]'
+    );
+
+  if (radio) {
+
+    radio.checked = true;
+
+  }
+}
+
+loadLightningSettings();
+
+applyLightningSettingsToUI();
+
 /* =========================================================
    PANEL
 ========================================================= */
 
-panelBtn.addEventListener("click", () => {
+panelBtn.addEventListener(
+  "click",
+  () => {
 
-  radarPanel.classList.toggle("open");
-
-  if (
-    radarPanel.classList.contains("open")
-  ) {
-
-    settingsPanel.classList.remove(
+    radarPanel.classList.toggle(
       "open"
     );
+
+    if (
+      radarPanel.classList.contains("open")
+    ) {
+
+      settingsPanel.classList.remove(
+        "open"
+      );
+
+    }
   }
-});
+);
 
-panelClose.addEventListener("click", () => {
+panelClose.addEventListener(
+  "click",
+  () => {
 
-  radarPanel.classList.remove("open");
+    radarPanel.classList.remove(
+      "open"
+    );
 
-});
+  }
+);
 
 /* =========================================================
    SETTINGS
@@ -876,6 +1373,7 @@ settingsBtn.addEventListener(
       radarPanel.classList.remove(
         "open"
       );
+
     }
   }
 );
@@ -887,6 +1385,7 @@ settingsClose.addEventListener(
     settingsPanel.classList.remove(
       "open"
     );
+
   }
 );
 
@@ -913,7 +1412,205 @@ opacitySlider.addEventListener(
       currentRadarLayer.setOpacity(
         radarOpacity
       );
+
     }
+  }
+);
+
+/* =========================================================
+   LIGHTNING PANEL OPEN/CLOSE
+========================================================= */
+
+function toggleLightningSettings() {
+
+  lightningRow.classList.toggle(
+    "open"
+  );
+
+}
+
+lightningMain.addEventListener(
+  "click",
+  event => {
+
+    /*
+     * Если нажали именно на checkbox,
+     * он сам меняет состояние.
+     *
+     * Настройки всё равно раскрываем.
+     */
+
+    toggleLightningSettings();
+
+    if (
+      event.target !== lightningToggle
+    ) {
+
+      lightningToggle.checked =
+        !lightningToggle.checked;
+
+      lightningToggle.dispatchEvent(
+        new Event("change")
+      );
+
+    }
+
+  }
+);
+
+/* =========================================================
+   LIGHTNING TOGGLE
+========================================================= */
+
+lightningToggle.addEventListener(
+  "change",
+  () => {
+
+    if (
+      lightningToggle.checked
+    ) {
+
+      if (!map.hasLayer(
+        lightningLayer
+      )) {
+
+        lightningLayer.addTo(map);
+
+      }
+
+      refreshLightning(
+        true
+      );
+
+    } else {
+
+      ++lightningRequestId;
+
+      lightningLayer.clearLayers();
+
+      if (
+        map.hasLayer(
+          lightningLayer
+        )
+      ) {
+
+        map.removeLayer(
+          lightningLayer
+        );
+
+      }
+
+      lightningLastKey = "";
+
+    }
+
+  }
+);
+
+/* =========================================================
+   LIGHTNING MODE
+========================================================= */
+
+document
+  .querySelectorAll(
+    'input[name="lightningMode"]'
+  )
+  .forEach(
+    radio => {
+
+      radio.addEventListener(
+        "change",
+        () => {
+
+          if (
+            !radio.checked
+          ) {
+
+            return;
+
+          }
+
+          lightningSettings.mode =
+            radio.value;
+
+          saveLightningSettings();
+
+          lightningLastKey = "";
+
+          if (
+            lightningToggle.checked
+          ) {
+
+            refreshLightning(
+              true
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+/* =========================================================
+   LIGHTNING SIZE
+========================================================= */
+
+lightningSize.addEventListener(
+  "input",
+  () => {
+
+    lightningSettings.size =
+      Number(
+        lightningSize.value
+      );
+
+    lightningSizeValue.textContent =
+      lightningSettings.size;
+
+    saveLightningSettings();
+
+    lightningLastKey = "";
+
+    if (
+      lightningToggle.checked
+    ) {
+
+      refreshLightning(
+        true
+      );
+
+    }
+
+  }
+);
+
+/* =========================================================
+   LIGHTNING COLOR
+========================================================= */
+
+lightningColor.addEventListener(
+  "input",
+  () => {
+
+    lightningSettings.color =
+      lightningColor.value;
+
+    saveLightningSettings();
+
+    lightningLastKey = "";
+
+    if (
+      lightningToggle.checked
+    ) {
+
+      refreshLightning(
+        true
+      );
+
+    }
+
   }
 );
 
@@ -923,7 +1620,8 @@ opacitySlider.addEventListener(
 
 function setStatus(text) {
 
-  statusEl.textContent = text;
+  statusEl.textContent =
+    text;
 
 }
 
@@ -933,9 +1631,14 @@ function setStatus(text) {
 
 function formatTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
 
     return "—";
 
@@ -948,13 +1651,19 @@ function formatTime(iso) {
       minute: "2-digit"
     }
   );
+
 }
 
 function formatDateTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
 
     return "—";
 
@@ -969,6 +1678,7 @@ function formatDateTime(iso) {
       minute: "2-digit"
     }
   );
+
 }
 
 function isUsableTime(date) {
@@ -999,12 +1709,17 @@ function extractTimesFromText(text) {
 
     const layers =
       Array.from(
-        xml.getElementsByTagName("Layer")
+        xml.getElementsByTagName(
+          "Layer"
+        )
       );
 
-    let targetLayer = null;
+    let targetLayer =
+      null;
 
-    for (const layer of layers) {
+    for (
+      const layer of layers
+    ) {
 
       const names =
         Array.from(
@@ -1012,17 +1727,23 @@ function extractTimesFromText(text) {
         ).filter(
           el =>
             el.localName &&
-            el.localName.toLowerCase() === "name"
+            el.localName.toLowerCase() ===
+            "name"
         );
 
       if (
         names.length &&
-        names[0].textContent.trim() === TARGET_LAYER
+        names[0].textContent.trim() ===
+        TARGET_LAYER
       ) {
 
-        targetLayer = layer;
+        targetLayer =
+          layer;
+
         break;
+
       }
+
     }
 
     if (targetLayer) {
@@ -1034,7 +1755,9 @@ function extractTimesFromText(text) {
           )
         );
 
-      for (const node of nodes) {
+      for (
+        const node of nodes
+      ) {
 
         const name =
           (
@@ -1042,15 +1765,21 @@ function extractTimesFromText(text) {
             ""
           ).toLowerCase();
 
-        if (name !== "time") {
+        if (
+          name !== "time"
+        ) {
+
           continue;
+
         }
 
         parseTimeValue(
           node.textContent.trim(),
           result
         );
+
       }
+
     }
 
   } catch (e) {
@@ -1062,7 +1791,9 @@ function extractTimesFromText(text) {
 
   }
 
-  if (!result.length) {
+  if (
+    !result.length
+  ) {
 
     const regex =
       /20\d\d-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:\.\d+)?Z/g;
@@ -1070,26 +1801,35 @@ function extractTimesFromText(text) {
     const matches =
       text.match(regex) || [];
 
-    for (const value of matches) {
+    for (
+      const value of matches
+    ) {
 
       const d =
         new Date(value);
 
-      if (!Number.isNaN(d.getTime())) {
+      if (
+        !Number.isNaN(
+          d.getTime()
+        )
+      ) {
 
         result.push(
           d.toISOString()
         );
 
       }
+
     }
+
   }
 
   return [
     ...new Set(result)
   ]
     .map(
-      value => new Date(value)
+      value =>
+        new Date(value)
     )
     .filter(
       isUsableTime
@@ -1100,14 +1840,21 @@ function extractTimesFromText(text) {
         b.getTime()
     )
     .map(
-      d => d.toISOString()
+      d =>
+        d.toISOString()
     );
+
 }
 
-function parseTimeValue(value, result) {
+function parseTimeValue(
+  value,
+  result
+) {
 
   if (!value) {
+
     return;
+
   }
 
   if (
@@ -1116,7 +1863,8 @@ function parseTimeValue(value, result) {
   ) {
 
     for (
-      const part of value.split(",")
+      const part of
+      value.split(",")
     ) {
 
       const d =
@@ -1125,7 +1873,9 @@ function parseTimeValue(value, result) {
         );
 
       if (
-        !Number.isNaN(d.getTime())
+        !Number.isNaN(
+          d.getTime()
+        )
       ) {
 
         result.push(
@@ -1133,15 +1883,19 @@ function parseTimeValue(value, result) {
         );
 
       }
+
     }
 
     return;
+
   }
 
   const parts =
     value.split("/");
 
-  if (parts.length >= 2) {
+  if (
+    parts.length >= 2
+  ) {
 
     const start =
       new Date(parts[0]);
@@ -1150,8 +1904,12 @@ function parseTimeValue(value, result) {
       new Date(parts[1]);
 
     if (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime())
+      !Number.isNaN(
+        start.getTime()
+      ) &&
+      !Number.isNaN(
+        end.getTime()
+      )
     ) {
 
       let step =
@@ -1167,13 +1925,19 @@ function parseTimeValue(value, result) {
         if (match) {
 
           const hours =
-            Number(match[1] || 0);
+            Number(
+              match[1] || 0
+            );
 
           const minutes =
-            Number(match[2] || 0);
+            Number(
+              match[2] || 0
+            );
 
           const seconds =
-            Number(match[3] || 0);
+            Number(
+              match[3] || 0
+            );
 
           step =
             (
@@ -1181,7 +1945,9 @@ function parseTimeValue(value, result) {
               minutes * 60 +
               seconds
             ) * 1000;
+
         }
+
       }
 
       const max =
@@ -1191,22 +1957,27 @@ function parseTimeValue(value, result) {
         );
 
       for (
-        let t = start.getTime();
+        let t =
+          start.getTime();
         t <= max;
         t += step
       ) {
 
         result.push(
-          new Date(t).toISOString()
+          new Date(t)
+            .toISOString()
         );
 
       }
+
     }
+
   }
+
 }
 
 /* =========================================================
-   GET CAPABILITIES
+   LOAD CAPABILITIES
 ========================================================= */
 
 async function loadCapabilities() {
@@ -1244,7 +2015,9 @@ async function loadCapabilities() {
       await response.text();
 
     let parsed =
-      extractTimesFromText(text);
+      extractTimesFromText(
+        text
+      );
 
     if (
       parsed.length >
@@ -1255,11 +2028,14 @@ async function loadCapabilities() {
         parsed.slice(
           -MAX_FRAMES
         );
+
     }
 
-    times = parsed;
+    times =
+      parsed;
 
-    timeSlider.min = 0;
+    timeSlider.min =
+      0;
 
     timeSlider.max =
       Math.max(
@@ -1276,7 +2052,9 @@ async function loadCapabilities() {
     }
 
     const newest =
-      times[times.length - 1];
+      times[
+        times.length - 1
+      ];
 
     if (!currentTime) {
 
@@ -1305,7 +2083,20 @@ async function loadCapabilities() {
 
     }
 
-    setStatus("Готово");
+    setStatus(
+      "Готово"
+    );
+
+    if (
+      lightningToggle.checked &&
+      currentTime
+    ) {
+
+      refreshLightning(
+        true
+      );
+
+    }
 
   } catch (error) {
 
@@ -1317,21 +2108,27 @@ async function loadCapabilities() {
     setStatus(
       "Ошибка загрузки радара"
     );
+
   }
+
 }
 
 /* =========================================================
    EPSG:3857
 ========================================================= */
 
-function project3857(lat, lon) {
+function project3857(
+  lat,
+  lon
+) {
 
-  const point =
-    L.CRS.EPSG3857.project(
-      L.latLng(lat, lon)
-    );
+  return L.CRS.EPSG3857.project(
+    L.latLng(
+      lat,
+      lon
+    )
+  );
 
-  return point;
 }
 
 function getProjectedBounds() {
@@ -1372,14 +2169,18 @@ function getProjectedBounds() {
           bounds.getEast()
         ]
       )
+
   };
+
 }
 
 /* =========================================================
    RADAR REQUEST
 ========================================================= */
 
-function getRadarRequest(time) {
+function getRadarRequest(
+  time
+) {
 
   const projected =
     getProjectedBounds();
@@ -1415,23 +2216,32 @@ function getRadarRequest(time) {
 
       REQUEST: "GetMap",
 
-      LAYERS: TARGET_LAYER,
+      LAYERS:
+        TARGET_LAYER,
 
       STYLES: "",
 
-      FORMAT: "image/png",
+      FORMAT:
+        "image/png",
 
-      TRANSPARENT: "true",
+      TRANSPARENT:
+        "true",
 
-      SRS: "EPSG:3857",
+      SRS:
+        "EPSG:3857",
 
-      BBOX: bbox,
+      BBOX:
+        bbox,
 
-      WIDTH: width,
+      WIDTH:
+        width,
 
-      HEIGHT: height,
+      HEIGHT:
+        height,
 
-      TIME: time
+      TIME:
+        time
+
     });
 
   return {
@@ -1443,14 +2253,18 @@ function getRadarRequest(time) {
 
     bounds:
       projected.latLngBounds
+
   };
+
 }
 
 /* =========================================================
    IMAGE
 ========================================================= */
 
-function loadImage(url) {
+function loadImage(
+  url
+) {
 
   return new Promise(
     (resolve, reject) => {
@@ -1458,59 +2272,72 @@ function loadImage(url) {
       const img =
         new Image();
 
-      img.onload = () => {
+      img.onload =
+        () => {
 
-        if (
-          !img.naturalWidth ||
-          !img.naturalHeight
-        ) {
+          if (
+            !img.naturalWidth ||
+            !img.naturalHeight
+          ) {
+
+            reject(
+              new Error(
+                "Пустое изображение"
+              )
+            );
+
+            return;
+
+          }
+
+          resolve(img);
+
+        };
+
+      img.onerror =
+        () => {
 
           reject(
             new Error(
-              "Пустое изображение"
+              "Изображение не загрузилось"
             )
           );
 
-          return;
-        }
+        };
 
-        resolve(img);
-      };
-
-      img.onerror = () => {
-
-        reject(
-          new Error(
-            "Изображение не загрузилось"
-          )
-        );
-
-      };
-
-      img.src = url;
+      img.src =
+        url;
 
     }
   );
+
 }
 
-function loadImageCached(url) {
+function loadImageCached(
+  url
+) {
 
   if (
     radarCache.has(url)
   ) {
 
     return radarCache.get(url);
+
   }
 
   const promise =
     loadImage(url)
-      .catch(error => {
+      .catch(
+        error => {
 
-        radarCache.delete(url);
+          radarCache.delete(
+            url
+          );
 
-        throw error;
+          throw error;
 
-      });
+        }
+      );
 
   radarCache.set(
     url,
@@ -1518,20 +2345,29 @@ function loadImageCached(url) {
   );
 
   return promise;
+
 }
 
 /* =========================================================
    CANDIDATES
 ========================================================= */
 
-function getCandidateTimes(time) {
+function getCandidateTimes(
+  time
+) {
 
   const index =
-    times.indexOf(time);
+    times.indexOf(
+      time
+    );
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
 
-    return [time];
+    return [
+      time
+    ];
 
   }
 
@@ -1541,6 +2377,7 @@ function getCandidateTimes(time) {
       index + 1
     )
     .reverse();
+
 }
 
 /* =========================================================
@@ -1552,25 +2389,32 @@ function applyRadarImage(
   bounds
 ) {
 
-  if (!radarToggle.checked) {
+  if (
+    !radarToggle.checked
+  ) {
 
     return;
 
   }
 
-  if (!currentRadarLayer) {
+  if (
+    !currentRadarLayer
+  ) {
 
     currentRadarLayer =
       L.imageOverlay(
         img.src,
         bounds,
         {
-          opacity: radarOpacity,
-          interactive: false
+          opacity:
+            radarOpacity,
+          interactive:
+            false
         }
       ).addTo(map);
 
     return;
+
   }
 
   currentRadarLayer.setUrl(
@@ -1584,6 +2428,7 @@ function applyRadarImage(
   currentRadarLayer.setOpacity(
     radarOpacity
   );
+
 }
 
 /* =========================================================
@@ -1607,15 +2452,21 @@ async function selectTime(
 
   const candidates =
     allowFallback
-      ? getCandidateTimes(requestedTime)
-      : [requestedTime];
+      ? getCandidateTimes(
+          requestedTime
+        )
+      : [
+          requestedTime
+        ];
 
   for (
-    const candidateTime of candidates
+    const candidateTime of
+    candidates
   ) {
 
     if (
-      requestId !== radarRequestId
+      requestId !==
+      radarRequestId
     ) {
 
       return;
@@ -1629,11 +2480,15 @@ async function selectTime(
 
     try {
 
-      if (!fromMapMove) {
+      if (
+        !fromMapMove
+      ) {
 
         setStatus(
           "Загрузка " +
-          formatTime(candidateTime) +
+          formatTime(
+            candidateTime
+          ) +
           "…"
         );
 
@@ -1645,7 +2500,8 @@ async function selectTime(
         );
 
       if (
-        requestId !== radarRequestId
+        requestId !==
+        radarRequestId
       ) {
 
         return;
@@ -1663,7 +2519,8 @@ async function selectTime(
       } catch (_) {}
 
       if (
-        requestId !== radarRequestId
+        requestId !==
+        radarRequestId
       ) {
 
         return;
@@ -1682,21 +2539,25 @@ async function selectTime(
 
       hidePixelInfo();
 
-      if (!fromMapMove) {
+      if (
+        !fromMapMove
+      ) {
 
         setStatus(
           "Отражаемость · " +
-          formatTime(currentTime)
+          formatTime(
+            currentTime
+          )
         );
 
       }
 
       if (
-        vectorToggle.checked
+        lightningToggle.checked
       ) {
 
-        loadVectors(
-          currentTime
+        refreshLightning(
+          true
         );
 
       }
@@ -1714,10 +2575,12 @@ async function selectTime(
       continue;
 
     }
+
   }
 
   if (
-    requestId === radarRequestId
+    requestId ===
+    radarRequestId
   ) {
 
     updateTimelinePosition();
@@ -1727,6 +2590,7 @@ async function selectTime(
     );
 
   }
+
 }
 
 /* =========================================================
@@ -1735,18 +2599,22 @@ async function selectTime(
 
 async function startInitialPreload() {
 
-  if (preloadStarted) {
+  if (
+    preloadStarted
+  ) {
 
     return;
 
   }
 
-  preloadStarted = true;
+  preloadStarted =
+    true;
 
   const start =
     Math.max(
       0,
-      times.length - INITIAL_PRELOAD
+      times.length -
+      INITIAL_PRELOAD
     );
 
   const preloadTimes =
@@ -1755,7 +2623,8 @@ async function startInitialPreload() {
       times.length - 1
     );
 
-  let cursor = 0;
+  let cursor =
+    0;
 
   async function worker() {
 
@@ -1768,7 +2637,9 @@ async function startInitialPreload() {
         cursor++;
 
       const time =
-        preloadTimes[index];
+        preloadTimes[
+          index
+        ];
 
       const request =
         getRadarRequest(
@@ -1790,14 +2661,18 @@ async function startInitialPreload() {
         );
 
       }
+
     }
+
   }
 
-  const workers = [];
+  const workers =
+    [];
 
   for (
     let i = 0;
-    i < Math.min(
+    i <
+    Math.min(
       PRELOAD_CONCURRENCY,
       preloadTimes.length
     );
@@ -1813,6 +2688,7 @@ async function startInitialPreload() {
   await Promise.all(
     workers
   );
+
 }
 
 /* =========================================================
@@ -1835,9 +2711,12 @@ function updateTimelinePosition() {
       currentTime
     );
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
 
-    let bestIndex = 0;
+    let bestIndex =
+      0;
 
     let bestDiff =
       Infinity;
@@ -1865,15 +2744,19 @@ function updateTimelinePosition() {
         diff < bestDiff
       ) {
 
-        bestDiff = diff;
+        bestDiff =
+          diff;
 
-        bestIndex = i;
+        bestIndex =
+          i;
 
       }
+
     }
 
     index =
       bestIndex;
+
   }
 
   timeSlider.value =
@@ -1883,6 +2766,7 @@ function updateTimelinePosition() {
     formatDateTime(
       currentTime
     );
+
 }
 
 timeSlider.addEventListener(
@@ -1894,7 +2778,9 @@ timeSlider.addEventListener(
         timeSlider.value
       );
 
-    if (!times[index]) {
+    if (
+      !times[index]
+    ) {
 
       return;
 
@@ -1909,6 +2795,7 @@ timeSlider.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1916,7 +2803,9 @@ prevBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
@@ -1945,6 +2834,7 @@ prevBtn.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1952,7 +2842,9 @@ nextBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
@@ -1981,6 +2873,7 @@ nextBtn.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1988,29 +2881,37 @@ playBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
     }
 
-    if (playing) {
+    if (
+      playing
+    ) {
 
-      playing = false;
+      playing =
+        false;
 
       clearInterval(
         playTimer
       );
 
-      playTimer = null;
+      playTimer =
+        null;
 
       playBtn.textContent =
         "▶";
 
       return;
+
     }
 
-    playing = true;
+    playing =
+      true;
 
     playBtn.textContent =
       "❚❚";
@@ -2031,7 +2932,8 @@ playBtn.addEventListener(
             times.length
           ) {
 
-            index = 0;
+            index =
+              0;
 
           }
 
@@ -2051,6 +2953,7 @@ playBtn.addEventListener(
         },
         900
       );
+
   }
 );
 
@@ -2062,7 +2965,9 @@ radarToggle.addEventListener(
   "change",
   () => {
 
-    if (!currentRadarLayer) {
+    if (
+      !currentRadarLayer
+    ) {
 
       return;
 
@@ -2083,281 +2988,1115 @@ radarToggle.addEventListener(
       );
 
     }
+
   }
 );
 
 /* =========================================================
-   VECTORS
+   LIGHTNING TIME
 ========================================================= */
 
-const vectorLayer =
-  L.layerGroup().addTo(map);
-
-function destination(
-  lon,
-  lat,
-  dist,
-  bearing
+function getLightningTime(
+  radarTime
 ) {
 
-  const R =
-    6371;
-
-  const brng =
-    bearing *
-    Math.PI /
-    180;
-
-  const lat1 =
-    lat *
-    Math.PI /
-    180;
-
-  const lon1 =
-    lon *
-    Math.PI /
-    180;
-
-  const d =
-    dist / R;
-
-  const lat2 =
-    Math.asin(
-      Math.sin(lat1) *
-      Math.cos(d) +
-      Math.cos(lat1) *
-      Math.sin(d) *
-      Math.cos(brng)
-    );
-
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(brng) *
-      Math.sin(d) *
-      Math.cos(lat1),
-
-      Math.cos(d) -
-      Math.sin(lat1) *
-      Math.sin(lat2)
-    );
-
-  return [
-    lon2 * 180 / Math.PI,
-    lat2 * 180 / Math.PI
-  ];
-}
-
-function createVector(
-  lat,
-  lon,
-  dist,
-  head
-) {
-
-  const end =
-    destination(
-      lon,
-      lat,
-      dist,
-      head
-    );
-
-  const points = [
-    [lat, lon],
-    [end[1], end[0]]
-  ];
-
-  const outline =
-    L.polyline(
-      points,
-      {
-        color: "#000000",
-        weight: 3,
-        opacity: .95,
-        interactive: false
-      }
-    );
-
-  const line =
-    L.polyline(
-      points,
-      {
-        color: "#ffffff",
-        weight: 1.5,
-        opacity: 1,
-        interactive: false
-      }
-    );
-
-  return L.layerGroup([
-    outline,
-    line
-  ]);
-}
-
-async function loadVectors(time) {
+  const t =
+    new Date(
+      radarTime
+    ).getTime();
 
   if (
-    !vectorToggle.checked
+    !Number.isFinite(t)
   ) {
 
-    vectorLayer.clearLayers();
+    return null;
+
+  }
+
+  /*
+   * Округляем вниз до 5 минут.
+   */
+
+  const rounded =
+    Math.floor(
+      t / LIGHTNING_STEP
+    ) *
+    LIGHTNING_STEP;
+
+  return new Date(
+    rounded
+  ).toISOString();
+
+}
+
+/* =========================================================
+   LIGHTNING BOUNDS
+========================================================= */
+
+function getLightningRequest() {
+
+  const projected =
+    getProjectedBounds();
+
+  const size =
+    map.getSize();
+
+  const bbox = [
+    projected.west,
+    projected.south,
+    projected.east,
+    projected.north
+  ].join(",");
+
+  const width =
+    Math.max(
+      256,
+      Math.min(
+        900,
+        Math.round(
+          size.x
+        )
+      )
+    );
+
+  const height =
+    Math.max(
+      256,
+      Math.min(
+        900,
+        Math.round(
+          size.y
+        )
+      )
+    );
+
+  const time =
+    getLightningTime(
+      currentTime
+    );
+
+  const params =
+    new URLSearchParams({
+
+      service:
+        "WMS",
+
+      version:
+        "1.3.0",
+
+      request:
+        "GetMap",
+
+      layers:
+        LIGHTNING_LAYER,
+
+      styles:
+        "",
+
+      format:
+        "image/png",
+
+      transparent:
+        "true",
+
+      crs:
+        "EPSG:3857",
+
+      bbox:
+        bbox,
+
+      width:
+        width,
+
+      height:
+        height,
+
+      time:
+        time
+
+    });
+
+  return {
+
+    url:
+      EUMETSAT_WMS +
+      "?" +
+      params.toString(),
+
+    bounds:
+      projected.latLngBounds,
+
+    width,
+
+    height
+
+  };
+
+}
+
+/* =========================================================
+   SVG COLOR
+========================================================= */
+
+function escapeSvgColor(
+  color
+) {
+
+  if (
+    /^#[0-9a-f]{6}$/i.test(
+      color
+    )
+  ) {
+
+    return color;
+
+  }
+
+  return "#FFD83D";
+
+}
+
+/* =========================================================
+   OUTLINE COLOR
+========================================================= */
+
+function getLightningOutline(
+  color
+) {
+
+  /*
+   * Тонкая тёплая обводка.
+   * Для стандартного жёлтого она
+   * получается оранжево-золотистой.
+   */
+
+  const hex =
+    color.replace(
+      "#",
+      ""
+    );
+
+  const r =
+    parseInt(
+      hex.substring(0,2),
+      16
+    );
+
+  const g =
+    parseInt(
+      hex.substring(2,4),
+      16
+    );
+
+  const b =
+    parseInt(
+      hex.substring(4,6),
+      16
+    );
+
+  const darken =
+    value =>
+      Math.max(
+        0,
+        Math.round(
+          value * 0.65
+        )
+      );
+
+  return (
+    "#" +
+    darken(r)
+      .toString(16)
+      .padStart(2,"0") +
+    darken(g)
+      .toString(16)
+      .padStart(2,"0") +
+    darken(b)
+      .toString(16)
+      .padStart(2,"0")
+  );
+
+}
+
+/* =========================================================
+   LIGHTNING BOLT ICON
+========================================================= */
+
+function createLightningBoltIcon(
+  size,
+  color
+) {
+
+  const fill =
+    escapeSvgColor(
+      color
+    );
+
+  const stroke =
+    getLightningOutline(
+      fill
+    );
+
+  const px =
+    Math.max(
+      8,
+      size * 2.5
+    );
+
+  return L.divIcon({
+
+    className:
+      "lightning-icon",
+
+    iconSize:
+      [
+        px,
+        px
+      ],
+
+    iconAnchor:
+      [
+        px / 2,
+        px / 2
+      ],
+
+    html:
+      `
+      <svg
+        class="lightning-bolt"
+        width="${px}"
+        height="${px}"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M13.4 1.8
+             L4.7 13.1
+             H10.8
+             L9.5 22.2
+             L19.5 9.1
+             H13.2
+             Z"
+          fill="${fill}"
+          stroke="${stroke}"
+          stroke-width="1"
+          stroke-linejoin="round"
+        />
+      </svg>
+      `
+
+  });
+
+}
+
+/* =========================================================
+   LIGHTNING FLASH ICON
+========================================================= */
+
+function createLightningFlashIcon(
+  size,
+  color
+) {
+
+  const fill =
+    escapeSvgColor(
+      color
+    );
+
+  const stroke =
+    getLightningOutline(
+      fill
+    );
+
+  const px =
+    Math.max(
+      10,
+      size * 2.8
+    );
+
+  return L.divIcon({
+
+    className:
+      "lightning-icon",
+
+    iconSize:
+      [
+        px,
+        px
+      ],
+
+    iconAnchor:
+      [
+        px / 2,
+        px / 2
+      ],
+
+    html:
+      `
+      <svg
+        class="lightning-flash"
+        width="${px}"
+        height="${px}"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <g
+          fill="${fill}"
+          stroke="${stroke}"
+          stroke-width=".7"
+          stroke-linejoin="round"
+        >
+
+          <path
+            d="M12 1
+               L13.5 8.5
+               L20.5 4.5
+               L15.5 11
+               L23 12
+               L15.5 13.5
+               L20 20
+               L13 15.5
+               L12 23
+               L10.5 15.5
+               L4 20
+               L8.5 13.5
+               L1 12
+               L8.5 10.5
+               L4 4.5
+               L10.5 8.5
+               Z"
+          />
+
+          <circle
+            cx="12"
+            cy="12"
+            r="2.7"
+            fill="${fill}"
+          />
+
+        </g>
+      </svg>
+      `
+
+  });
+
+}
+
+/* =========================================================
+   CREATE LIGHTNING MARKER
+========================================================= */
+
+function createLightningMarker(
+  lat,
+  lon
+) {
+
+  const mode =
+    lightningSettings.mode;
+
+  const size =
+    Number(
+      lightningSettings.size
+    );
+
+  const color =
+    lightningSettings.color;
+
+  if (
+    mode === "dot"
+  ) {
+
+    return L.circleMarker(
+      [
+        lat,
+        lon
+      ],
+      {
+
+        radius:
+          Math.max(
+            2,
+            size * .55
+          ),
+
+        color:
+          getLightningOutline(
+            color
+          ),
+
+        weight:
+          .7,
+
+        opacity:
+          1,
+
+        fillColor:
+          color,
+
+        fillOpacity:
+          .96,
+
+        pane:
+          "lightningPane",
+
+        interactive:
+          false
+
+      }
+    );
+
+  }
+
+  if (
+    mode === "flash"
+  ) {
+
+    return L.marker(
+      [
+        lat,
+        lon
+      ],
+      {
+
+        icon:
+          createLightningFlashIcon(
+            size,
+            color
+          ),
+
+        pane:
+          "lightningPane",
+
+        interactive:
+          false
+
+      }
+    );
+
+  }
+
+  return L.marker(
+    [
+      lat,
+      lon
+    ],
+    {
+
+      icon:
+        createLightningBoltIcon(
+          size,
+          color
+        ),
+
+      pane:
+        "lightningPane",
+
+      interactive:
+        false
+
+    }
+  );
+
+}
+
+/* =========================================================
+   PIXEL IS LIGHTNING
+========================================================= */
+
+function pixelLooksActive(
+  r,
+  g,
+  b,
+  a
+) {
+
+  if (
+    a < 30
+  ) {
+
+    return false;
+
+  }
+
+  /*
+   * EUMETView AFA:
+   * без вспышек — прозрачные пиксели.
+   *
+   * Поэтому alpha является главным
+   * индикатором.
+   */
+
+  const max =
+    Math.max(
+      r,
+      g,
+      b
+    );
+
+  const min =
+    Math.min(
+      r,
+      g,
+      b
+    );
+
+  const saturation =
+    max -
+    min;
+
+  /*
+   * Отсекаем почти полностью серые/
+   * белые служебные области.
+   */
+
+  if (
+    max < 35
+  ) {
+
+    return false;
+
+  }
+
+  /*
+   * Слишком тёмные пиксели не считаем
+   * активностью.
+   */
+
+  if (
+    max < 55 &&
+    saturation < 12
+  ) {
+
+    return false;
+
+  }
+
+  return true;
+
+}
+
+/* =========================================================
+   CANVAS → POINTS
+========================================================= */
+
+function extractLightningPoints(
+  img,
+  request
+) {
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+  canvas.width =
+    request.width;
+
+  canvas.height =
+    request.height;
+
+  const ctx =
+    canvas.getContext(
+      "2d",
+      {
+        willReadFrequently:
+          true
+      }
+    );
+
+  if (!ctx) {
+
+    throw new Error(
+      "Canvas недоступен"
+    );
+
+  }
+
+  ctx.drawImage(
+    img,
+    0,
+    0,
+    request.width,
+    request.height
+  );
+
+  let data;
+
+  try {
+
+    data =
+      ctx.getImageData(
+        0,
+        0,
+        request.width,
+        request.height
+      ).data;
+
+  } catch (error) {
+
+    throw new Error(
+      "EUMETSAT не разрешил чтение изображения"
+    );
+
+  }
+
+  const points =
+    [];
+
+  const grid =
+    LIGHTNING_GRID;
+
+  const bbox =
+    getProjectedBounds();
+
+  /*
+   * Важно:
+   * используем именно BBOX этого запроса.
+   */
+
+  const west =
+    bbox.west;
+
+  const east =
+    bbox.east;
+
+  const north =
+    bbox.north;
+
+  const south =
+    bbox.south;
+
+  /*
+   * По одному маркеру на активную
+   * область сетки.
+   */
+
+  for (
+    let y = 0;
+    y < request.height;
+    y += grid
+  ) {
+
+    for (
+      let x = 0;
+      x < request.width;
+      x += grid
+    ) {
+
+      let best =
+        null;
+
+      const maxX =
+        Math.min(
+          request.width,
+          x + grid
+        );
+
+      const maxY =
+        Math.min(
+          request.height,
+          y + grid
+        );
+
+      for (
+        let py = y;
+        py < maxY;
+        py++
+      ) {
+
+        for (
+          let px = x;
+          px < maxX;
+          px++
+        ) {
+
+          const index =
+            (
+              py *
+              request.width +
+              px
+            ) * 4;
+
+          const r =
+            data[index];
+
+          const g =
+            data[index + 1];
+
+          const b =
+            data[index + 2];
+
+          const a =
+            data[index + 3];
+
+          if (
+            !pixelLooksActive(
+              r,
+              g,
+              b,
+              a
+            )
+          ) {
+
+            continue;
+
+          }
+
+          /*
+           * Ищем наиболее яркий активный
+           * пиксель внутри клетки.
+           */
+
+          const score =
+            a +
+            Math.max(
+              r,
+              g,
+              b
+            );
+
+          if (
+            !best ||
+            score >
+            best.score
+          ) {
+
+            best = {
+
+              px,
+              py,
+              score
+
+            };
+
+          }
+
+        }
+
+      }
+
+      if (!best) {
+
+        continue;
+
+      }
+
+      /*
+       * Pixel → EPSG:3857.
+       */
+
+      const mapX =
+        west +
+        (
+          best.px /
+          request.width
+        ) *
+        (
+          east -
+          west
+        );
+
+      const mapY =
+        north -
+        (
+          best.py /
+          request.height
+        ) *
+        (
+          north -
+          south
+        );
+
+      const latLng =
+        L.CRS.EPSG3857.unproject(
+          L.point(
+            mapX,
+            mapY
+          )
+        );
+
+      if (
+        !Number.isFinite(
+          latLng.lat
+        ) ||
+        !Number.isFinite(
+          latLng.lng
+        )
+      ) {
+
+        continue;
+
+      }
+
+      if (
+        latLng.lat < -90 ||
+        latLng.lat > 90 ||
+        latLng.lng < -180 ||
+        latLng.lng > 180
+      ) {
+
+        continue;
+
+      }
+
+      points.push(
+        [
+          latLng.lat,
+          latLng.lng
+        ]
+      );
+
+    }
+
+  }
+
+  return points;
+
+}
+
+/* =========================================================
+   LIGHTNING WMS IMAGE
+========================================================= */
+
+function loadCrossOriginImage(
+  url
+) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const img =
+        new Image();
+
+      /*
+       * Нужен для canvas.
+       */
+
+      img.crossOrigin =
+        "anonymous";
+
+      img.onload =
+        () => {
+
+          if (
+            !img.naturalWidth ||
+            !img.naturalHeight
+          ) {
+
+            reject(
+              new Error(
+                "Пустой EUMETSAT кадр"
+              )
+            );
+
+            return;
+
+          }
+
+          resolve(img);
+
+        };
+
+      img.onerror =
+        () => {
+
+          reject(
+            new Error(
+              "EUMETSAT WMS image error"
+            )
+          );
+
+        };
+
+      img.src =
+        url;
+
+    }
+  );
+
+}
+
+/* =========================================================
+   REFRESH LIGHTNING
+========================================================= */
+
+async function refreshLightning(
+  force = false
+) {
+
+  if (
+    !lightningToggle.checked ||
+    !currentTime
+  ) {
 
     return;
 
   }
 
-  const requestId =
-    ++vectorRequestId;
+  const request =
+    getLightningRequest();
 
-  const url =
-    VECTOR_URL +
-    "?time=" +
-    encodeURIComponent(time) +
-    "&title=" +
-    encodeURIComponent(
-      VECTOR_TITLE
-    );
+  const key =
+    [
+      getLightningTime(
+        currentTime
+      ),
+      request.url,
+      lightningSettings.mode,
+      lightningSettings.color,
+      lightningSettings.size
+    ].join("|");
+
+  if (
+    !force &&
+    key ===
+    lightningLastKey
+  ) {
+
+    return;
+
+  }
+
+  if (
+    lightningLoading
+  ) {
+
+    ++lightningRequestId;
+
+  }
+
+  const requestId =
+    ++lightningRequestId;
+
+  lightningLoading =
+    true;
 
   try {
 
-    const response =
-      await fetch(
-        url,
-        {
-          cache: "no-store"
-        }
+    const img =
+      await loadCrossOriginImage(
+        request.url
       );
-
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " +
-        response.status
-      );
-
-    }
-
-    const data =
-      await response.json();
 
     if (
-      requestId !== vectorRequestId ||
-      time !== currentTime ||
-      !vectorToggle.checked
+      requestId !==
+      lightningRequestId
     ) {
 
       return;
 
     }
 
-    vectorLayer.clearLayers();
-
-    if (!Array.isArray(data)) {
+    if (
+      !lightningToggle.checked
+    ) {
 
       return;
 
     }
+
+    const points =
+      extractLightningPoints(
+        img,
+        request
+      );
+
+    if (
+      requestId !==
+      lightningRequestId
+    ) {
+
+      return;
+
+    }
+
+    lightningLayer.clearLayers();
+
+    /*
+     * Ограничиваем количество маркеров.
+     * Это защищает iPhone от тысяч DOM-элементов.
+     */
+
+    const maxPoints =
+      900;
+
+    const step =
+      points.length >
+      maxPoints
+        ? Math.ceil(
+            points.length /
+            maxPoints
+          )
+        : 1;
 
     for (
-      const item of data
+      let i = 0;
+      i < points.length;
+      i += step
     ) {
 
-      if (
-        !Array.isArray(item) ||
-        item.length < 4
-      ) {
+      const point =
+        points[i];
 
-        continue;
-
-      }
-
-      const lat =
-        Number(item[0]);
-
-      const lon =
-        Number(item[1]);
-
-      const dist =
-        Number(item[2]) * 3.6;
-
-      const head =
-        Number(item[3]);
-
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lon) ||
-        !Number.isFinite(dist) ||
-        !Number.isFinite(head)
-      ) {
-
-        continue;
-
-      }
-
-      if (
-        lat < -90 ||
-        lat > 90 ||
-        lon < -180 ||
-        lon > 180
-      ) {
-
-        continue;
-
-      }
-
-      vectorLayer.addLayer(
-        createVector(
-          lat,
-          lon,
-          dist,
-          head
+      lightningLayer.addLayer(
+        createLightningMarker(
+          point[0],
+          point[1]
         )
       );
+
     }
+
+    if (
+      !map.hasLayer(
+        lightningLayer
+      )
+    ) {
+
+      lightningLayer.addTo(
+        map
+      );
+
+    }
+
+    lightningLastKey =
+      key;
+
+    console.log(
+      "EUMETSAT lightning points:",
+      points.length
+    );
 
   } catch (error) {
 
     console.warn(
-      "Vector error:",
+      "Lightning error:",
       error
     );
 
+    /*
+     * Не ломаем радар,
+     * если EUMETSAT недоступен
+     * или браузер запрещает canvas.
+     */
+
+    lightningLayer.clearLayers();
+
+  } finally {
+
+    lightningLoading =
+      false;
+
   }
+
 }
-
-vectorToggle.addEventListener(
-  "change",
-  () => {
-
-    if (
-      !vectorToggle.checked
-    ) {
-
-      ++vectorRequestId;
-
-      vectorLayer.clearLayers();
-
-      return;
-
-    }
-
-    if (currentTime) {
-
-      loadVectors(
-        currentTime
-      );
-
-    }
-  }
-);
 
 /* =========================================================
    MAP MOVE / ZOOM
 ========================================================= */
 
-let moveTimer = null;
+let moveTimer =
+  null;
 
 function refreshRadarAfterMapChange() {
 
@@ -2369,7 +4108,9 @@ function refreshRadarAfterMapChange() {
     setTimeout(
       () => {
 
-        if (!currentTime) {
+        if (
+          !currentTime
+        ) {
 
           return;
 
@@ -2381,9 +4122,20 @@ function refreshRadarAfterMapChange() {
           false
         );
 
+        if (
+          lightningToggle.checked
+        ) {
+
+          refreshLightning(
+            true
+          );
+
+        }
+
       },
       180
     );
+
 }
 
 map.on(
@@ -2410,19 +4162,17 @@ function showPixelPoint(
 ) {
 
   pixelPoint.style.left =
-    containerPoint.x + "px";
+    containerPoint.x +
+    "px";
 
   pixelPoint.style.top =
-    containerPoint.y + "px";
+    containerPoint.y +
+    "px";
 
   pixelPoint.style.display =
     "block";
-}
 
-/*
- * Прямоугольник теперь всегда строится
- * непосредственно под точкой.
- */
+}
 
 function positionPixelInfo(
   containerPoint
@@ -2456,7 +4206,8 @@ function positionPixelInfo(
 
   if (
     left + width >
-    window.innerWidth - margin
+    window.innerWidth -
+    margin
   ) {
 
     left =
@@ -2466,14 +4217,10 @@ function positionPixelInfo(
 
   }
 
-  /*
-   * Если снизу уже нет места,
-   * показываем над точкой.
-   */
-
   if (
     top + estimatedHeight >
-    window.innerHeight - margin
+    window.innerHeight -
+    margin
   ) {
 
     top =
@@ -2484,10 +4231,13 @@ function positionPixelInfo(
   }
 
   pixelInfo.style.left =
-    left + "px";
+    left +
+    "px";
 
   pixelInfo.style.top =
-    top + "px";
+    top +
+    "px";
+
 }
 
 /* =========================================================
@@ -2521,12 +4271,6 @@ map.on(
       return;
 
     }
-
-    /*
-     * Сначала сразу показываем точку.
-     * Она остаётся на месте клика,
-     * пока идёт запрос.
-     */
 
     const clickedPoint =
       map.latLngToContainerPoint(
@@ -2572,17 +4316,23 @@ map.on(
     const params =
       new URLSearchParams({
 
-        SERVICE: "WMS",
+        SERVICE:
+          "WMS",
 
-        VERSION: "1.1.1",
+        VERSION:
+          "1.1.1",
 
-        REQUEST: "GetFeatureInfo",
+        REQUEST:
+          "GetFeatureInfo",
 
-        LAYERS: TARGET_LAYER,
+        LAYERS:
+          TARGET_LAYER,
 
-        QUERY_LAYERS: TARGET_LAYER,
+        QUERY_LAYERS:
+          TARGET_LAYER,
 
-        STYLES: "",
+        STYLES:
+          "",
 
         INFO_FORMAT:
           "text/html",
@@ -2599,19 +4349,28 @@ map.on(
           ].join(","),
 
         WIDTH:
-          Math.round(size.x),
+          Math.round(
+            size.x
+          ),
 
         HEIGHT:
-          Math.round(size.y),
+          Math.round(
+            size.y
+          ),
 
         X:
-          Math.round(point.x),
+          Math.round(
+            point.x
+          ),
 
         Y:
-          Math.round(point.y),
+          Math.round(
+            point.y
+          ),
 
         TIME:
           currentTime
+
       });
 
     const url =
@@ -2625,11 +4384,14 @@ map.on(
         await fetch(
           url,
           {
-            cache: "no-store"
+            cache:
+              "no-store"
           }
         );
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
 
         throw new Error(
           "HTTP " +
@@ -2642,13 +4404,9 @@ map.on(
         await response.text();
 
       const dbz =
-        parseDbz(text);
-
-      /*
-       * Если пользователь уже закрыл
-       * информацию во время запроса —
-       * ничего обратно не открываем.
-       */
+        parseDbz(
+          text
+        );
 
       if (
         pixelInfo.style.display ===
@@ -2700,6 +4458,7 @@ map.on(
         "Нет данных";
 
     }
+
   }
 );
 
@@ -2707,7 +4466,9 @@ map.on(
    DBZ PARSER
 ========================================================= */
 
-function parseDbz(text) {
+function parseDbz(
+  text
+) {
 
   if (!text) {
 
@@ -2715,18 +4476,15 @@ function parseDbz(text) {
 
   }
 
-  /*
-   * -------------------------------------------------------
-   * 1. JSON
-   * -------------------------------------------------------
-   */
-
   try {
 
     const json =
-      JSON.parse(text);
+      JSON.parse(
+        text
+      );
 
-    const candidates = [];
+    const candidates =
+      [];
 
     function collect(
       value,
@@ -2743,12 +4501,17 @@ function parseDbz(text) {
       }
 
       if (
-        typeof value === "number"
+        typeof value ===
+        "number"
       ) {
 
         candidates.push({
-          key: key.toLowerCase(),
-          value: value
+
+          key:
+            key.toLowerCase(),
+
+          value
+
         });
 
         return;
@@ -2756,7 +4519,8 @@ function parseDbz(text) {
       }
 
       if (
-        typeof value === "string"
+        typeof value ===
+        "string"
       ) {
 
         const n =
@@ -2767,8 +4531,13 @@ function parseDbz(text) {
         ) {
 
           candidates.push({
-            key: key.toLowerCase(),
-            value: n
+
+            key:
+              key.toLowerCase(),
+
+            value:
+              n
+
           });
 
         }
@@ -2797,12 +4566,17 @@ function parseDbz(text) {
       }
 
       if (
-        typeof value === "object"
+        typeof value ===
+        "object"
       ) {
 
         for (
-          const [k, v] of
-          Object.entries(value)
+          const [
+            k,
+            v
+          ] of Object.entries(
+            value
+          )
         ) {
 
           collect(
@@ -2813,9 +4587,12 @@ function parseDbz(text) {
         }
 
       }
+
     }
 
-    collect(json);
+    collect(
+      json
+    );
 
     const preferred =
       candidates.find(
@@ -2825,14 +4602,18 @@ function parseDbz(text) {
           )
       );
 
-    if (preferred) {
+    if (
+      preferred
+    ) {
 
       const value =
         convertRadarValue(
           preferred.value
         );
 
-      if (value !== null) {
+      if (
+        value !== null
+      ) {
 
         return value;
 
@@ -2840,25 +4621,13 @@ function parseDbz(text) {
 
     }
 
-  } catch (_) {
-
-    /*
-     * Ответ не JSON.
-     * Переходим к HTML/XML.
-     */
-
-  }
-
-  /*
-   * -------------------------------------------------------
-   * 2. HTML/XML
-   * -------------------------------------------------------
-   */
+  } catch (_) {}
 
   const parser =
     new DOMParser();
 
-  let doc = null;
+  let doc =
+    null;
 
   try {
 
@@ -2891,8 +4660,7 @@ function parseDbz(text) {
         )
         .map(
           cell =>
-            cell.textContent
-              .trim()
+            cell.textContent.trim()
         );
 
       if (
@@ -2931,31 +4699,35 @@ function parseDbz(text) {
 
           const value =
             convertRadarValue(
-              Number(match[0])
+              Number(
+                match[0]
+              )
             );
 
-          if (value !== null) {
+          if (
+            value !== null
+          ) {
 
             return value;
 
           }
-        }
-      }
-    }
 
-    /*
-     * Иногда сервер отдаёт XML/GML,
-     * поэтому ищем элементы с понятными
-     * названиями.
-     */
+        }
+
+      }
+
+    }
 
     const allElements =
       Array.from(
-        doc.querySelectorAll("*")
+        doc.querySelectorAll(
+          "*"
+        )
       );
 
     for (
-      const element of allElements
+      const element of
+      allElements
     ) {
 
       const name =
@@ -2999,22 +4771,22 @@ function parseDbz(text) {
 
       const value =
         convertRadarValue(
-          Number(match[0])
+          Number(
+            match[0]
+          )
         );
 
-      if (value !== null) {
+      if (
+        value !== null
+      ) {
 
         return value;
 
       }
-    }
-  }
 
-  /*
-   * -------------------------------------------------------
-   * 3. Прямой текстовый поиск
-   * -------------------------------------------------------
-   */
+    }
+
+  }
 
   const patterns = [
 
@@ -3029,11 +4801,14 @@ function parseDbz(text) {
   ];
 
   for (
-    const pattern of patterns
+    const pattern of
+    patterns
   ) {
 
     const match =
-      text.match(pattern);
+      text.match(
+        pattern
+      );
 
     if (!match) {
 
@@ -3042,41 +4817,46 @@ function parseDbz(text) {
     }
 
     const raw =
-      Number(match[1]);
+      Number(
+        match[1]
+      );
 
     const value =
-      convertRadarValue(raw);
+      convertRadarValue(
+        raw
+      );
 
-    if (value !== null) {
+    if (
+      value !== null
+    ) {
 
       return value;
 
     }
+
   }
 
   return null;
+
 }
 
 /* =========================================================
-   RADAR VALUE CONVERSION
+   RADAR VALUE
 ========================================================= */
 
-function convertRadarValue(raw) {
+function convertRadarValue(
+  raw
+) {
 
   if (
-    !Number.isFinite(raw)
+    !Number.isFinite(
+      raw
+    )
   ) {
 
     return null;
 
   }
-
-  /*
-   * Уже нормальное значение dBZ.
-   *
-   * BALTRAD/Nowcast может отдавать
-   * значение непосредственно в dBZ.
-   */
 
   if (
     raw >= -100 &&
@@ -3087,20 +4867,14 @@ function convertRadarValue(raw) {
 
   }
 
-  /*
-   * Если значение хранится как
-   * 8-bit код:
-   *
-   * dBZ = raw * 0.5 - 32
-   */
-
   if (
     raw >= 0 &&
     raw <= 254
   ) {
 
     const dbz =
-      raw * 0.5 - 32;
+      raw * 0.5 -
+      32;
 
     if (
       dbz >= -100 &&
@@ -3110,9 +4884,11 @@ function convertRadarValue(raw) {
       return dbz;
 
     }
+
   }
 
   return null;
+
 }
 
 /* =========================================================
@@ -3133,7 +4909,9 @@ map.on(
 ========================================================= */
 
 document
-  .getElementById("locateBtn")
+  .getElementById(
+    "locateBtn"
+  )
   .addEventListener(
     "click",
     () => {
@@ -3157,7 +4935,10 @@ document
             position.coords.longitude;
 
           map.setView(
-            [lat, lon],
+            [
+              lat,
+              lon
+            ],
             Math.max(
               map.getZoom(),
               8
@@ -3176,12 +4957,20 @@ document
         },
 
         {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000
+
+          enableHighAccuracy:
+            true,
+
+          timeout:
+            10000,
+
+          maximumAge:
+            30000
+
         }
 
       );
+
     }
   );
 
@@ -3190,7 +4979,9 @@ document
 ========================================================= */
 
 document
-  .getElementById("searchBtn")
+  .getElementById(
+    "searchBtn"
+  )
   .addEventListener(
     "click",
     () => {
@@ -3208,7 +4999,10 @@ document
 
       const parts =
         value
-          .replace(";", ",")
+          .replace(
+            ";",
+            ","
+          )
           .split(",");
 
       if (
@@ -3251,7 +5045,10 @@ document
       }
 
       map.setView(
-        [lat, lon],
+        [
+          lat,
+          lon
+        ],
         Math.max(
           map.getZoom(),
           8
