@@ -729,7 +729,7 @@ body {
         </span>
 
         <span class="lightning-chevron">
-         ⌄
+          ⌄
         </span>
 
       </div>
@@ -826,6 +826,31 @@ body {
       </div>
 
     </div>
+
+  </div>
+
+  <!-- =====================================================
+       DANGEROUS PHENOMENA
+  ====================================================== -->
+
+  <div class="panel-section">
+
+    <div class="panel-label">
+      Опасные явления
+    </div>
+
+    <label class="layer-row">
+
+      <input
+        id="dangerToggle"
+        type="checkbox"
+      >
+
+      <span id="dangerLabel">
+        Опасные явления
+      </span>
+
+    </label>
 
   </div>
 
@@ -968,6 +993,15 @@ const WMS_URL = "/baltrad_wsgi";
 
 const TARGET_LAYER = "bufr_dbz1";
 
+/*
+ * Опасные явления.
+ *
+ * Точное имя слоя заранее не фиксируем:
+ * оно автоматически определяется из GetCapabilities.
+ */
+
+let DANGER_LAYER = null;
+
 const FRAME_STEP =
   10 * 60 * 1000;
 
@@ -987,20 +1021,8 @@ const EUMETSAT_WMS =
 const LIGHTNING_LAYER =
   "mtg_fd:li_afa";
 
-/*
- * LI AFA имеет 5-минутный шаг.
- */
-
 const LIGHTNING_STEP =
   5 * 60 * 1000;
-
-/*
- * Сколько пикселей пропускаем
- * при анализе изображения.
- *
- * Чем больше значение —
- * тем меньше маркеров.
- */
 
 const LIGHTNING_GRID =
   8;
@@ -1030,14 +1052,6 @@ L.tileLayer(
    LIGHTNING PANE
 ========================================================= */
 
-/*
- * Radar image находится в стандартном
- * overlayPane (~400).
- *
- * Молнии ставим выше него (~450),
- * но весь интерфейс имеет z-index 1000+.
- */
-
 map.createPane(
   "lightningPane"
 );
@@ -1045,6 +1059,18 @@ map.createPane(
 map.getPane(
   "lightningPane"
 ).style.zIndex = 450;
+
+/* =========================================================
+   DANGER PANE
+========================================================= */
+
+map.createPane(
+  "dangerPane"
+);
+
+map.getPane(
+  "dangerPane"
+).style.zIndex = 410;
 
 /* =========================================================
    STATE
@@ -1056,7 +1082,11 @@ let currentTime = null;
 
 let currentRadarLayer = null;
 
+let currentDangerLayer = null;
+
 let radarRequestId = 0;
+
+let dangerRequestId = 0;
 
 let playing = false;
 
@@ -1065,6 +1095,8 @@ let playTimer = null;
 let autoFollowLatest = true;
 
 const radarCache = new Map();
+
+const dangerCache = new Map();
 
 let preloadStarted = false;
 
@@ -1111,6 +1143,12 @@ const panelClose =
 
 const radarToggle =
   document.getElementById("radarToggle");
+
+const dangerToggle =
+  document.getElementById("dangerToggle");
+
+const dangerLabel =
+  document.getElementById("dangerLabel");
 
 const statusEl =
   document.getElementById("status");
@@ -1209,9 +1247,7 @@ function loadLightningSettings() {
       );
 
     if (!saved) {
-
       return;
-
     }
 
     const parsed =
@@ -1261,6 +1297,7 @@ function loadLightningSettings() {
           );
 
       }
+
     }
 
   } catch (error) {
@@ -1271,6 +1308,7 @@ function loadLightningSettings() {
     );
 
   }
+
 }
 
 function saveLightningSettings() {
@@ -1307,10 +1345,9 @@ function applyLightningSettingsToUI() {
     );
 
   if (radio) {
-
     radio.checked = true;
-
   }
+
 }
 
 loadLightningSettings();
@@ -1338,6 +1375,7 @@ panelBtn.addEventListener(
       );
 
     }
+
   }
 );
 
@@ -1375,6 +1413,7 @@ settingsBtn.addEventListener(
       );
 
     }
+
   }
 );
 
@@ -1414,6 +1453,7 @@ opacitySlider.addEventListener(
       );
 
     }
+
   }
 );
 
@@ -1432,13 +1472,6 @@ function toggleLightningSettings() {
 lightningMain.addEventListener(
   "click",
   event => {
-
-    /*
-     * Если нажали именно на checkbox,
-     * он сам меняет состояние.
-     *
-     * Настройки всё равно раскрываем.
-     */
 
     toggleLightningSettings();
 
@@ -1470,9 +1503,11 @@ lightningToggle.addEventListener(
       lightningToggle.checked
     ) {
 
-      if (!map.hasLayer(
-        lightningLayer
-      )) {
+      if (
+        !map.hasLayer(
+          lightningLayer
+        )
+      ) {
 
         lightningLayer.addTo(map);
 
@@ -1525,9 +1560,7 @@ document
           if (
             !radio.checked
           ) {
-
             return;
-
           }
 
           lightningSettings.mode =
@@ -1689,6 +1722,222 @@ function isUsableTime(date) {
 }
 
 /* =========================================================
+   DANGER LAYER DISCOVERY
+========================================================= */
+
+/*
+ * Ищем слой опасных явлений в GetCapabilities.
+ *
+ * Приоритет:
+ *
+ * 1. название явно содержит danger/hazard
+ * 2. название содержит "опас"
+ * 3. title содержит danger/hazard
+ * 4. title содержит "опас"
+ * 5. phenomena + thunder/hail/etc.
+ *
+ * buf/dbz слои исключаются.
+ */
+
+function findDangerLayerFromCapabilities(text) {
+
+  try {
+
+    const parser =
+      new DOMParser();
+
+    const xml =
+      parser.parseFromString(
+        text,
+        "text/xml"
+      );
+
+    const layers =
+      Array.from(
+        xml.getElementsByTagName(
+          "Layer"
+        )
+      );
+
+    const candidates =
+      [];
+
+    for (
+      const layer of layers
+    ) {
+
+      const nameNode =
+        Array.from(
+          layer.children
+        ).find(
+          el =>
+            el.localName &&
+            el.localName.toLowerCase() ===
+            "name"
+        );
+
+      if (!nameNode) {
+        continue;
+      }
+
+      const name =
+        nameNode.textContent
+          .trim();
+
+      if (!name) {
+        continue;
+      }
+
+      const titleNode =
+        Array.from(
+          layer.children
+        ).find(
+          el =>
+            el.localName &&
+            el.localName.toLowerCase() ===
+            "title"
+        );
+
+      const title =
+        titleNode
+          ? titleNode.textContent.trim()
+          : "";
+
+      const combined =
+        (
+          name +
+          " " +
+          title
+        ).toLowerCase();
+
+      if (
+        name === TARGET_LAYER ||
+        /dbz|reflect|отраж/.test(
+          combined
+        )
+      ) {
+        continue;
+      }
+
+      let score = 0;
+
+      if (
+        /danger|hazard|dangerous/.test(
+          combined
+        )
+      ) {
+        score += 100;
+      }
+
+      if (
+        /опасн/.test(
+          combined
+        )
+      ) {
+        score += 100;
+      }
+
+      if (
+        /phenomena|phenomenon/.test(
+          combined
+        )
+      ) {
+        score += 40;
+      }
+
+      if (
+        /явлен/.test(
+          combined
+        )
+      ) {
+        score += 40;
+      }
+
+      if (
+        /thunder|storm|hail|tornado/.test(
+          combined
+        )
+      ) {
+        score += 25;
+      }
+
+      if (
+        /гроз|град|торнад|шторм/.test(
+          combined
+        )
+      ) {
+        score += 25;
+      }
+
+      if (
+        score > 0
+      ) {
+
+        candidates.push({
+          name,
+          title,
+          score
+        });
+
+      }
+
+    }
+
+    candidates.sort(
+      (a,b) =>
+        b.score -
+        a.score
+    );
+
+    if (
+      candidates.length
+    ) {
+
+      console.log(
+        "Danger layer candidates:",
+        candidates
+      );
+
+      return candidates[0].name;
+
+    }
+
+  } catch (error) {
+
+    console.warn(
+      "Danger layer discovery error:",
+      error
+    );
+
+  }
+
+  return null;
+
+}
+
+/* =========================================================
+   DANGER LABEL
+========================================================= */
+
+function updateDangerLabel() {
+
+  if (
+    DANGER_LAYER
+  ) {
+
+    dangerLabel.textContent =
+      "Опасные явления";
+
+    return;
+
+  }
+
+  dangerLabel.textContent =
+    "Опасные явления";
+
+}
+
+/* =========================================================
    CAPABILITIES
 ========================================================= */
 
@@ -1768,9 +2017,7 @@ function extractTimesFromText(text) {
         if (
           name !== "time"
         ) {
-
           continue;
-
         }
 
         parseTimeValue(
@@ -1852,9 +2099,7 @@ function parseTimeValue(
 ) {
 
   if (!value) {
-
     return;
-
   }
 
   if (
@@ -2014,6 +2259,32 @@ async function loadCapabilities() {
     const text =
       await response.text();
 
+    /*
+     * Ищем опасные явления
+     * в том же GetCapabilities.
+     */
+
+    const discoveredDangerLayer =
+      findDangerLayerFromCapabilities(
+        text
+      );
+
+    if (
+      discoveredDangerLayer
+    ) {
+
+      DANGER_LAYER =
+        discoveredDangerLayer;
+
+      console.log(
+        "Selected danger layer:",
+        DANGER_LAYER
+      );
+
+    }
+
+    updateDangerLabel();
+
     let parsed =
       extractTimesFromText(
         text
@@ -2093,6 +2364,17 @@ async function loadCapabilities() {
     ) {
 
       refreshLightning(
+        true
+      );
+
+    }
+
+    if (
+      dangerToggle.checked &&
+      currentTime
+    ) {
+
+      refreshDanger(
         true
       );
 
@@ -2442,9 +2724,7 @@ async function selectTime(
 ) {
 
   if (!requestedTime) {
-
     return;
-
   }
 
   const requestId =
@@ -2511,9 +2791,7 @@ async function selectTime(
       try {
 
         if (img.decode) {
-
           await img.decode();
-
         }
 
       } catch (_) {}
@@ -2543,12 +2821,27 @@ async function selectTime(
         !fromMapMove
       ) {
 
-        setStatus(
-          "Отражаемость · " +
-          formatTime(
-            currentTime
-          )
-        );
+        if (
+          dangerToggle.checked
+        ) {
+
+          setStatus(
+            "Опасные явления · " +
+            formatTime(
+              currentTime
+            )
+          );
+
+        } else {
+
+          setStatus(
+            "Отражаемость · " +
+            formatTime(
+              currentTime
+            )
+          );
+
+        }
 
       }
 
@@ -2557,6 +2850,16 @@ async function selectTime(
       ) {
 
         refreshLightning(
+          true
+        );
+
+      }
+
+      if (
+        dangerToggle.checked
+      ) {
+
+        refreshDanger(
           true
         );
 
@@ -2958,6 +3261,43 @@ playBtn.addEventListener(
 );
 
 /* =========================================================
+   RADAR / DANGER MUTUAL EXCLUSION
+========================================================= */
+
+function disableDangerLayer() {
+
+  ++dangerRequestId;
+
+  if (
+    currentDangerLayer
+  ) {
+
+    map.removeLayer(
+      currentDangerLayer
+    );
+
+    currentDangerLayer =
+      null;
+
+  }
+
+}
+
+function disableRadarVisual() {
+
+  if (
+    currentRadarLayer
+  ) {
+
+    currentRadarLayer.setOpacity(
+      0
+    );
+
+  }
+
+}
+
+/* =========================================================
    RADAR TOGGLE
 ========================================================= */
 
@@ -2966,7 +3306,289 @@ radarToggle.addEventListener(
   () => {
 
     if (
-      !currentRadarLayer
+      radarToggle.checked
+    ) {
+
+      /*
+       * ВАЖНО:
+       * отражаемость и опасные явления
+       * не могут быть включены одновременно.
+       */
+
+      if (
+        dangerToggle.checked
+      ) {
+
+        dangerToggle.checked =
+          false;
+
+        disableDangerLayer();
+
+      }
+
+      if (
+        currentRadarLayer
+      ) {
+
+        currentRadarLayer.setOpacity(
+          radarOpacity
+        );
+
+      } else if (
+        currentTime
+      ) {
+
+        selectTime(
+          currentTime,
+          false,
+          true
+        );
+
+      }
+
+    } else {
+
+      disableRadarVisual();
+
+    }
+
+  }
+);
+
+/* =========================================================
+   DANGER REQUEST
+========================================================= */
+
+function getDangerRequest(
+  time
+) {
+
+  if (
+    !DANGER_LAYER
+  ) {
+
+    return null;
+
+  }
+
+  const projected =
+    getProjectedBounds();
+
+  const size =
+    map.getSize();
+
+  const bbox = [
+    projected.west,
+    projected.south,
+    projected.east,
+    projected.north
+  ].join(",");
+
+  const width =
+    Math.max(
+      256,
+      Math.round(size.x)
+    );
+
+  const height =
+    Math.max(
+      256,
+      Math.round(size.y)
+    );
+
+  const params =
+    new URLSearchParams({
+
+      SERVICE:
+        "WMS",
+
+      VERSION:
+        "1.1.1",
+
+      REQUEST:
+        "GetMap",
+
+      LAYERS:
+        DANGER_LAYER,
+
+      STYLES:
+        "",
+
+      FORMAT:
+        "image/png",
+
+      TRANSPARENT:
+        "true",
+
+      SRS:
+        "EPSG:3857",
+
+      BBOX:
+        bbox,
+
+      WIDTH:
+        width,
+
+      HEIGHT:
+        height,
+
+      TIME:
+        time
+
+    });
+
+  return {
+
+    url:
+      WMS_URL +
+      "?" +
+      params.toString(),
+
+    bounds:
+      projected.latLngBounds
+
+  };
+
+}
+
+/* =========================================================
+   LOAD DANGER IMAGE
+========================================================= */
+
+function loadDangerImage(
+  url
+) {
+
+  if (
+    dangerCache.has(url)
+  ) {
+
+    return dangerCache.get(url);
+
+  }
+
+  const promise =
+    loadImage(url)
+      .catch(
+        error => {
+
+          dangerCache.delete(
+            url
+          );
+
+          throw error;
+
+        }
+      );
+
+  dangerCache.set(
+    url,
+    promise
+  );
+
+  return promise;
+
+}
+
+/* =========================================================
+   APPLY DANGER
+========================================================= */
+
+function applyDangerImage(
+  img,
+  bounds
+) {
+
+  if (
+    !dangerToggle.checked
+  ) {
+
+    return;
+
+  }
+
+  if (
+    !currentDangerLayer
+  ) {
+
+    currentDangerLayer =
+      L.imageOverlay(
+        img.src,
+        bounds,
+        {
+          opacity:
+            1,
+          interactive:
+            false,
+          pane:
+            "dangerPane"
+        }
+      ).addTo(map);
+
+    return;
+
+  }
+
+  currentDangerLayer.setUrl(
+    img.src
+  );
+
+  currentDangerLayer.setBounds(
+    bounds
+  );
+
+}
+
+/* =========================================================
+   REFRESH DANGER
+========================================================= */
+
+async function refreshDanger(
+  force = false
+) {
+
+  if (
+    !dangerToggle.checked ||
+    !currentTime ||
+    !DANGER_LAYER
+  ) {
+
+    return;
+
+  }
+
+  const request =
+    getDangerRequest(
+      currentTime
+    );
+
+  if (!request) {
+
+    return;
+
+  }
+
+  const requestId =
+    ++dangerRequestId;
+
+  try {
+
+    setStatus(
+      "Опасные явления · " +
+      formatTime(
+        currentTime
+      ) +
+      "…"
+    );
+
+    const img =
+      await loadDangerImage(
+        request.url
+      );
+
+    if (
+      requestId !==
+      dangerRequestId
     ) {
 
       return;
@@ -2974,18 +3596,109 @@ radarToggle.addEventListener(
     }
 
     if (
-      radarToggle.checked
+      !dangerToggle.checked
     ) {
 
-      currentRadarLayer.setOpacity(
-        radarOpacity
+      return;
+
+    }
+
+    applyDangerImage(
+      img,
+      request.bounds
+    );
+
+    setStatus(
+      "Опасные явления · " +
+      formatTime(
+        currentTime
+      )
+    );
+
+  } catch (error) {
+
+    console.warn(
+      "Danger layer error:",
+      error
+    );
+
+    if (
+      requestId ===
+      dangerRequestId
+    ) {
+
+      setStatus(
+        "Опасные явления: нет данных"
+      );
+
+    }
+
+  }
+
+}
+
+/* =========================================================
+   DANGER TOGGLE
+========================================================= */
+
+dangerToggle.addEventListener(
+  "change",
+  () => {
+
+    if (
+      dangerToggle.checked
+    ) {
+
+      /*
+       * Главная логика:
+       *
+       * Опасные явления включаются
+       * вместо отражаемости.
+       */
+
+      if (
+        radarToggle.checked
+      ) {
+
+        radarToggle.checked =
+          false;
+
+      }
+
+      disableRadarVisual();
+
+      if (
+        !DANGER_LAYER
+      ) {
+
+        setStatus(
+          "Слой опасных явлений не найден"
+        );
+
+        dangerToggle.checked =
+          false;
+
+        return;
+
+      }
+
+      refreshDanger(
+        true
       );
 
     } else {
 
-      currentRadarLayer.setOpacity(
-        0
-      );
+      disableDangerLayer();
+
+      if (
+        currentTime
+      ) {
+
+        setStatus(
+          "Готово"
+        );
+
+      }
 
     }
 
@@ -3012,10 +3725,6 @@ function getLightningTime(
     return null;
 
   }
-
-  /*
-   * Округляем вниз до 5 минут.
-   */
 
   const rounded =
     Math.floor(
@@ -3163,12 +3872,6 @@ function escapeSvgColor(
 function getLightningOutline(
   color
 ) {
-
-  /*
-   * Тонкая тёплая обводка.
-   * Для стандартного жёлтого она
-   * получается оранжево-золотистой.
-   */
 
   const hex =
     color.replace(
@@ -3518,14 +4221,6 @@ function pixelLooksActive(
 
   }
 
-  /*
-   * EUMETView AFA:
-   * без вспышек — прозрачные пиксели.
-   *
-   * Поэтому alpha является главным
-   * индикатором.
-   */
-
   const max =
     Math.max(
       r,
@@ -3544,11 +4239,6 @@ function pixelLooksActive(
     max -
     min;
 
-  /*
-   * Отсекаем почти полностью серые/
-   * белые служебные области.
-   */
-
   if (
     max < 35
   ) {
@@ -3556,11 +4246,6 @@ function pixelLooksActive(
     return false;
 
   }
-
-  /*
-   * Слишком тёмные пиксели не считаем
-   * активностью.
-   */
 
   if (
     max < 55 &&
@@ -3646,30 +4331,35 @@ function extractLightningPoints(
   const grid =
     LIGHTNING_GRID;
 
-  const bbox =
-    getProjectedBounds();
-
   /*
-   * Важно:
-   * используем именно BBOX этого запроса.
+   * ВАЖНО:
+   * здесь используем именно bounds
+   * текущего WMS-запроса.
    */
+
+  const projected =
+    project3857(
+      request.bounds.getSouth(),
+      request.bounds.getWest()
+    );
+
+  const projectedNE =
+    project3857(
+      request.bounds.getNorth(),
+      request.bounds.getEast()
+    );
 
   const west =
-    bbox.west;
+    projected.x;
 
   const east =
-    bbox.east;
-
-  const north =
-    bbox.north;
+    projectedNE.x;
 
   const south =
-    bbox.south;
+    projected.y;
 
-  /*
-   * По одному маркеру на активную
-   * область сетки.
-   */
+  const north =
+    projectedNE.y;
 
   for (
     let y = 0;
@@ -3742,11 +4432,6 @@ function extractLightningPoints(
 
           }
 
-          /*
-           * Ищем наиболее яркий активный
-           * пиксель внутри клетки.
-           */
-
           const score =
             a +
             Math.max(
@@ -3776,14 +4461,8 @@ function extractLightningPoints(
       }
 
       if (!best) {
-
         continue;
-
       }
-
-      /*
-       * Pixel → EPSG:3857.
-       */
 
       const mapX =
         west +
@@ -3867,10 +4546,6 @@ function loadCrossOriginImage(
 
       const img =
         new Image();
-
-      /*
-       * Нужен для canvas.
-       */
 
       img.crossOrigin =
         "anonymous";
@@ -4012,11 +4687,6 @@ async function refreshLightning(
 
     lightningLayer.clearLayers();
 
-    /*
-     * Ограничиваем количество маркеров.
-     * Это защищает iPhone от тысяч DOM-элементов.
-     */
-
     const maxPoints =
       900;
 
@@ -4074,12 +4744,6 @@ async function refreshLightning(
       error
     );
 
-    /*
-     * Не ломаем радар,
-     * если EUMETSAT недоступен
-     * или браузер запрещает canvas.
-     */
-
     lightningLayer.clearLayers();
 
   } finally {
@@ -4116,11 +4780,36 @@ function refreshRadarAfterMapChange() {
 
         }
 
-        selectTime(
-          currentTime,
-          true,
-          false
-        );
+        /*
+         * Отражаемость обновляем только
+         * если она активна.
+         */
+
+        if (
+          radarToggle.checked
+        ) {
+
+          selectTime(
+            currentTime,
+            true,
+            false
+          );
+
+        }
+
+        /*
+         * Опасные явления обновляем отдельно.
+         */
+
+        if (
+          dangerToggle.checked
+        ) {
+
+          refreshDanger(
+            true
+          );
+
+        }
 
         if (
           lightningToggle.checked
@@ -4263,9 +4952,18 @@ map.on(
   "click",
   async event => {
 
+    /*
+     * GetFeatureInfo относится только
+     * к отражаемости.
+     *
+     * При активных опасных явлениях
+     * dBZ-информация не показывается.
+     */
+
     if (
       !currentTime ||
-      !radarToggle.checked
+      !radarToggle.checked ||
+      dangerToggle.checked
     ) {
 
       return;
@@ -4471,9 +5169,7 @@ function parseDbz(
 ) {
 
   if (!text) {
-
     return null;
-
   }
 
   try {
@@ -4495,9 +5191,7 @@ function parseDbz(
         value === null ||
         value === undefined
       ) {
-
         return;
-
       }
 
       if (
@@ -4666,9 +5360,7 @@ function parseDbz(
       if (
         cells.length < 2
       ) {
-
         continue;
-
       }
 
       const label =
@@ -4692,9 +5384,7 @@ function parseDbz(
             );
 
           if (!match) {
-
             continue;
-
           }
 
           const value =
@@ -4764,9 +5454,7 @@ function parseDbz(
         );
 
       if (!match) {
-
         continue;
-
       }
 
       const value =
@@ -4811,9 +5499,7 @@ function parseDbz(
       );
 
     if (!match) {
-
       continue;
-
     }
 
     const raw =
@@ -4992,9 +5678,7 @@ document
         );
 
       if (!value) {
-
         return;
-
       }
 
       const parts =
