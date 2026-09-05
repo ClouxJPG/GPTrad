@@ -183,7 +183,9 @@ body {
   z-index: 1300;
   top: 64px;
   right: 10px;
-  width: 245px;
+  width: 300px;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
   background: rgba(20,20,20,.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -259,6 +261,94 @@ body {
   width: 100%;
   height: 20px;
   margin: 0;
+}
+
+/* =========================================================
+   PALETTE EDITOR
+========================================================= */
+
+.palette-title {
+  font-size: 11px;
+  opacity: .58;
+  margin-bottom: 8px;
+}
+
+.palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.palette-row {
+  display: grid;
+  grid-template-columns: 58px 1fr 38px;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-dbz {
+  width: 100%;
+  height: 29px;
+  padding: 0 5px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  outline: 0;
+  background: rgba(255,255,255,.07);
+  color: white;
+  font-size: 11px;
+}
+
+.palette-color {
+  width: 100%;
+  height: 29px;
+  padding: 2px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.palette-delete {
+  width: 32px;
+  height: 29px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.75);
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.palette-delete:active {
+  background: rgba(255,255,255,.16);
+}
+
+.palette-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.palette-action {
+  flex: 1;
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255,255,255,.08);
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.palette-action:active {
+  background: rgba(255,255,255,.17);
+}
+
+.palette-hint {
+  margin-top: 7px;
+  font-size: 9px;
+  line-height: 1.35;
+  opacity: .45;
 }
 
 /* =========================================================
@@ -461,7 +551,7 @@ body {
   .settings-panel {
     top: 60px;
     right: 8px;
-    width: 230px;
+    width: 260px;
   }
 
   .timeline {
@@ -488,13 +578,13 @@ body {
 
   <div class="top-spacer"></div>
 
-  <button id="locateBtn" class="icon-btn">⌖</button>
+  <button id="locateBtn" class="icon-btn" aria-label="Моё местоположение">⌖</button>
 
-  <button id="searchBtn" class="icon-btn">⌕</button>
+  <button id="searchBtn" class="icon-btn" aria-label="Поиск">⌕</button>
 
-  <button id="settingsBtn" class="icon-btn">⚙</button>
+  <button id="settingsBtn" class="icon-btn" aria-label="Настройки">⚙</button>
 
-  <button id="panelBtn" class="icon-btn">☰</button>
+  <button id="panelBtn" class="icon-btn" aria-label="Радар">☰</button>
 
 </div>
 
@@ -602,6 +692,40 @@ body {
       value="72"
       step="1"
     >
+
+  </div>
+
+  <div class="settings-section">
+
+    <div class="palette-title">
+      Цвета dBZ
+    </div>
+
+    <div id="paletteList" class="palette-list"></div>
+
+    <div class="palette-actions">
+
+      <button
+        id="addPaletteBtn"
+        class="palette-action"
+      >
+        ＋ Добавить
+      </button>
+
+      <button
+        id="resetPaletteBtn"
+        class="palette-action"
+      >
+        Сбросить
+      </button>
+
+    </div>
+
+    <div class="palette-hint">
+      Значение слева — dBZ. Цвет справа применяется
+      к этому уровню отражаемости. Настройки сохраняются
+      только в этом браузере.
+    </div>
 
   </div>
 
@@ -762,6 +886,24 @@ let preloadStarted = false;
 let radarOpacity = 0.72;
 
 /* =========================================================
+   DEFAULT PALETTE
+========================================================= */
+
+const DEFAULT_PALETTE = [
+  { dbz: -10, color: "#5B8CFF" },
+  { dbz: 0,   color: "#00BFFF" },
+  { dbz: 10,  color: "#00D26A" },
+  { dbz: 20,  color: "#FFF000" },
+  { dbz: 30,  color: "#FF8A00" },
+  { dbz: 40,  color: "#FF2020" },
+  { dbz: 50,  color: "#C000FF" },
+  { dbz: 60,  color: "#FFFFFF" },
+  { dbz: 70,  color: "#FFFFFF" }
+];
+
+let palette = loadPalette();
+
+/* =========================================================
    DOM
 ========================================================= */
 
@@ -831,29 +973,507 @@ const opacitySlider =
 const opacityValue =
   document.getElementById("opacityValue");
 
+const paletteList =
+  document.getElementById("paletteList");
+
+const addPaletteBtn =
+  document.getElementById("addPaletteBtn");
+
+const resetPaletteBtn =
+  document.getElementById("resetPaletteBtn");
+
+/* =========================================================
+   LOAD SETTINGS
+========================================================= */
+
+function loadPalette() {
+
+  try {
+
+    const saved =
+      localStorage.getItem(
+        "gptrad-dbz-palette"
+      );
+
+    if (!saved) {
+
+      return DEFAULT_PALETTE.map(
+        item => ({ ...item })
+      );
+
+    }
+
+    const parsed =
+      JSON.parse(saved);
+
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.length
+    ) {
+
+      return DEFAULT_PALETTE.map(
+        item => ({ ...item })
+      );
+
+    }
+
+    const clean =
+      parsed
+        .map(item => ({
+          dbz: Number(item.dbz),
+          color: String(item.color)
+        }))
+        .filter(item =>
+          Number.isFinite(item.dbz) &&
+          /^#[0-9a-fA-F]{6}$/.test(
+            item.color
+          )
+        );
+
+    if (!clean.length) {
+
+      return DEFAULT_PALETTE.map(
+        item => ({ ...item })
+      );
+
+    }
+
+    return clean.sort(
+      (a,b) =>
+        a.dbz - b.dbz
+    );
+
+  } catch (error) {
+
+    console.warn(
+      "Palette load error:",
+      error
+    );
+
+    return DEFAULT_PALETTE.map(
+      item => ({ ...item })
+    );
+
+  }
+}
+
+function savePalette() {
+
+  try {
+
+    localStorage.setItem(
+      "gptrad-dbz-palette",
+      JSON.stringify(
+        palette
+      )
+    );
+
+  } catch (error) {
+
+    console.warn(
+      "Palette save error:",
+      error
+    );
+
+  }
+}
+
+/* =========================================================
+   RENDER PALETTE
+========================================================= */
+
+function renderPalette() {
+
+  paletteList.innerHTML = "";
+
+  palette
+    .sort(
+      (a,b) =>
+        a.dbz - b.dbz
+    );
+
+  palette.forEach(
+    (item, index) => {
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+      row.className =
+        "palette-row";
+
+      const dbz =
+        document.createElement(
+          "input"
+        );
+
+      dbz.className =
+        "palette-dbz";
+
+      dbz.type =
+        "number";
+
+      dbz.step =
+        "0.1";
+
+      dbz.value =
+        item.dbz;
+
+      dbz.title =
+        "Значение dBZ";
+
+      dbz.addEventListener(
+        "change",
+        () => {
+
+          const value =
+            Number(
+              dbz.value
+            );
+
+          if (
+            !Number.isFinite(value)
+          ) {
+
+            dbz.value =
+              item.dbz;
+
+            return;
+
+          }
+
+          palette[index].dbz =
+            value;
+
+          palette.sort(
+            (a,b) =>
+              a.dbz - b.dbz
+          );
+
+          savePalette();
+
+          renderPalette();
+
+          refreshCurrentRadar();
+
+        }
+      );
+
+      const color =
+        document.createElement(
+          "input"
+        );
+
+      color.className =
+        "palette-color";
+
+      color.type =
+        "color";
+
+      color.value =
+        item.color;
+
+      color.title =
+        "Цвет";
+
+      color.addEventListener(
+        "input",
+        () => {
+
+          palette[index].color =
+            color.value;
+
+          savePalette();
+
+          refreshCurrentRadar();
+
+        }
+      );
+
+      const remove =
+        document.createElement(
+          "button"
+        );
+
+      remove.className =
+        "palette-delete";
+
+      remove.textContent =
+        "×";
+
+      remove.title =
+        "Удалить";
+
+      remove.addEventListener(
+        "click",
+        () => {
+
+          if (
+            palette.length <= 2
+          ) {
+
+            return;
+
+          }
+
+          palette.splice(
+            index,
+            1
+          );
+
+          savePalette();
+
+          renderPalette();
+
+          refreshCurrentRadar();
+
+        }
+      );
+
+      row.appendChild(
+        dbz
+      );
+
+      row.appendChild(
+        color
+      );
+
+      row.appendChild(
+        remove
+      );
+
+      paletteList.appendChild(
+        row
+      );
+
+    }
+  );
+}
+
+/* =========================================================
+   ADD / RESET PALETTE
+========================================================= */
+
+addPaletteBtn.addEventListener(
+  "click",
+  () => {
+
+    let dbz = 0;
+
+    if (palette.length) {
+
+      dbz =
+        palette[
+          palette.length - 1
+        ].dbz + 10;
+
+    }
+
+    palette.push({
+      dbz,
+      color: "#FFFFFF"
+    });
+
+    palette.sort(
+      (a,b) =>
+        a.dbz - b.dbz
+    );
+
+    savePalette();
+
+    renderPalette();
+
+    refreshCurrentRadar();
+
+  }
+);
+
+resetPaletteBtn.addEventListener(
+  "click",
+  () => {
+
+    palette =
+      DEFAULT_PALETTE.map(
+        item => ({ ...item })
+      );
+
+    savePalette();
+
+    renderPalette();
+
+    refreshCurrentRadar();
+
+  }
+);
+
+renderPalette();
+
+/* =========================================================
+   SLD
+========================================================= */
+
+function escapeXml(value) {
+
+  return String(value)
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&apos;"
+    );
+
+}
+
+function buildSld() {
+
+  const entries =
+    palette
+      .slice()
+      .sort(
+        (a,b) =>
+          a.dbz - b.dbz
+      )
+      .map(
+        item =>
+          `
+          <ColorMapEntry
+            color="${escapeXml(item.color)}"
+            quantity="${escapeXml(item.dbz)}"
+            opacity="1"
+            label="${escapeXml(item.dbz + " dBZ")}"
+          />`
+      )
+      .join("");
+
+  return `
+<?xml version="1.0" encoding="UTF-8"?>
+<sld:StyledLayerDescriptor
+  version="1.0.0"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:sld="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.opengis.net/sld
+    http://schemas.opengis.net/sld/1.0.0/StyledLayerDescriptor.xsd">
+
+  <sld:NamedLayer>
+
+    <sld:Name>${escapeXml(TARGET_LAYER)}</sld:Name>
+
+    <sld:UserStyle>
+
+      <sld:Name>GPTrad custom dBZ</sld:Name>
+
+      <sld:Title>GPTrad custom dBZ palette</sld:Title>
+
+      <sld:FeatureTypeStyle>
+
+        <sld:Rule>
+
+          <sld:RasterSymbolizer>
+
+            <sld:ColorMap type="intervals">
+
+              ${entries}
+
+            </sld:ColorMap>
+
+          </sld:RasterSymbolizer>
+
+        </sld:Rule>
+
+      </sld:FeatureTypeStyle>
+
+    </sld:UserStyle>
+
+  </sld:NamedLayer>
+
+</sld:StyledLayerDescriptor>
+`.trim();
+
+}
+
+/* =========================================================
+   REFRESH RADAR AFTER PALETTE CHANGE
+========================================================= */
+
+function refreshCurrentRadar() {
+
+  if (!currentTime) {
+
+    return;
+
+  }
+
+  /*
+   * Старый URL кэша с прежней SLD
+   * больше не используется.
+   *
+   * Запрашиваем текущий кадр заново.
+   */
+
+  selectTime(
+    currentTime,
+    true,
+    false
+  );
+
+}
+
 /* =========================================================
    PANEL
 ========================================================= */
 
-panelBtn.addEventListener("click", () => {
+panelBtn.addEventListener(
+  "click",
+  () => {
 
-  radarPanel.classList.toggle("open");
-
-  if (
-    radarPanel.classList.contains("open")
-  ) {
-
-    settingsPanel.classList.remove(
+    radarPanel.classList.toggle(
       "open"
     );
+
+    if (
+      radarPanel.classList.contains(
+        "open"
+      )
+    ) {
+
+      settingsPanel.classList.remove(
+        "open"
+      );
+
+    }
+
   }
-});
+);
 
-panelClose.addEventListener("click", () => {
+panelClose.addEventListener(
+  "click",
+  () => {
 
-  radarPanel.classList.remove("open");
+    radarPanel.classList.remove(
+      "open"
+    );
 
-});
+  }
+);
 
 /* =========================================================
    SETTINGS
@@ -876,7 +1496,9 @@ settingsBtn.addEventListener(
       radarPanel.classList.remove(
         "open"
       );
+
     }
+
   }
 );
 
@@ -887,8 +1509,45 @@ settingsClose.addEventListener(
     settingsPanel.classList.remove(
       "open"
     );
+
   }
 );
+
+/* =========================================================
+   OPACITY
+========================================================= */
+
+try {
+
+  const savedOpacity =
+    Number(
+      localStorage.getItem(
+        "gptrad-radar-opacity"
+      )
+    );
+
+  if (
+    Number.isFinite(savedOpacity) &&
+    savedOpacity >= 0 &&
+    savedOpacity <= 1
+  ) {
+
+    radarOpacity =
+      savedOpacity;
+
+  }
+
+} catch (_) {}
+
+opacitySlider.value =
+  Math.round(
+    radarOpacity * 100
+  );
+
+opacityValue.textContent =
+  Math.round(
+    radarOpacity * 100
+  ) + "%";
 
 opacitySlider.addEventListener(
   "input",
@@ -905,6 +1564,17 @@ opacitySlider.addEventListener(
     opacityValue.textContent =
       value + "%";
 
+    try {
+
+      localStorage.setItem(
+        "gptrad-radar-opacity",
+        String(
+          radarOpacity
+        )
+      );
+
+    } catch (_) {}
+
     if (
       currentRadarLayer &&
       radarToggle.checked
@@ -913,7 +1583,9 @@ opacitySlider.addEventListener(
       currentRadarLayer.setOpacity(
         radarOpacity
       );
+
     }
+
   }
 );
 
@@ -923,7 +1595,8 @@ opacitySlider.addEventListener(
 
 function setStatus(text) {
 
-  statusEl.textContent = text;
+  statusEl.textContent =
+    text;
 
 }
 
@@ -933,9 +1606,14 @@ function setStatus(text) {
 
 function formatTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
 
     return "—";
 
@@ -948,13 +1626,19 @@ function formatTime(iso) {
       minute: "2-digit"
     }
   );
+
 }
 
 function formatDateTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
 
     return "—";
 
@@ -969,6 +1653,7 @@ function formatDateTime(iso) {
       minute: "2-digit"
     }
   );
+
 }
 
 function isUsableTime(date) {
@@ -999,12 +1684,16 @@ function extractTimesFromText(text) {
 
     const layers =
       Array.from(
-        xml.getElementsByTagName("Layer")
+        xml.getElementsByTagName(
+          "Layer"
+        )
       );
 
     let targetLayer = null;
 
-    for (const layer of layers) {
+    for (
+      const layer of layers
+    ) {
 
       const names =
         Array.from(
@@ -1012,17 +1701,23 @@ function extractTimesFromText(text) {
         ).filter(
           el =>
             el.localName &&
-            el.localName.toLowerCase() === "name"
+            el.localName.toLowerCase() ===
+            "name"
         );
 
       if (
         names.length &&
-        names[0].textContent.trim() === TARGET_LAYER
+        names[0].textContent.trim() ===
+        TARGET_LAYER
       ) {
 
-        targetLayer = layer;
+        targetLayer =
+          layer;
+
         break;
+
       }
+
     }
 
     if (targetLayer) {
@@ -1034,23 +1729,33 @@ function extractTimesFromText(text) {
           )
         );
 
-      for (const node of nodes) {
+      for (
+        const node of nodes
+      ) {
 
         const name =
           (
-            node.getAttribute("name") ||
+            node.getAttribute(
+              "name"
+            ) ||
             ""
           ).toLowerCase();
 
-        if (name !== "time") {
+        if (
+          name !== "time"
+        ) {
+
           continue;
+
         }
 
         parseTimeValue(
           node.textContent.trim(),
           result
         );
+
       }
+
     }
 
   } catch (e) {
@@ -1070,26 +1775,37 @@ function extractTimesFromText(text) {
     const matches =
       text.match(regex) || [];
 
-    for (const value of matches) {
+    for (
+      const value of matches
+    ) {
 
       const d =
         new Date(value);
 
-      if (!Number.isNaN(d.getTime())) {
+      if (
+        !Number.isNaN(
+          d.getTime()
+        )
+      ) {
 
         result.push(
           d.toISOString()
         );
 
       }
+
     }
+
   }
 
   return [
-    ...new Set(result)
+    ...new Set(
+      result
+    )
   ]
     .map(
-      value => new Date(value)
+      value =>
+        new Date(value)
     )
     .filter(
       isUsableTime
@@ -1100,14 +1816,21 @@ function extractTimesFromText(text) {
         b.getTime()
     )
     .map(
-      d => d.toISOString()
+      d =>
+        d.toISOString()
     );
+
 }
 
-function parseTimeValue(value, result) {
+function parseTimeValue(
+  value,
+  result
+) {
 
   if (!value) {
+
     return;
+
   }
 
   if (
@@ -1116,7 +1839,8 @@ function parseTimeValue(value, result) {
   ) {
 
     for (
-      const part of value.split(",")
+      const part of
+      value.split(",")
     ) {
 
       const d =
@@ -1125,7 +1849,9 @@ function parseTimeValue(value, result) {
         );
 
       if (
-        !Number.isNaN(d.getTime())
+        !Number.isNaN(
+          d.getTime()
+        )
       ) {
 
         result.push(
@@ -1133,25 +1859,37 @@ function parseTimeValue(value, result) {
         );
 
       }
+
     }
 
     return;
+
   }
 
   const parts =
     value.split("/");
 
-  if (parts.length >= 2) {
+  if (
+    parts.length >= 2
+  ) {
 
     const start =
-      new Date(parts[0]);
+      new Date(
+        parts[0]
+      );
 
     const end =
-      new Date(parts[1]);
+      new Date(
+        parts[1]
+      );
 
     if (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime())
+      !Number.isNaN(
+        start.getTime()
+      ) &&
+      !Number.isNaN(
+        end.getTime()
+      )
     ) {
 
       let step =
@@ -1167,13 +1905,19 @@ function parseTimeValue(value, result) {
         if (match) {
 
           const hours =
-            Number(match[1] || 0);
+            Number(
+              match[1] || 0
+            );
 
           const minutes =
-            Number(match[2] || 0);
+            Number(
+              match[2] || 0
+            );
 
           const seconds =
-            Number(match[3] || 0);
+            Number(
+              match[3] || 0
+            );
 
           step =
             (
@@ -1181,7 +1925,9 @@ function parseTimeValue(value, result) {
               minutes * 60 +
               seconds
             ) * 1000;
+
         }
+
       }
 
       const max =
@@ -1191,7 +1937,8 @@ function parseTimeValue(value, result) {
         );
 
       for (
-        let t = start.getTime();
+        let t =
+          start.getTime();
         t <= max;
         t += step
       ) {
@@ -1201,8 +1948,11 @@ function parseTimeValue(value, result) {
         );
 
       }
+
     }
+
   }
+
 }
 
 /* =========================================================
@@ -1231,7 +1981,9 @@ async function loadCapabilities() {
         }
       );
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
 
       throw new Error(
         "HTTP " +
@@ -1244,7 +1996,9 @@ async function loadCapabilities() {
       await response.text();
 
     let parsed =
-      extractTimesFromText(text);
+      extractTimesFromText(
+        text
+      );
 
     if (
       parsed.length >
@@ -1255,11 +2009,14 @@ async function loadCapabilities() {
         parsed.slice(
           -MAX_FRAMES
         );
+
     }
 
-    times = parsed;
+    times =
+      parsed;
 
-    timeSlider.min = 0;
+    timeSlider.min =
+      0;
 
     timeSlider.max =
       Math.max(
@@ -1276,7 +2033,9 @@ async function loadCapabilities() {
     }
 
     const newest =
-      times[times.length - 1];
+      times[
+        times.length - 1
+      ];
 
     if (!currentTime) {
 
@@ -1305,7 +2064,9 @@ async function loadCapabilities() {
 
     }
 
-    setStatus("Готово");
+    setStatus(
+      "Готово"
+    );
 
   } catch (error) {
 
@@ -1317,21 +2078,30 @@ async function loadCapabilities() {
     setStatus(
       "Ошибка загрузки радара"
     );
+
   }
+
 }
 
 /* =========================================================
    EPSG:3857
 ========================================================= */
 
-function project3857(lat, lon) {
+function project3857(
+  lat,
+  lon
+) {
 
   const point =
     L.CRS.EPSG3857.project(
-      L.latLng(lat, lon)
+      L.latLng(
+        lat,
+        lon
+      )
     );
 
   return point;
+
 }
 
 function getProjectedBounds() {
@@ -1353,13 +2123,17 @@ function getProjectedBounds() {
 
   return {
 
-    south: sw.y,
+    south:
+      sw.y,
 
-    west: sw.x,
+    west:
+      sw.x,
 
-    north: ne.y,
+    north:
+      ne.y,
 
-    east: ne.x,
+    east:
+      ne.x,
 
     latLngBounds:
       L.latLngBounds(
@@ -1372,14 +2146,18 @@ function getProjectedBounds() {
           bounds.getEast()
         ]
       )
+
   };
+
 }
 
 /* =========================================================
    RADAR REQUEST
 ========================================================= */
 
-function getRadarRequest(time) {
+function getRadarRequest(
+  time
+) {
 
   const projected =
     getProjectedBounds();
@@ -1397,41 +2175,61 @@ function getRadarRequest(time) {
   const width =
     Math.max(
       256,
-      Math.round(size.x)
+      Math.round(
+        size.x
+      )
     );
 
   const height =
     Math.max(
       256,
-      Math.round(size.y)
+      Math.round(
+        size.y
+      )
     );
 
   const params =
     new URLSearchParams({
 
-      SERVICE: "WMS",
+      SERVICE:
+        "WMS",
 
-      VERSION: "1.1.1",
+      VERSION:
+        "1.1.1",
 
-      REQUEST: "GetMap",
+      REQUEST:
+        "GetMap",
 
-      LAYERS: TARGET_LAYER,
+      LAYERS:
+        TARGET_LAYER,
 
-      STYLES: "",
+      STYLES:
+        "",
 
-      FORMAT: "image/png",
+      FORMAT:
+        "image/png",
 
-      TRANSPARENT: "true",
+      TRANSPARENT:
+        "true",
 
-      SRS: "EPSG:3857",
+      SRS:
+        "EPSG:3857",
 
-      BBOX: bbox,
+      BBOX:
+        bbox,
 
-      WIDTH: width,
+      WIDTH:
+        width,
 
-      HEIGHT: height,
+      HEIGHT:
+        height,
 
-      TIME: time
+      TIME:
+        time,
+
+      SLD_BODY:
+        buildSld()
+
     });
 
   return {
@@ -1443,74 +2241,101 @@ function getRadarRequest(time) {
 
     bounds:
       projected.latLngBounds
+
   };
+
 }
 
 /* =========================================================
    IMAGE
 ========================================================= */
 
-function loadImage(url) {
+function loadImage(
+  url
+) {
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
 
       const img =
         new Image();
 
-      img.onload = () => {
+      img.onload =
+        () => {
 
-        if (
-          !img.naturalWidth ||
-          !img.naturalHeight
-        ) {
+          if (
+            !img.naturalWidth ||
+            !img.naturalHeight
+          ) {
+
+            reject(
+              new Error(
+                "Пустое изображение"
+              )
+            );
+
+            return;
+
+          }
+
+          resolve(
+            img
+          );
+
+        };
+
+      img.onerror =
+        () => {
 
           reject(
             new Error(
-              "Пустое изображение"
+              "Изображение не загрузилось"
             )
           );
 
-          return;
-        }
+        };
 
-        resolve(img);
-      };
-
-      img.onerror = () => {
-
-        reject(
-          new Error(
-            "Изображение не загрузилось"
-          )
-        );
-
-      };
-
-      img.src = url;
+      img.src =
+        url;
 
     }
   );
+
 }
 
-function loadImageCached(url) {
+function loadImageCached(
+  url
+) {
 
   if (
-    radarCache.has(url)
+    radarCache.has(
+      url
+    )
   ) {
 
-    return radarCache.get(url);
+    return radarCache.get(
+      url
+    );
+
   }
 
   const promise =
-    loadImage(url)
-      .catch(error => {
+    loadImage(
+      url
+    ).catch(
+      error => {
 
-        radarCache.delete(url);
+        radarCache.delete(
+          url
+        );
 
         throw error;
 
-      });
+      }
+    );
 
   radarCache.set(
     url,
@@ -1518,20 +2343,29 @@ function loadImageCached(url) {
   );
 
   return promise;
+
 }
 
 /* =========================================================
    CANDIDATES
 ========================================================= */
 
-function getCandidateTimes(time) {
+function getCandidateTimes(
+  time
+) {
 
   const index =
-    times.indexOf(time);
+    times.indexOf(
+      time
+    );
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
 
-    return [time];
+    return [
+      time
+    ];
 
   }
 
@@ -1541,6 +2375,7 @@ function getCandidateTimes(time) {
       index + 1
     )
     .reverse();
+
 }
 
 /* =========================================================
@@ -1552,25 +2387,35 @@ function applyRadarImage(
   bounds
 ) {
 
-  if (!radarToggle.checked) {
+  if (
+    !radarToggle.checked
+  ) {
 
     return;
 
   }
 
-  if (!currentRadarLayer) {
+  if (
+    !currentRadarLayer
+  ) {
 
     currentRadarLayer =
       L.imageOverlay(
         img.src,
         bounds,
         {
-          opacity: radarOpacity,
-          interactive: false
+          opacity:
+            radarOpacity,
+
+          interactive:
+            false
         }
-      ).addTo(map);
+      ).addTo(
+        map
+      );
 
     return;
+
   }
 
   currentRadarLayer.setUrl(
@@ -1584,6 +2429,7 @@ function applyRadarImage(
   currentRadarLayer.setOpacity(
     radarOpacity
   );
+
 }
 
 /* =========================================================
@@ -1607,15 +2453,21 @@ async function selectTime(
 
   const candidates =
     allowFallback
-      ? getCandidateTimes(requestedTime)
-      : [requestedTime];
+      ? getCandidateTimes(
+          requestedTime
+        )
+      : [
+          requestedTime
+        ];
 
   for (
-    const candidateTime of candidates
+    const candidateTime of
+    candidates
   ) {
 
     if (
-      requestId !== radarRequestId
+      requestId !==
+      radarRequestId
     ) {
 
       return;
@@ -1629,11 +2481,15 @@ async function selectTime(
 
     try {
 
-      if (!fromMapMove) {
+      if (
+        !fromMapMove
+      ) {
 
         setStatus(
           "Загрузка " +
-          formatTime(candidateTime) +
+          formatTime(
+            candidateTime
+          ) +
           "…"
         );
 
@@ -1645,7 +2501,8 @@ async function selectTime(
         );
 
       if (
-        requestId !== radarRequestId
+        requestId !==
+        radarRequestId
       ) {
 
         return;
@@ -1654,7 +2511,9 @@ async function selectTime(
 
       try {
 
-        if (img.decode) {
+        if (
+          img.decode
+        ) {
 
           await img.decode();
 
@@ -1663,7 +2522,8 @@ async function selectTime(
       } catch (_) {}
 
       if (
-        requestId !== radarRequestId
+        requestId !==
+        radarRequestId
       ) {
 
         return;
@@ -1682,11 +2542,15 @@ async function selectTime(
 
       hidePixelInfo();
 
-      if (!fromMapMove) {
+      if (
+        !fromMapMove
+      ) {
 
         setStatus(
           "Отражаемость · " +
-          formatTime(currentTime)
+          formatTime(
+            currentTime
+          )
         );
 
       }
@@ -1714,10 +2578,12 @@ async function selectTime(
       continue;
 
     }
+
   }
 
   if (
-    requestId === radarRequestId
+    requestId ===
+    radarRequestId
   ) {
 
     updateTimelinePosition();
@@ -1727,6 +2593,7 @@ async function selectTime(
     );
 
   }
+
 }
 
 /* =========================================================
@@ -1735,18 +2602,22 @@ async function selectTime(
 
 async function startInitialPreload() {
 
-  if (preloadStarted) {
+  if (
+    preloadStarted
+  ) {
 
     return;
 
   }
 
-  preloadStarted = true;
+  preloadStarted =
+    true;
 
   const start =
     Math.max(
       0,
-      times.length - INITIAL_PRELOAD
+      times.length -
+      INITIAL_PRELOAD
     );
 
   const preloadTimes =
@@ -1755,7 +2626,8 @@ async function startInitialPreload() {
       times.length - 1
     );
 
-  let cursor = 0;
+  let cursor =
+    0;
 
   async function worker() {
 
@@ -1768,7 +2640,9 @@ async function startInitialPreload() {
         cursor++;
 
       const time =
-        preloadTimes[index];
+        preloadTimes[
+          index
+        ];
 
       const request =
         getRadarRequest(
@@ -1790,14 +2664,18 @@ async function startInitialPreload() {
         );
 
       }
+
     }
+
   }
 
-  const workers = [];
+  const workers =
+    [];
 
   for (
     let i = 0;
-    i < Math.min(
+    i <
+    Math.min(
       PRELOAD_CONCURRENCY,
       preloadTimes.length
     );
@@ -1813,6 +2691,7 @@ async function startInitialPreload() {
   await Promise.all(
     workers
   );
+
 }
 
 /* =========================================================
@@ -1835,9 +2714,12 @@ function updateTimelinePosition() {
       currentTime
     );
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
 
-    let bestIndex = 0;
+    let bestIndex =
+      0;
 
     let bestDiff =
       Infinity;
@@ -1849,7 +2731,8 @@ function updateTimelinePosition() {
 
     for (
       let i = 0;
-      i < times.length;
+      i <
+      times.length;
       i++
     ) {
 
@@ -1862,18 +2745,23 @@ function updateTimelinePosition() {
         );
 
       if (
-        diff < bestDiff
+        diff <
+        bestDiff
       ) {
 
-        bestDiff = diff;
+        bestDiff =
+          diff;
 
-        bestIndex = i;
+        bestIndex =
+          i;
 
       }
+
     }
 
     index =
       bestIndex;
+
   }
 
   timeSlider.value =
@@ -1883,6 +2771,7 @@ function updateTimelinePosition() {
     formatDateTime(
       currentTime
     );
+
 }
 
 timeSlider.addEventListener(
@@ -1894,7 +2783,9 @@ timeSlider.addEventListener(
         timeSlider.value
       );
 
-    if (!times[index]) {
+    if (
+      !times[index]
+    ) {
 
       return;
 
@@ -1909,6 +2800,7 @@ timeSlider.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1916,7 +2808,9 @@ prevBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
@@ -1945,6 +2839,7 @@ prevBtn.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1952,7 +2847,9 @@ nextBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
@@ -1981,6 +2878,7 @@ nextBtn.addEventListener(
       false,
       true
     );
+
   }
 );
 
@@ -1988,29 +2886,37 @@ playBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       return;
 
     }
 
-    if (playing) {
+    if (
+      playing
+    ) {
 
-      playing = false;
+      playing =
+        false;
 
       clearInterval(
         playTimer
       );
 
-      playTimer = null;
+      playTimer =
+        null;
 
       playBtn.textContent =
         "▶";
 
       return;
+
     }
 
-    playing = true;
+    playing =
+      true;
 
     playBtn.textContent =
       "❚❚";
@@ -2031,7 +2937,8 @@ playBtn.addEventListener(
             times.length
           ) {
 
-            index = 0;
+            index =
+              0;
 
           }
 
@@ -2051,6 +2958,7 @@ playBtn.addEventListener(
         },
         900
       );
+
   }
 );
 
@@ -2062,7 +2970,9 @@ radarToggle.addEventListener(
   "change",
   () => {
 
-    if (!currentRadarLayer) {
+    if (
+      !currentRadarLayer
+    ) {
 
       return;
 
@@ -2083,6 +2993,7 @@ radarToggle.addEventListener(
       );
 
     }
+
   }
 );
 
@@ -2091,7 +3002,9 @@ radarToggle.addEventListener(
 ========================================================= */
 
 const vectorLayer =
-  L.layerGroup().addTo(map);
+  L.layerGroup().addTo(
+    map
+  );
 
 function destination(
   lon,
@@ -2143,9 +3056,15 @@ function destination(
     );
 
   return [
-    lon2 * 180 / Math.PI,
-    lat2 * 180 / Math.PI
+    lon2 *
+      180 /
+      Math.PI,
+
+    lat2 *
+      180 /
+      Math.PI
   ];
+
 }
 
 function createVector(
@@ -2172,10 +3091,17 @@ function createVector(
     L.polyline(
       points,
       {
-        color: "#000000",
-        weight: 3,
-        opacity: .95,
-        interactive: false
+        color:
+          "#000000",
+
+        weight:
+          3,
+
+        opacity:
+          .95,
+
+        interactive:
+          false
       }
     );
 
@@ -2183,10 +3109,17 @@ function createVector(
     L.polyline(
       points,
       {
-        color: "#ffffff",
-        weight: 1.5,
-        opacity: 1,
-        interactive: false
+        color:
+          "#ffffff",
+
+        weight:
+          1.5,
+
+        opacity:
+          1,
+
+        interactive:
+          false
       }
     );
 
@@ -2194,9 +3127,12 @@ function createVector(
     outline,
     line
   ]);
+
 }
 
-async function loadVectors(time) {
+async function loadVectors(
+  time
+) {
 
   if (
     !vectorToggle.checked
@@ -2214,7 +3150,9 @@ async function loadVectors(time) {
   const url =
     VECTOR_URL +
     "?time=" +
-    encodeURIComponent(time) +
+    encodeURIComponent(
+      time
+    ) +
     "&title=" +
     encodeURIComponent(
       VECTOR_TITLE
@@ -2226,11 +3164,14 @@ async function loadVectors(time) {
       await fetch(
         url,
         {
-          cache: "no-store"
+          cache:
+            "no-store"
         }
       );
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
 
       throw new Error(
         "HTTP " +
@@ -2243,8 +3184,10 @@ async function loadVectors(time) {
       await response.json();
 
     if (
-      requestId !== vectorRequestId ||
-      time !== currentTime ||
+      requestId !==
+      vectorRequestId ||
+      time !==
+      currentTime ||
       !vectorToggle.checked
     ) {
 
@@ -2254,14 +3197,17 @@ async function loadVectors(time) {
 
     vectorLayer.clearLayers();
 
-    if (!Array.isArray(data)) {
+    if (
+      !Array.isArray(data)
+    ) {
 
       return;
 
     }
 
     for (
-      const item of data
+      const item of
+      data
     ) {
 
       if (
@@ -2274,16 +3220,24 @@ async function loadVectors(time) {
       }
 
       const lat =
-        Number(item[0]);
+        Number(
+          item[0]
+        );
 
       const lon =
-        Number(item[1]);
+        Number(
+          item[1]
+        );
 
       const dist =
-        Number(item[2]) * 3.6;
+        Number(
+          item[2]
+        ) * 3.6;
 
       const head =
-        Number(item[3]);
+        Number(
+          item[3]
+        );
 
       if (
         !Number.isFinite(lat) ||
@@ -2315,6 +3269,7 @@ async function loadVectors(time) {
           head
         )
       );
+
     }
 
   } catch (error) {
@@ -2325,6 +3280,7 @@ async function loadVectors(time) {
     );
 
   }
+
 }
 
 vectorToggle.addEventListener(
@@ -2343,13 +3299,16 @@ vectorToggle.addEventListener(
 
     }
 
-    if (currentTime) {
+    if (
+      currentTime
+    ) {
 
       loadVectors(
         currentTime
       );
 
     }
+
   }
 );
 
@@ -2357,7 +3316,8 @@ vectorToggle.addEventListener(
    MAP MOVE / ZOOM
 ========================================================= */
 
-let moveTimer = null;
+let moveTimer =
+  null;
 
 function refreshRadarAfterMapChange() {
 
@@ -2369,7 +3329,9 @@ function refreshRadarAfterMapChange() {
     setTimeout(
       () => {
 
-        if (!currentTime) {
+        if (
+          !currentTime
+        ) {
 
           return;
 
@@ -2384,6 +3346,7 @@ function refreshRadarAfterMapChange() {
       },
       180
     );
+
 }
 
 map.on(
@@ -2392,7 +3355,7 @@ map.on(
 );
 
 /* =========================================================
-   PIXEL INFO HELPERS
+   PIXEL INFO
 ========================================================= */
 
 function hidePixelInfo() {
@@ -2410,19 +3373,17 @@ function showPixelPoint(
 ) {
 
   pixelPoint.style.left =
-    containerPoint.x + "px";
+    containerPoint.x +
+    "px";
 
   pixelPoint.style.top =
-    containerPoint.y + "px";
+    containerPoint.y +
+    "px";
 
   pixelPoint.style.display =
     "block";
-}
 
-/*
- * Прямоугольник теперь всегда строится
- * непосредственно под точкой.
- */
+}
 
 function positionPixelInfo(
   containerPoint
@@ -2456,7 +3417,8 @@ function positionPixelInfo(
 
   if (
     left + width >
-    window.innerWidth - margin
+    window.innerWidth -
+    margin
   ) {
 
     left =
@@ -2466,14 +3428,10 @@ function positionPixelInfo(
 
   }
 
-  /*
-   * Если снизу уже нет места,
-   * показываем над точкой.
-   */
-
   if (
     top + estimatedHeight >
-    window.innerHeight - margin
+    window.innerHeight -
+    margin
   ) {
 
     top =
@@ -2484,15 +3442,14 @@ function positionPixelInfo(
   }
 
   pixelInfo.style.left =
-    left + "px";
+    left +
+    "px";
 
   pixelInfo.style.top =
-    top + "px";
-}
+    top +
+    "px";
 
-/* =========================================================
-   CLOSE PIXEL INFO
-========================================================= */
+}
 
 pixelClose.addEventListener(
   "click",
@@ -2521,12 +3478,6 @@ map.on(
       return;
 
     }
-
-    /*
-     * Сначала сразу показываем точку.
-     * Она остаётся на месте клика,
-     * пока идёт запрос.
-     */
 
     const clickedPoint =
       map.latLngToContainerPoint(
@@ -2572,17 +3523,23 @@ map.on(
     const params =
       new URLSearchParams({
 
-        SERVICE: "WMS",
+        SERVICE:
+          "WMS",
 
-        VERSION: "1.1.1",
+        VERSION:
+          "1.1.1",
 
-        REQUEST: "GetFeatureInfo",
+        REQUEST:
+          "GetFeatureInfo",
 
-        LAYERS: TARGET_LAYER,
+        LAYERS:
+          TARGET_LAYER,
 
-        QUERY_LAYERS: TARGET_LAYER,
+        QUERY_LAYERS:
+          TARGET_LAYER,
 
-        STYLES: "",
+        STYLES:
+          "",
 
         INFO_FORMAT:
           "text/html",
@@ -2599,19 +3556,28 @@ map.on(
           ].join(","),
 
         WIDTH:
-          Math.round(size.x),
+          Math.round(
+            size.x
+          ),
 
         HEIGHT:
-          Math.round(size.y),
+          Math.round(
+            size.y
+          ),
 
         X:
-          Math.round(point.x),
+          Math.round(
+            point.x
+          ),
 
         Y:
-          Math.round(point.y),
+          Math.round(
+            point.y
+          ),
 
         TIME:
           currentTime
+
       });
 
     const url =
@@ -2625,11 +3591,14 @@ map.on(
         await fetch(
           url,
           {
-            cache: "no-store"
+            cache:
+              "no-store"
           }
         );
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
 
         throw new Error(
           "HTTP " +
@@ -2642,13 +3611,9 @@ map.on(
         await response.text();
 
       const dbz =
-        parseDbz(text);
-
-      /*
-       * Если пользователь уже закрыл
-       * информацию во время запроса —
-       * ничего обратно не открываем.
-       */
+        parseDbz(
+          text
+        );
 
       if (
         pixelInfo.style.display ===
@@ -2700,6 +3665,7 @@ map.on(
         "Нет данных";
 
     }
+
   }
 );
 
@@ -2707,7 +3673,9 @@ map.on(
    DBZ PARSER
 ========================================================= */
 
-function parseDbz(text) {
+function parseDbz(
+  text
+) {
 
   if (!text) {
 
@@ -2716,17 +3684,18 @@ function parseDbz(text) {
   }
 
   /*
-   * -------------------------------------------------------
-   * 1. JSON
-   * -------------------------------------------------------
+   * JSON
    */
 
   try {
 
     const json =
-      JSON.parse(text);
+      JSON.parse(
+        text
+      );
 
-    const candidates = [];
+    const candidates =
+      [];
 
     function collect(
       value,
@@ -2747,8 +3716,9 @@ function parseDbz(text) {
       ) {
 
         candidates.push({
-          key: key.toLowerCase(),
-          value: value
+          key:
+            key.toLowerCase(),
+          value
         });
 
         return;
@@ -2760,15 +3730,19 @@ function parseDbz(text) {
       ) {
 
         const n =
-          Number(value);
+          Number(
+            value
+          );
 
         if (
           Number.isFinite(n)
         ) {
 
           candidates.push({
-            key: key.toLowerCase(),
-            value: n
+            key:
+              key.toLowerCase(),
+            value:
+              n
           });
 
         }
@@ -2782,7 +3756,8 @@ function parseDbz(text) {
       ) {
 
         for (
-          const item of value
+          const item of
+          value
         ) {
 
           collect(
@@ -2801,8 +3776,13 @@ function parseDbz(text) {
       ) {
 
         for (
-          const [k, v] of
-          Object.entries(value)
+          const [
+            k,
+            v
+          ] of
+          Object.entries(
+            value
+          )
         ) {
 
           collect(
@@ -2813,9 +3793,12 @@ function parseDbz(text) {
         }
 
       }
+
     }
 
-    collect(json);
+    collect(
+      json
+    );
 
     const preferred =
       candidates.find(
@@ -2825,14 +3808,18 @@ function parseDbz(text) {
           )
       );
 
-    if (preferred) {
+    if (
+      preferred
+    ) {
 
       const value =
         convertRadarValue(
           preferred.value
         );
 
-      if (value !== null) {
+      if (
+        value !== null
+      ) {
 
         return value;
 
@@ -2840,25 +3827,17 @@ function parseDbz(text) {
 
     }
 
-  } catch (_) {
-
-    /*
-     * Ответ не JSON.
-     * Переходим к HTML/XML.
-     */
-
-  }
+  } catch (_) {}
 
   /*
-   * -------------------------------------------------------
-   * 2. HTML/XML
-   * -------------------------------------------------------
+   * HTML
    */
 
   const parser =
     new DOMParser();
 
-  let doc = null;
+  let doc =
+    null;
 
   try {
 
@@ -2870,7 +3849,9 @@ function parseDbz(text) {
 
   } catch (_) {}
 
-  if (doc) {
+  if (
+    doc
+  ) {
 
     const rows =
       Array.from(
@@ -2880,7 +3861,8 @@ function parseDbz(text) {
       );
 
     for (
-      const row of rows
+      const row of
+      rows
     ) {
 
       const cells =
@@ -2891,8 +3873,7 @@ function parseDbz(text) {
         )
         .map(
           cell =>
-            cell.textContent
-              .trim()
+            cell.textContent.trim()
         );
 
       if (
@@ -2914,7 +3895,8 @@ function parseDbz(text) {
 
         for (
           let i = 1;
-          i < cells.length;
+          i <
+          cells.length;
           i++
         ) {
 
@@ -2923,7 +3905,9 @@ function parseDbz(text) {
               /-?\d+(?:\.\d+)?/
             );
 
-          if (!match) {
+          if (
+            !match
+          ) {
 
             continue;
 
@@ -2931,31 +3915,35 @@ function parseDbz(text) {
 
           const value =
             convertRadarValue(
-              Number(match[0])
+              Number(
+                match[0]
+              )
             );
 
-          if (value !== null) {
+          if (
+            value !== null
+          ) {
 
             return value;
 
           }
-        }
-      }
-    }
 
-    /*
-     * Иногда сервер отдаёт XML/GML,
-     * поэтому ищем элементы с понятными
-     * названиями.
-     */
+        }
+
+      }
+
+    }
 
     const allElements =
       Array.from(
-        doc.querySelectorAll("*")
+        doc.querySelectorAll(
+          "*"
+        )
       );
 
     for (
-      const element of allElements
+      const element of
+      allElements
     ) {
 
       const name =
@@ -2991,7 +3979,9 @@ function parseDbz(text) {
           /-?\d+(?:\.\d+)?/
         );
 
-      if (!match) {
+      if (
+        !match
+      ) {
 
         continue;
 
@@ -2999,21 +3989,25 @@ function parseDbz(text) {
 
       const value =
         convertRadarValue(
-          Number(match[0])
+          Number(
+            match[0]
+          )
         );
 
-      if (value !== null) {
+      if (
+        value !== null
+      ) {
 
         return value;
 
       }
+
     }
+
   }
 
   /*
-   * -------------------------------------------------------
-   * 3. Прямой текстовый поиск
-   * -------------------------------------------------------
+   * Plain text
    */
 
   const patterns = [
@@ -3029,42 +4023,59 @@ function parseDbz(text) {
   ];
 
   for (
-    const pattern of patterns
+    const pattern of
+    patterns
   ) {
 
     const match =
-      text.match(pattern);
+      text.match(
+        pattern
+      );
 
-    if (!match) {
+    if (
+      !match
+    ) {
 
       continue;
 
     }
 
     const raw =
-      Number(match[1]);
+      Number(
+        match[1]
+      );
 
     const value =
-      convertRadarValue(raw);
+      convertRadarValue(
+        raw
+      );
 
-    if (value !== null) {
+    if (
+      value !== null
+    ) {
 
       return value;
 
     }
+
   }
 
   return null;
+
 }
 
 /* =========================================================
    RADAR VALUE CONVERSION
 ========================================================= */
 
-function convertRadarValue(raw) {
+function convertRadarValue(
+  raw
+) {
 
   if (
-    !Number.isFinite(raw)
+    !Number.isFinite(
+      raw
+    )
   ) {
 
     return null;
@@ -3072,10 +4083,7 @@ function convertRadarValue(raw) {
   }
 
   /*
-   * Уже нормальное значение dBZ.
-   *
-   * BALTRAD/Nowcast может отдавать
-   * значение непосредственно в dBZ.
+   * Нормальное значение dBZ.
    */
 
   if (
@@ -3088,10 +4096,7 @@ function convertRadarValue(raw) {
   }
 
   /*
-   * Если значение хранится как
-   * 8-bit код:
-   *
-   * dBZ = raw * 0.5 - 32
+   * Возможный 8-bit код.
    */
 
   if (
@@ -3100,7 +4105,7 @@ function convertRadarValue(raw) {
   ) {
 
     const dbz =
-      raw * 0.5 - 32;
+      raw * .5 - 32;
 
     if (
       dbz >= -100 &&
@@ -3110,9 +4115,11 @@ function convertRadarValue(raw) {
       return dbz;
 
     }
+
   }
 
   return null;
+
 }
 
 /* =========================================================
@@ -3133,7 +4140,9 @@ map.on(
 ========================================================= */
 
 document
-  .getElementById("locateBtn")
+  .getElementById(
+    "locateBtn"
+  )
   .addEventListener(
     "click",
     () => {
@@ -3157,7 +4166,10 @@ document
             position.coords.longitude;
 
           map.setView(
-            [lat, lon],
+            [
+              lat,
+              lon
+            ],
             Math.max(
               map.getZoom(),
               8
@@ -3176,12 +4188,18 @@ document
         },
 
         {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000
+          enableHighAccuracy:
+            true,
+
+          timeout:
+            10000,
+
+          maximumAge:
+            30000
         }
 
       );
+
     }
   );
 
@@ -3190,7 +4208,9 @@ document
 ========================================================= */
 
 document
-  .getElementById("searchBtn")
+  .getElementById(
+    "searchBtn"
+  )
   .addEventListener(
     "click",
     () => {
@@ -3200,7 +4220,9 @@ document
           "Введите координаты:\n\nНапример:\n54.74, 55.97"
         );
 
-      if (!value) {
+      if (
+        !value
+      ) {
 
         return;
 
@@ -3208,7 +4230,10 @@ document
 
       const parts =
         value
-          .replace(";", ",")
+          .replace(
+            ";",
+            ","
+          )
           .split(",");
 
       if (
@@ -3251,7 +4276,10 @@ document
       }
 
       map.setView(
-        [lat, lon],
+        [
+          lat,
+          lon
+        ],
         Math.max(
           map.getZoom(),
           8
