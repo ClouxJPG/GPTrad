@@ -36,33 +36,21 @@ body {
   background: #d9d9d9;
 }
 
-/* =========================
-   TOP BAR
-========================= */
-
 .topbar {
   position: fixed;
   z-index: 1000;
   top: 10px;
   left: 10px;
   right: 10px;
-
   height: 44px;
-
   display: flex;
   align-items: center;
-
   padding: 0 8px;
-
   background: rgba(20,20,20,.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-
   border-radius: 10px;
-
-  box-shadow:
-    0 4px 20px rgba(0,0,0,.28);
-
+  box-shadow: 0 4px 20px rgba(0,0,0,.28);
   color: white;
 }
 
@@ -79,21 +67,15 @@ body {
 .icon-btn {
   width: 34px;
   height: 34px;
-
   border: 0;
   outline: 0;
-
   border-radius: 8px;
-
   background: rgba(255,255,255,.08);
   color: white;
-
   font-size: 20px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   cursor: pointer;
 }
 
@@ -101,32 +83,19 @@ body {
   background: rgba(255,255,255,.18);
 }
 
-/* =========================
-   RADAR PANEL
-========================= */
-
 .radar-panel {
   position: fixed;
   z-index: 1100;
-
   top: 64px;
   right: 10px;
-
   width: 245px;
-
   background: rgba(20,20,20,.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-
   border-radius: 10px;
-
   padding: 11px;
-
   color: white;
-
-  box-shadow:
-    0 8px 30px rgba(0,0,0,.35);
-
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
   transform: translateX(calc(100% + 20px));
   transition: transform .22s ease;
 }
@@ -138,33 +107,24 @@ body {
 .panel-head {
   display: flex;
   align-items: center;
-
   height: 30px;
-
   margin-bottom: 8px;
 }
 
 .panel-close {
   width: 28px;
   height: 28px;
-
   margin-right: 4px;
-
   border: 0;
   outline: 0;
-
   background: transparent;
   color: rgba(255,255,255,.9);
-
   border-radius: 7px;
-
   font-size: 25px;
   line-height: 25px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   cursor: pointer;
 }
 
@@ -195,18 +155,14 @@ body {
 .layer-row {
   display: flex;
   align-items: center;
-
   min-height: 34px;
-
   font-size: 13px;
 }
 
 .layer-row input {
   width: 16px;
   height: 16px;
-
   margin: 0 8px 0 0;
-
   accent-color: white;
 }
 
@@ -214,67 +170,41 @@ body {
   flex: 1;
 }
 
-/* =========================
-   STATUS
-========================= */
-
 .status {
   position: fixed;
   z-index: 1001;
-
   left: 10px;
   bottom: 94px;
-
   padding: 7px 10px;
-
   border-radius: 7px;
-
   background: rgba(20,20,20,.82);
   color: white;
-
   font-size: 11px;
-
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-
   pointer-events: none;
-
   opacity: .9;
 }
-
-/* =========================
-   TIME PANEL
-========================= */
 
 .timeline {
   position: fixed;
   z-index: 1000;
-
   left: 10px;
   right: 10px;
   bottom: 10px;
-
   height: 68px;
-
   padding: 9px 12px 8px;
-
   background: rgba(20,20,20,.9);
-
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-
   border-radius: 10px;
-
   color: white;
-
-  box-shadow:
-    0 5px 25px rgba(0,0,0,.3);
+  box-shadow: 0 5px 25px rgba(0,0,0,.3);
 }
 
 .time-top {
   display: flex;
   align-items: center;
-
   margin-bottom: 6px;
 }
 
@@ -285,7 +215,6 @@ body {
 
 .time-value {
   margin-left: auto;
-
   font-size: 12px;
   font-weight: 600;
 }
@@ -299,17 +228,12 @@ body {
 .time-button {
   width: 29px;
   height: 27px;
-
   border: 0;
   outline: 0;
-
   border-radius: 6px;
-
   background: rgba(255,255,255,.08);
   color: white;
-
   font-size: 14px;
-
   cursor: pointer;
 }
 
@@ -323,29 +247,16 @@ body {
   margin: 0;
 }
 
-/* =========================
-   PIXEL INFO
-========================= */
-
 .pixel-info {
   position: fixed;
   z-index: 1200;
-
   display: none;
-
   width: 190px;
-
   padding: 11px 12px 12px;
-
   background: rgba(18,18,18,.94);
-
   color: white;
-
   border-radius: 6px;
-
-  box-shadow:
-    0 6px 25px rgba(0,0,0,.4);
-
+  box-shadow: 0 6px 25px rgba(0,0,0,.4);
   pointer-events: none;
 }
 
@@ -357,28 +268,21 @@ body {
 
 .pixel-time {
   margin-top: 5px;
-
   font-size: 11px;
   opacity: .65;
 }
 
 .pixel-coords {
   margin-top: 4px;
-
   font-size: 9px;
   opacity: .5;
 }
 
 .pixel-phenomenon {
   margin-top: 6px;
-
   font-size: 11px;
   opacity: .8;
 }
-
-/* =========================
-   LEAFLET
-========================= */
 
 .leaflet-control-zoom {
   margin-top: 65px !important;
@@ -387,10 +291,6 @@ body {
 .leaflet-control-attribution {
   font-size: 8px;
 }
-
-/* =========================
-   MOBILE
-========================= */
 
 @media (max-width: 600px) {
 
@@ -430,30 +330,15 @@ body {
 
   <div class="top-spacer"></div>
 
-  <button
-    id="locateBtn"
-    class="icon-btn"
-    title="Моё местоположение"
-  >⌖</button>
+  <button id="locateBtn" class="icon-btn">⌖</button>
 
-  <button
-    id="searchBtn"
-    class="icon-btn"
-    title="Поиск координат"
-  >⌕</button>
+  <button id="searchBtn" class="icon-btn">⌕</button>
 
-  <button
-    id="panelBtn"
-    class="icon-btn"
-    title="Радар"
-  >☰</button>
+  <button id="panelBtn" class="icon-btn">☰</button>
 
 </div>
 
-<div
-  id="radarPanel"
-  class="radar-panel"
->
+<div id="radarPanel" class="radar-panel">
 
   <div class="panel-head">
 
@@ -483,9 +368,7 @@ body {
         checked
       >
 
-      <span>
-        Отражаемость
-      </span>
+      <span>Отражаемость</span>
 
     </label>
 
@@ -505,9 +388,7 @@ body {
         checked
       >
 
-      <span>
-        Векторы движения
-      </span>
+      <span>Векторы движения</span>
 
     </label>
 
@@ -515,37 +396,19 @@ body {
 
 </div>
 
-<div
-  id="status"
-  class="status"
->
+<div id="status" class="status">
   Загрузка радара…
 </div>
 
-<div
-  id="pixelInfo"
-  class="pixel-info"
->
+<div id="pixelInfo" class="pixel-info">
 
-  <div
-    id="pixelValue"
-    class="pixel-value"
-  >—</div>
+  <div id="pixelValue" class="pixel-value">—</div>
 
-  <div
-    id="pixelTime"
-    class="pixel-time"
-  >—</div>
+  <div id="pixelTime" class="pixel-time">—</div>
 
-  <div
-    id="pixelCoords"
-    class="pixel-coords"
-  >—</div>
+  <div id="pixelCoords" class="pixel-coords">—</div>
 
-  <div
-    id="pixelPhenomenon"
-    class="pixel-phenomenon"
-  >
+  <div id="pixelPhenomenon" class="pixel-phenomenon">
     Отражаемость
   </div>
 
@@ -559,10 +422,7 @@ body {
       Время
     </div>
 
-    <div
-      id="timeValue"
-      class="time-value"
-    >
+    <div id="timeValue" class="time-value">
       —
     </div>
 
@@ -570,15 +430,9 @@ body {
 
   <div class="timeline-controls">
 
-    <button
-      id="prevBtn"
-      class="time-button"
-    >‹</button>
+    <button id="prevBtn" class="time-button">‹</button>
 
-    <button
-      id="playBtn"
-      class="time-button"
-    >▶</button>
+    <button id="playBtn" class="time-button">▶</button>
 
     <input
       id="timeSlider"
@@ -589,10 +443,7 @@ body {
       step="1"
     >
 
-    <button
-      id="nextBtn"
-      class="time-button"
-    >›</button>
+    <button id="nextBtn" class="time-button">›</button>
 
   </div>
 
@@ -737,7 +588,7 @@ function setStatus(text) {
 }
 
 /* =========================================================
-   TIME HELPERS
+   TIME
 ========================================================= */
 
 function formatTime(iso) {
@@ -783,7 +634,7 @@ function isUsableTime(date) {
 }
 
 /* =========================================================
-   PARSE CAPABILITIES
+   CAPABILITIES
 ========================================================= */
 
 function extractTimesFromText(text) {
@@ -815,6 +666,7 @@ function extractTimesFromText(text) {
           layer.children
         ).filter(
           el =>
+            el.localName &&
             el.localName.toLowerCase() === "name"
         );
 
@@ -905,10 +757,7 @@ function extractTimesFromText(text) {
     );
 }
 
-function parseTimeValue(
-  value,
-  result
-) {
+function parseTimeValue(value, result) {
 
   if (!value) {
     return;
@@ -1088,9 +937,7 @@ async function loadCapabilities() {
 
       startInitialPreload();
 
-    }
-
-    else if (
+    } else if (
       autoFollowLatest &&
       currentTime !== newest
     ) {
@@ -1101,16 +948,12 @@ async function loadCapabilities() {
         true
       );
 
-    }
-
-    else {
+    } else {
 
       updateTimelinePosition();
     }
 
-    setStatus(
-      "Готово"
-    );
+    setStatus("Готово");
 
   } catch (error) {
 
@@ -1126,34 +969,81 @@ async function loadCapabilities() {
 }
 
 /* =========================================================
+   EPSG:3857
+========================================================= */
+
+/*
+ * WMS теперь запрашивается в той же проекции,
+ * в которой Leaflet отображает карту.
+ *
+ * Это принципиально важно для ImageOverlay:
+ * картинка и карта имеют одинаковую геометрию.
+ */
+
+function project3857(lat, lon) {
+
+  const point =
+    L.CRS.EPSG3857.project(
+      L.latLng(lat, lon)
+    );
+
+  return point;
+}
+
+function getProjectedBounds() {
+
+  const bounds =
+    map.getBounds();
+
+  const sw =
+    project3857(
+      bounds.getSouth(),
+      bounds.getWest()
+    );
+
+  const ne =
+    project3857(
+      bounds.getNorth(),
+      bounds.getEast()
+    );
+
+  return {
+    south: sw.y,
+    west: sw.x,
+    north: ne.y,
+    east: ne.x,
+
+    latLngBounds:
+      L.latLngBounds(
+        [
+          bounds.getSouth(),
+          bounds.getWest()
+        ],
+        [
+          bounds.getNorth(),
+          bounds.getEast()
+        ]
+      )
+  };
+}
+
+/* =========================================================
    RADAR REQUEST
 ========================================================= */
 
 function getRadarRequest(time) {
 
-  const bounds =
-    map.getBounds();
-
-  const south =
-    bounds.getSouth();
-
-  const west =
-    bounds.getWest();
-
-  const north =
-    bounds.getNorth();
-
-  const east =
-    bounds.getEast();
+  const projected =
+    getProjectedBounds();
 
   const size =
     map.getSize();
 
   const bbox = [
-    west,
-    south,
-    east,
-    north
+    projected.west,
+    projected.south,
+    projected.east,
+    projected.north
   ].join(",");
 
   const width =
@@ -1185,7 +1075,7 @@ function getRadarRequest(time) {
 
       TRANSPARENT: "true",
 
-      SRS: "EPSG:4326",
+      SRS: "EPSG:3857",
 
       BBOX: bbox,
 
@@ -1204,15 +1094,12 @@ function getRadarRequest(time) {
       params.toString(),
 
     bounds:
-      L.latLngBounds(
-        [south, west],
-        [north, east]
-      )
+      projected.latLngBounds
   };
 }
 
 /* =========================================================
-   IMAGE CACHE
+   IMAGE
 ========================================================= */
 
 function loadImage(url) {
@@ -1283,7 +1170,7 @@ function loadImageCached(url) {
 }
 
 /* =========================================================
-   CANDIDATE FRAMES
+   CANDIDATES
 ========================================================= */
 
 function getCandidateTimes(time) {
@@ -1317,23 +1204,19 @@ function applyRadarImage(
   }
 
   /*
-   * Критически важно:
-   * используем границы карты в момент
-   * фактической установки изображения.
+   * НИКОГДА не используем map.getBounds()
+   * здесь.
    *
-   * Если пользователь успел изменить zoom
-   * во время загрузки WMS, старый bounds
-   * больше не используется.
+   * bounds — это именно тот географический
+   * BBOX, для которого был отрисован PNG.
    */
-  const actualBounds =
-    map.getBounds();
 
   if (!currentRadarLayer) {
 
     currentRadarLayer =
       L.imageOverlay(
         img.src,
-        actualBounds,
+        bounds,
         {
           opacity: .72,
           interactive: false
@@ -1343,32 +1226,17 @@ function applyRadarImage(
     return;
   }
 
-  const element =
-    currentRadarLayer.getElement();
+  currentRadarLayer.setUrl(
+    img.src
+  );
 
-  if (element) {
-
-    element.src =
-      img.src;
-
-    currentRadarLayer.setBounds(
-      actualBounds
-    );
-
-  } else {
-
-    currentRadarLayer.setUrl(
-      img.src
-    );
-
-    currentRadarLayer.setBounds(
-      actualBounds
-    );
-  }
+  currentRadarLayer.setBounds(
+    bounds
+  );
 }
 
 /* =========================================================
-   SELECT RADAR TIME
+   SELECT TIME
 ========================================================= */
 
 async function selectTime(
@@ -1399,6 +1267,12 @@ async function selectTime(
 
       return;
     }
+
+    /*
+     * Очень важно:
+     * BBOX фиксируется именно сейчас.
+     * После этого он не меняется.
+     */
 
     const request =
       getRadarRequest(
@@ -1442,6 +1316,11 @@ async function selectTime(
 
         return;
       }
+
+      /*
+       * Используем request.bounds,
+       * а НЕ текущие bounds карты.
+       */
 
       applyRadarImage(
         img,
@@ -1500,7 +1379,7 @@ async function selectTime(
 }
 
 /* =========================================================
-   INITIAL PRELOAD
+   PRELOAD
 ========================================================= */
 
 async function startInitialPreload() {
@@ -1582,7 +1461,7 @@ async function startInitialPreload() {
 }
 
 /* =========================================================
-   TIMELINE POSITION
+   TIMELINE
 ========================================================= */
 
 function updateTimelinePosition() {
@@ -1644,10 +1523,6 @@ function updateTimelinePosition() {
     );
 }
 
-/* =========================================================
-   TIMELINE INPUT
-========================================================= */
-
 timeSlider.addEventListener(
   "input",
   () => {
@@ -1657,9 +1532,7 @@ timeSlider.addEventListener(
         timeSlider.value
       );
 
-    if (
-      !times[index]
-    ) {
+    if (!times[index]) {
       return;
     }
 
@@ -1674,10 +1547,6 @@ timeSlider.addEventListener(
     );
   }
 );
-
-/* =========================================================
-   PREVIOUS
-========================================================= */
 
 prevBtn.addEventListener(
   "click",
@@ -1713,10 +1582,6 @@ prevBtn.addEventListener(
   }
 );
 
-/* =========================================================
-   NEXT
-========================================================= */
-
 nextBtn.addEventListener(
   "click",
   () => {
@@ -1750,10 +1615,6 @@ nextBtn.addEventListener(
     );
   }
 );
-
-/* =========================================================
-   PLAY
-========================================================= */
 
 playBtn.addEventListener(
   "click",
@@ -1852,15 +1713,11 @@ radarToggle.addEventListener(
 );
 
 /* =========================================================
-   VECTOR LAYER
+   VECTORS
 ========================================================= */
 
 const vectorLayer =
   L.layerGroup().addTo(map);
-
-/* =========================================================
-   DESTINATION
-========================================================= */
 
 function destination(
   lon,
@@ -1917,10 +1774,6 @@ function destination(
   ];
 }
 
-/* =========================================================
-   CREATE VECTOR
-========================================================= */
-
 function createVector(
   lat,
   lon,
@@ -1969,13 +1822,7 @@ function createVector(
   ]);
 }
 
-/* =========================================================
-   LOAD VECTORS
-========================================================= */
-
-async function loadVectors(
-  time
-) {
+async function loadVectors(time) {
 
   if (
     !vectorToggle.checked
@@ -2078,16 +1925,13 @@ async function loadVectors(
         continue;
       }
 
-      const vector =
+      vectorLayer.addLayer(
         createVector(
           lat,
           lon,
           dist,
           head
-        );
-
-      vectorLayer.addLayer(
-        vector
+        )
       );
     }
 
@@ -2099,10 +1943,6 @@ async function loadVectors(
     );
   }
 }
-
-/* =========================================================
-   VECTOR TOGGLE
-========================================================= */
 
 vectorToggle.addEventListener(
   "change",
@@ -2132,6 +1972,17 @@ vectorToggle.addEventListener(
    MAP MOVE / ZOOM
 ========================================================= */
 
+/*
+ * Один moveend покрывает:
+ * - zoom
+ * - перетаскивание карты
+ * - setView
+ * - геолокацию
+ * - поиск координат
+ *
+ * При этом старый PNG НЕ трогаем.
+ */
+
 let moveTimer = null;
 
 function refreshRadarAfterMapChange() {
@@ -2149,20 +2000,14 @@ function refreshRadarAfterMapChange() {
         }
 
         /*
-         * Сразу подгоняем существующий
-         * слой под актуальные границы карты.
+         * Старому изображению bounds
+         * НЕ меняем.
+         *
+         * Новый BBOX будет создан внутри
+         * selectTime() и новый PNG получит
+         * именно свой BBOX.
          */
-        if (currentRadarLayer) {
 
-          currentRadarLayer.setBounds(
-            map.getBounds()
-          );
-        }
-
-        /*
-         * После этого запрашиваем WMS
-         * уже с новым BBOX.
-         */
         selectTime(
           currentTime,
           true,
@@ -2179,13 +2024,8 @@ map.on(
   refreshRadarAfterMapChange
 );
 
-map.on(
-  "zoomend",
-  refreshRadarAfterMapChange
-);
-
 /* =========================================================
-   MAP CLICK / PIXEL INFO
+   GET FEATURE INFO
 ========================================================= */
 
 map.on(
@@ -2200,8 +2040,8 @@ map.on(
       return;
     }
 
-    const bounds =
-      map.getBounds();
+    const projected =
+      getProjectedBounds();
 
     const size =
       map.getSize();
@@ -2229,14 +2069,15 @@ map.on(
         INFO_FORMAT:
           "text/html",
 
-        SRS: "EPSG:4326",
+        SRS:
+          "EPSG:3857",
 
         BBOX:
           [
-            bounds.getWest(),
-            bounds.getSouth(),
-            bounds.getEast(),
-            bounds.getNorth()
+            projected.west,
+            projected.south,
+            projected.east,
+            projected.north
           ].join(","),
 
         WIDTH:
@@ -2251,7 +2092,8 @@ map.on(
         Y:
           Math.round(point.y),
 
-        TIME: currentTime
+        TIME:
+          currentTime
       });
 
     const url =
@@ -2281,9 +2123,7 @@ map.on(
         await response.text();
 
       const dbz =
-        parseDbz(
-          text
-        );
+        parseDbz(text);
 
       if (
         dbz === null
@@ -2358,7 +2198,7 @@ map.on(
 );
 
 /* =========================================================
-   DBZ PARSER
+   DBZ
 ========================================================= */
 
 function parseDbz(text) {
@@ -2404,13 +2244,6 @@ function parseDbz(text) {
     return null;
   }
 
-  /*
-   * BALTRAD DBZH:
-   *
-   * dBZ = raw * 0.5 - 32
-   *
-   * 255 = NoData
-   */
   if (
     raw >= 0 &&
     raw <= 254
@@ -2490,7 +2323,7 @@ document
   );
 
 /* =========================================================
-   COORDINATE SEARCH
+   SEARCH
 ========================================================= */
 
 document
@@ -2510,10 +2343,7 @@ document
 
       const parts =
         value
-          .replace(
-            ";",
-            ","
-          )
+          .replace(";", ",")
           .split(",");
 
       if (
@@ -2564,7 +2394,7 @@ document
   );
 
 /* =========================================================
-   PERIODIC UPDATE
+   UPDATE
 ========================================================= */
 
 setInterval(
