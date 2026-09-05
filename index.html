@@ -601,24 +601,6 @@ body {
 }
 
 /* =========================================================
-   DANGER / ОЯ
-========================================================= */
-
-.danger-vector {
-  pointer-events: none;
-}
-
-.danger-arrow {
-  filter:
-    drop-shadow(0 1px 2px rgba(0,0,0,.75));
-}
-
-.danger-origin {
-  filter:
-    drop-shadow(0 1px 2px rgba(0,0,0,.75));
-}
-
-/* =========================================================
    LEAFLET
 ========================================================= */
 
@@ -1008,16 +990,9 @@ const WMS_URL = "/baltrad_wsgi";
 const TARGET_LAYER = "bufr_dbz1";
 
 /*
- * Реальный endpoint ОЯ из оригинального Nowcast demo.js.
+ * ОЯ теперь НЕ являются WMS-слоем.
  *
- * Это НЕ WMS layer.
- *
- * /vector_wsgi возвращает массив:
- *
- * [
- *   [lat, lon, speed_mps, heading_deg],
- *   ...
- * ]
+ * Nowcast отдаёт их через /vector_wsgi.
  */
 
 const DANGER_VECTOR_URL =
@@ -1123,16 +1098,6 @@ let playTimer = null;
 let autoFollowLatest = true;
 
 const radarCache = new Map();
-
-/*
- * Кэш именно JSON ОЯ.
- *
- * key:
- * ISO time
- *
- * value:
- * Promise -> array
- */
 
 const dangerCache = new Map();
 
@@ -1240,8 +1205,6 @@ const opacitySlider =
 
 const opacityValue =
   document.getElementById("opacityValue");
-
-/* Lightning */
 
 const lightningRow =
   document.getElementById(
@@ -1778,6 +1741,17 @@ function isUsableTime(date) {
 }
 
 /* =========================================================
+   DANGER LABEL
+========================================================= */
+
+function updateDangerLabel() {
+
+  dangerLabel.textContent =
+    "Опасные явления";
+
+}
+
+/* =========================================================
    CAPABILITIES
 ========================================================= */
 
@@ -2100,6 +2074,8 @@ async function loadCapabilities() {
 
     const text =
       await response.text();
+
+    updateDangerLabel();
 
     let parsed =
       extractTimesFromText(
@@ -3240,10 +3216,6 @@ function disableDangerLayer() {
 
 }
 
-/*
- * Настоящее удаление радара.
- */
-
 function disableRadarLayer() {
 
   ++radarRequestId;
@@ -3303,13 +3275,99 @@ radarToggle.addEventListener(
 );
 
 /* =========================================================
-   DANGER VECTOR CACHE
+   DANGER VECTOR HELPERS
 ========================================================= */
 
 /*
- * Кэшируем ответ /vector_wsgi отдельно
- * от радарных изображений.
+ * Nowcast /vector_wsgi возвращает:
+ *
+ * [
+ *   [
+ *     lat,
+ *     lon,
+ *     speed,
+ *     heading
+ *   ],
+ *   ...
+ * ]
+ *
+ * speed — м/с
+ * heading — градусы
+ *
+ * Оригинальный demo.js Nowcast:
+ *
+ * dist = speed * 3.6
+ *
+ * затем строится линия от исходной точки
+ * в направлении heading.
  */
+
+/* =========================================================
+   DESTINATION
+========================================================= */
+
+function destination(
+  lon,
+  lat,
+  distanceKm,
+  bearingDeg
+) {
+
+  const R =
+    6371;
+
+  const distance =
+    Number(distanceKm);
+
+  const bearing =
+    Number(bearingDeg) *
+    Math.PI /
+    180;
+
+  const lat1 =
+    Number(lat) *
+    Math.PI /
+    180;
+
+  const lon1 =
+    Number(lon) *
+    Math.PI /
+    180;
+
+  const angularDistance =
+    distance /
+    R;
+
+  const lat2 =
+    Math.asin(
+      Math.sin(lat1) *
+      Math.cos(angularDistance) +
+      Math.cos(lat1) *
+      Math.sin(angularDistance) *
+      Math.cos(bearing)
+    );
+
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(bearing) *
+      Math.sin(angularDistance) *
+      Math.cos(lat1),
+      Math.cos(angularDistance) -
+      Math.sin(lat1) *
+      Math.sin(lat2)
+    );
+
+  return [
+    lat2 * 180 / Math.PI,
+    lon2 * 180 / Math.PI
+  ];
+
+}
+
+/* =========================================================
+   DANGER VECTOR CACHE
+========================================================= */
 
 function loadDangerVectorsCached(
   time
@@ -3326,21 +3384,16 @@ function loadDangerVectorsCached(
 
   }
 
-  const params =
-    new URLSearchParams({
-
-      time:
-        time,
-
-      title:
-        DANGER_TITLE
-
-    });
-
   const url =
     DANGER_VECTOR_URL +
-    "?" +
-    params.toString();
+    "?time=" +
+    encodeURIComponent(
+      time
+    ) +
+    "&title=" +
+    encodeURIComponent(
+      DANGER_TITLE
+    );
 
   const promise =
     fetch(
@@ -3364,7 +3417,43 @@ function loadDangerVectorsCached(
 
           }
 
-          return response.json();
+          return response.text();
+
+        }
+      )
+      .then(
+        text => {
+
+          let data;
+
+          try {
+
+            data =
+              JSON.parse(
+                text
+              );
+
+          } catch (error) {
+
+            throw new Error(
+              "Ответ не является JSON"
+            );
+
+          }
+
+          if (
+            !Array.isArray(
+              data
+            )
+          ) {
+
+            throw new Error(
+              "Ожидался массив ОЯ"
+            );
+
+          }
+
+          return data;
 
         }
       )
@@ -3390,294 +3479,121 @@ function loadDangerVectorsCached(
 }
 
 /* =========================================================
-   DESTINATION
+   CREATE DANGER LINE
 ========================================================= */
 
-/*
- * Это адаптация destination() из оригинального
- * Nowcast demo.js.
- *
- * distKm — расстояние в километрах.
- * headingDeg — направление в градусах.
- */
-
-function destination(
-  lon,
-  lat,
-  distKm,
-  headingDeg
+function createDangerLine(
+  item
 ) {
 
-  const R =
-    6371;
+  if (
+    !Array.isArray(
+      item
+    ) ||
+    item.length < 4
+  ) {
 
-  const lat1 =
-    lat *
-    Math.PI /
-    180;
+    return null;
 
-  const lon1 =
-    lon *
-    Math.PI /
-    180;
+  }
 
-  const bearing =
-    headingDeg *
-    Math.PI /
-    180;
-
-  const distance =
-    distKm /
-    R;
-
-  const lat2 =
-    Math.asin(
-      Math.sin(lat1) *
-      Math.cos(distance) +
-      Math.cos(lat1) *
-      Math.sin(distance) *
-      Math.cos(bearing)
+  const lat =
+    Number(
+      item[0]
     );
 
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(bearing) *
-      Math.sin(distance) *
-      Math.cos(lat1),
-      Math.cos(distance) -
-      Math.sin(lat1) *
-      Math.sin(lat2)
+  const lon =
+    Number(
+      item[1]
     );
 
-  return [
+  const speedMps =
+    Number(
+      item[2]
+    );
 
-    lon2 *
-    180 /
-    Math.PI,
+  const heading =
+    Number(
+      item[3]
+    );
 
-    lat2 *
-    180 /
-    Math.PI
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    !Number.isFinite(speedMps) ||
+    !Number.isFinite(heading)
+  ) {
 
-  ];
+    return null;
 
-}
+  }
 
-/* =========================================================
-   DANGER ARROW
-========================================================= */
+  if (
+    lat < -90 ||
+    lat > 90 ||
+    lon < -180 ||
+    lon > 180
+  ) {
 
-function createDangerArrow(
-  lat,
-  lon,
-  speed,
-  heading
-) {
+    return null;
+
+  }
 
   /*
-   * Оригинальный Nowcast demo делает:
+   * Это соответствует оригинальному
+   * Nowcast demo.js:
    *
-   * dist = speed * 3.6
+   * dist = myArr[i][2] * 3.6
    *
-   * где speed приходит в m/s.
+   * Используем результат как длину
+   * направления в километрах.
    */
 
-  const distKm =
-    speed *
+  const distanceKm =
+    speedMps *
     3.6;
 
-  const destinationPoint =
+  const end =
     destination(
       lon,
       lat,
-      distKm,
+      distanceKm,
       heading
     );
 
-  const endLat =
-    destinationPoint[1];
-
-  const endLon =
-    destinationPoint[0];
-
-  /*
-   * Основная линия движения.
-   */
-
-  const line =
-    L.polyline(
-      [
-        [
-          lat,
-          lon
-        ],
-        [
-          endLat,
-          endLon
-        ]
-      ],
-      {
-
-        pane:
-          "dangerPane",
-
-        color:
-          "#ff3b30",
-
-        weight:
-          3,
-
-        opacity:
-          .95,
-
-        lineCap:
-          "round",
-
-        lineJoin:
-          "round",
-
-        className:
-          "danger-vector"
-
-      }
-    );
-
-  /*
-   * Длина наконечника.
-   */
-
-  const arrowLength =
-    Math.max(
-      0.25,
-      Math.min(
-        1.0,
-        distKm * 0.18
-      )
-    );
-
-  /*
-   * Две боковые точки наконечника.
-   */
-
-  const angle =
-    heading *
-    Math.PI /
-    180;
-
-  /*
-   * destination() работает с направлением
-   * от севера по часовой стрелке.
-   *
-   * Для наконечника используем обратные
-   * направления.
-   */
-
-  const left =
-    destination(
-      endLon,
-      endLat,
-      arrowLength,
-      heading + 150
-    );
-
-  const right =
-    destination(
-      endLon,
-      endLat,
-      arrowLength,
-      heading - 150
-    );
-
-  const arrow =
-    L.polygon(
-      [
-        [
-          endLat,
-          endLon
-        ],
-        [
-          left[1],
-          left[0]
-        ],
-        [
-          right[1],
-          right[0]
-        ]
-      ],
-      {
-
-        pane:
-          "dangerPane",
-
-        color:
-          "#ff3b30",
-
-        weight:
-          1,
-
-        opacity:
-          .95,
-
-        fillColor:
-          "#ff3b30",
-
-        fillOpacity:
-          .95,
-
-        className:
-          "danger-arrow",
-
-        interactive:
-          false
-
-      }
-    );
-
-  /*
-   * Точка начала движения.
-   */
-
-  const origin =
-    L.circleMarker(
+  return L.polyline(
+    [
       [
         lat,
         lon
       ],
-      {
+      end
+    ],
+    {
 
-        pane:
-          "dangerPane",
+      color:
+        "#ff3b30",
 
-        radius:
-          3,
+      weight:
+        3,
 
-        color:
-          "#ffffff",
+      opacity:
+        0.95,
 
-        weight:
-          1,
+      lineCap:
+        "round",
 
-        fillColor:
-          "#ff3b30",
+      lineJoin:
+        "round",
 
-        fillOpacity:
-          1,
+      pane:
+        "dangerPane",
 
-        className:
-          "danger-origin",
+      interactive:
+        false
 
-        interactive:
-          false
-
-      }
-    );
-
-  return [
-    line,
-    arrow,
-    origin
-  ];
+    }
+  );
 
 }
 
@@ -3689,99 +3605,39 @@ function renderDangerVectors(
   data
 ) {
 
-  /*
-   * Старый слой ОЯ полностью заменяем
-   * только после того, как новые данные
-   * успешно получены.
-   */
-
   const group =
-    L.layerGroup(
-      [],
-      {
-        pane:
-          "dangerPane"
-      }
-    );
+    L.layerGroup();
 
-  if (
-    Array.isArray(data)
+  let valid =
+    0;
+
+  for (
+    const item of
+    data
   ) {
 
-    for (
-      const item of data
-    ) {
+    const line =
+      createDangerLine(
+        item
+      );
 
-      if (
-        !Array.isArray(item) ||
-        item.length < 4
-      ) {
-
-        continue;
-
-      }
-
-      const lat =
-        Number(
-          item[0]
-        );
-
-      const lon =
-        Number(
-          item[1]
-        );
-
-      const speed =
-        Number(
-          item[2]
-        );
-
-      const heading =
-        Number(
-          item[3]
-        );
-
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lon) ||
-        !Number.isFinite(speed) ||
-        !Number.isFinite(heading)
-      ) {
-
-        continue;
-
-      }
-
-      if (
-        lat < -90 ||
-        lat > 90 ||
-        lon < -180 ||
-        lon > 180
-      ) {
-
-        continue;
-
-      }
-
-      const objects =
-        createDangerArrow(
-          lat,
-          lon,
-          speed,
-          heading
-        );
-
-      for (
-        const object of objects
-      ) {
-
-        group.addLayer(
-          object
-        );
-
-      }
-
+    if (!line) {
+      continue;
     }
+
+    group.addLayer(
+      line
+    );
+
+    valid++;
+
+  }
+
+  if (
+    !dangerToggle.checked
+  ) {
+
+    return;
 
   }
 
@@ -3818,7 +3674,7 @@ function renderDangerVectors(
 
   }
 
-  return group;
+  return valid;
 
 }
 
@@ -3840,7 +3696,9 @@ async function refreshDanger(
   }
 
   const timeAtRequest =
-    currentTime;
+    String(
+      currentTime
+    );
 
   const requestId =
     ++dangerRequestId;
@@ -3860,10 +3718,6 @@ async function refreshDanger(
         timeAtRequest
       );
 
-    /*
-     * Проверяем, не устарел ли запрос.
-     */
-
     if (
       requestId !==
       dangerRequestId
@@ -3882,7 +3736,9 @@ async function refreshDanger(
     }
 
     if (
-      currentTime !==
+      String(
+        currentTime
+      ) !==
       timeAtRequest
     ) {
 
@@ -3890,35 +3746,34 @@ async function refreshDanger(
 
     }
 
-    renderDangerVectors(
-      data
-    );
-
     const count =
-      Array.isArray(data)
-        ? data.length
-        : 0;
+      renderDangerVectors(
+        data
+      );
+
+    if (
+      count === 0
+    ) {
+
+      setStatus(
+        "ОЯ · " +
+        formatTime(
+          timeAtRequest
+        ) +
+        " · нет объектов"
+      );
+
+      return;
+
+    }
 
     setStatus(
-      "Опасные явления · " +
+      "ОЯ · " +
       formatTime(
-        currentTime
-      )
-    );
-
-    console.log(
-      "Nowcast ОЯ:",
-      {
-        time:
-          timeAtRequest,
-
-        title:
-          DANGER_TITLE,
-
-        count,
-
-        data
-      }
+        timeAtRequest
+      ) +
+      " · объектов: " +
+      count
     );
 
   } catch (error) {
@@ -3933,40 +3788,17 @@ async function refreshDanger(
       dangerRequestId
     ) {
 
-      /*
-       * Если запрос не удался,
-       * старые ОЯ не показываем как
-       * актуальные.
-       */
+      disableDangerLayer();
 
       if (
-        currentDangerLayer
+        dangerToggle.checked
       ) {
 
-        try {
-
-          if (
-            map.hasLayer(
-              currentDangerLayer
-            )
-          ) {
-
-            map.removeLayer(
-              currentDangerLayer
-            );
-
-          }
-
-        } catch (_) {}
+        setStatus(
+          "ОЯ: нет данных"
+        );
 
       }
-
-      currentDangerLayer =
-        null;
-
-      setStatus(
-        "Опасные явления: нет данных"
-      );
 
     }
 
@@ -3985,10 +3817,6 @@ dangerToggle.addEventListener(
     if (
       dangerToggle.checked
     ) {
-
-      /*
-       * ОЯ и отражаемость взаимно исключаются.
-       */
 
       if (
         radarToggle.checked
