@@ -1538,6 +1538,11 @@ function createRadarLayer(time) {
         time:
           time,
 
+        /*
+         * Новый кадр ВСЕГДА
+         * начинается полностью
+         * прозрачным.
+         */
         opacity:
           0,
 
@@ -1954,14 +1959,15 @@ async function selectTime(
 
 
       /*
-       * Новый слой создаётся
-       * полностью прозрачным.
+       * =====================================================
+       * КРИТИЧЕСКАЯ ЧАСТЬ
+       * =====================================================
        *
-       * Дополнительно сразу после
-       * добавления скрываем его
-       * через visibility:hidden.
+       * Новый слой сначала добавляется
+       * невидимым.
        *
-       * Старый кадр остаётся видимым.
+       * Старый кадр при этом остаётся
+       * полностью видимым.
        */
 
       if (
@@ -1975,11 +1981,13 @@ async function selectTime(
 
 
       /*
-       * Получаем контейнер нового
-       * слоя и скрываем его.
+       * Сразу после создания DOM-контейнера
+       * полностью запрещаем его отображение.
        *
-       * Это выполняется сразу после
-       * добавления слоя в Leaflet.
+       * Даже если opacity Leaflet где-то
+       * обработается позже, visibility:hidden
+       * физически не даст новому кадру
+       * попасть на экран.
        */
 
       const hiddenContainer =
@@ -1994,14 +2002,30 @@ async function selectTime(
         hiddenContainer.style.visibility =
           "hidden";
 
+        hiddenContainer.style.opacity =
+          "0";
+
         hiddenContainer.style.pointerEvents =
           "none";
       }
 
 
       /*
-       * Ждём именно событие load.
+       * На всякий случай дополнительно
+       * принудительно оставляем Leaflet layer
+       * прозрачным.
        */
+
+      layer.setOpacity(
+        0
+      );
+
+
+      /*
+       * Ждём полной загрузки нового
+       * набора WMS-тайлов.
+       */
+
       await new Promise(
         (resolve, reject) => {
 
@@ -2107,6 +2131,7 @@ async function selectTime(
            * успел получить тайлы до
            * установки обработчика.
            */
+
           setTimeout(
             () => {
 
@@ -2127,8 +2152,14 @@ async function selectTime(
                 container
               ) {
 
+                /*
+                 * Всё ещё скрыто.
+                 */
                 container.style.visibility =
                   "hidden";
+
+                container.style.opacity =
+                  "0";
               }
 
 
@@ -2187,6 +2218,7 @@ async function selectTime(
        * пользователь мог выбрать
        * другой кадр.
        */
+
       if (
         requestId !== radarRequestId
       ) {
@@ -2206,10 +2238,15 @@ async function selectTime(
 
 
       /*
-       * НОВЫЙ КАДР ПОЛНОСТЬЮ ГОТОВ.
+       * =====================================================
+       * НОВЫЙ КАДР ПОЛНОСТЬЮ ГОТОВ
+       * =====================================================
        *
-       * Сначала показываем контейнер,
-       * затем задаём целевую opacity.
+       * Здесь происходит атомарное
+       * переключение.
+       *
+       * Сначала задаём opacity.
+       * Контейнер всё ещё hidden.
        */
 
       const visibleContainer =
@@ -2217,17 +2254,10 @@ async function selectTime(
         layer.getContainer();
 
 
-      if (
-        visibleContainer
-      ) {
-
-        visibleContainer.style.visibility =
-          "visible";
-
-        visibleContainer.style.pointerEvents =
-          "none";
-      }
-
+      /*
+       * Сначала выставляем нужную
+       * прозрачность, пока слой скрыт.
+       */
 
       layer.setOpacity(
         radarToggle.checked
@@ -2236,10 +2266,88 @@ async function selectTime(
       );
 
 
+      if (
+        visibleContainer
+      ) {
+
+        visibleContainer.style.opacity =
+          radarToggle.checked
+            ? ".72"
+            : "0";
+      }
+
+
       /*
-       * Теперь старый кадр можно
-       * удалить.
+       * Слой ещё НЕ показываем.
+       *
+       * Ждём следующий animation frame,
+       * чтобы браузер успел применить
+       * opacity до снятия visibility:hidden.
        */
+
+      await new Promise(
+        resolve =>
+          requestAnimationFrame(
+            () =>
+              requestAnimationFrame(
+                resolve
+              )
+          )
+      );
+
+
+      /*
+       * Проверяем ещё раз, что запрос
+       * всё ещё актуален.
+       */
+
+      if (
+        requestId !== radarRequestId
+      ) {
+
+        if (
+          map.hasLayer(layer) &&
+          layer !== currentRadarLayer
+        ) {
+
+          map.removeLayer(
+            layer
+          );
+        }
+
+        return;
+      }
+
+
+      /*
+       * Только теперь новый кадр
+       * становится физически видимым.
+       */
+
+      if (
+        visibleContainer
+      ) {
+
+        visibleContainer.style.visibility =
+          "visible";
+
+        visibleContainer.style.opacity =
+          radarToggle.checked
+            ? ".72"
+            : "0";
+
+        visibleContainer.style.pointerEvents =
+          "none";
+      }
+
+
+      /*
+       * Теперь старый кадр можно удалить.
+       *
+       * Поэтому пустого промежутка
+       * между кадрами нет.
+       */
+
       if (
         currentRadarLayer &&
         currentRadarLayer !== layer
@@ -2270,6 +2378,7 @@ async function selectTime(
        * Запоминаем, что этот кадр
        * успешно был загружен.
        */
+
       radarCache.set(
         candidateTime,
         {
