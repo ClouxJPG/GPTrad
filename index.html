@@ -610,40 +610,16 @@ const VECTOR_URL = "/vector_wsgi";
 
 const TARGET_LAYER = "bufr_dbz1";
 
-/*
- * Для векторов используем те же слои,
- * которые использует исходное демо.
- */
 const VECTOR_TITLE =
   "bufr_dbz1,bufr_novosib_dbz1,bufr_vlad_dbz1";
 
-/*
- * 10 минут между кадрами.
- */
 const FRAME_STEP =
   10 * 60 * 1000;
 
-/*
- * Всего показываем 32 кадра.
- *
- * 32 × 10 минут =
- * 5 часов 20 минут.
- */
 const MAX_FRAMES = 32;
 
-/*
- * При первом запуске заранее грузим
- * последние 14 кадров.
- */
 const INITIAL_PRELOAD = 14;
 
-/*
- * Максимум одновременных фоновых
- * загрузок.
- *
- * Это важно для iPhone:
- * не отправляем сразу 14 тяжёлых WMS-запросов.
- */
 const PRELOAD_CONCURRENCY = 2;
 
 /* =========================================================
@@ -687,19 +663,8 @@ let playTimer = null;
 
 let autoFollowLatest = true;
 
-/*
- * Кеш WMS.
- *
- * Ключом является полный URL.
- *
- * Это важно, потому что URL содержит
- * BBOX текущего положения карты.
- */
 const radarCache = new Map();
 
-/*
- * Уже запущенная фоновая предзагрузка.
- */
 let preloadStarted = false;
 
 /* =========================================================
@@ -899,10 +864,6 @@ function extractTimesFromText(text) {
     );
   }
 
-  /*
-   * Fallback.
-   */
-
   if (!result.length) {
 
     const regex =
@@ -953,10 +914,6 @@ function parseTimeValue(
     return;
   }
 
-  /*
-   * Список времён.
-   */
-
   if (
     value.includes(",") &&
     !value.includes("/")
@@ -983,12 +940,6 @@ function parseTimeValue(
 
     return;
   }
-
-  /*
-   * Интервал:
-   *
-   * start/end/step
-   */
 
   const parts =
     value.split("/");
@@ -1096,10 +1047,6 @@ async function loadCapabilities() {
     let parsed =
       extractTimesFromText(text);
 
-    /*
-     * Берём последние 32.
-     */
-
     if (
       parsed.length >
       MAX_FRAMES
@@ -1131,10 +1078,6 @@ async function loadCapabilities() {
     const newest =
       times[times.length - 1];
 
-    /*
-     * Первый запуск.
-     */
-
     if (!currentTime) {
 
       await selectTime(
@@ -1143,12 +1086,6 @@ async function loadCapabilities() {
         true
       );
 
-      /*
-       * Только после того как
-       * первый кадр появился на карте,
-       * запускаем фоновую загрузку
-       * последних 14 кадров.
-       */
       startInitialPreload();
 
     }
@@ -1321,11 +1258,6 @@ function loadImage(url) {
 
 function loadImageCached(url) {
 
-  /*
-   * Если этот URL уже грузится
-   * или был загружен —
-   * используем существующий Promise.
-   */
   if (
     radarCache.has(url)
   ) {
@@ -1337,10 +1269,6 @@ function loadImageCached(url) {
     loadImage(url)
       .catch(error => {
 
-        /*
-         * Ошибочные запросы не держим
-         * в кеше — можно будет повторить.
-         */
         radarCache.delete(url);
 
         throw error;
@@ -1388,12 +1316,24 @@ function applyRadarImage(
     return;
   }
 
+  /*
+   * Критически важно:
+   * используем границы карты в момент
+   * фактической установки изображения.
+   *
+   * Если пользователь успел изменить zoom
+   * во время загрузки WMS, старый bounds
+   * больше не используется.
+   */
+  const actualBounds =
+    map.getBounds();
+
   if (!currentRadarLayer) {
 
     currentRadarLayer =
       L.imageOverlay(
         img.src,
-        bounds,
+        actualBounds,
         {
           opacity: .72,
           interactive: false
@@ -1408,17 +1348,11 @@ function applyRadarImage(
 
   if (element) {
 
-    /*
-     * Просто заменяем картинку.
-     *
-     * Никакого изменения opacity
-     * при переключении кадров.
-     */
     element.src =
       img.src;
 
     currentRadarLayer.setBounds(
-      bounds
+      actualBounds
     );
 
   } else {
@@ -1428,7 +1362,7 @@ function applyRadarImage(
     );
 
     currentRadarLayer.setBounds(
-      bounds
+      actualBounds
     );
   }
 }
@@ -1466,12 +1400,6 @@ async function selectTime(
       return;
     }
 
-    /*
-     * BBOX создаём именно сейчас.
-     *
-     * Он будет сохранён вместе
-     * с результатом загрузки.
-     */
     const request =
       getRadarRequest(
         candidateTime
@@ -1488,12 +1416,6 @@ async function selectTime(
         );
       }
 
-      /*
-       * Грузим новый кадр.
-       *
-       * Старую картинку НЕ трогаем
-       * до успешной загрузки новой.
-       */
       const img =
         await loadImageCached(
           request.url
@@ -1521,11 +1443,6 @@ async function selectTime(
         return;
       }
 
-      /*
-       * Просто заменяем изображение.
-       *
-       * Никаких opacity/visibility.
-       */
       applyRadarImage(
         img,
         request.bounds
@@ -1547,10 +1464,6 @@ async function selectTime(
         );
       }
 
-      /*
-       * Векторы всегда привязаны
-       * к реально показанному кадру.
-       */
       if (
         vectorToggle.checked
       ) {
@@ -1570,10 +1483,6 @@ async function selectTime(
         error
       );
 
-      /*
-       * Если выбранный кадр недоступен —
-       * пробуем предыдущий.
-       */
       continue;
     }
   }
@@ -1602,13 +1511,6 @@ async function startInitialPreload() {
 
   preloadStarted = true;
 
-  /*
-   * Последние 14 кадров.
-   *
-   * Самый последний уже был загружен
-   * через selectTime(), поэтому начинаем
-   * с предыдущих.
-   */
   const start =
     Math.max(
       0,
@@ -1621,10 +1523,6 @@ async function startInitialPreload() {
       times.length - 1
     );
 
-  /*
-   * Очередь с ограничением
-   * количества одновременных запросов.
-   */
   let cursor = 0;
 
   async function worker() {
@@ -2043,9 +1941,6 @@ function createVector(
     [end[1], end[0]]
   ];
 
-  /*
-   * Чёрная обводка.
-   */
   const outline =
     L.polyline(
       points,
@@ -2057,9 +1952,6 @@ function createVector(
       }
     );
 
-  /*
-   * Белая основная линия.
-   */
   const line =
     L.polyline(
       points,
@@ -2237,38 +2129,59 @@ vectorToggle.addEventListener(
 );
 
 /* =========================================================
-   MAP MOVE
+   MAP MOVE / ZOOM
 ========================================================= */
 
 let moveTimer = null;
 
+function refreshRadarAfterMapChange() {
+
+  clearTimeout(
+    moveTimer
+  );
+
+  moveTimer =
+    setTimeout(
+      () => {
+
+        if (!currentTime) {
+          return;
+        }
+
+        /*
+         * Сразу подгоняем существующий
+         * слой под актуальные границы карты.
+         */
+        if (currentRadarLayer) {
+
+          currentRadarLayer.setBounds(
+            map.getBounds()
+          );
+        }
+
+        /*
+         * После этого запрашиваем WMS
+         * уже с новым BBOX.
+         */
+        selectTime(
+          currentTime,
+          true,
+          false
+        );
+
+      },
+      180
+    );
+}
+
 map.on(
   "moveend",
-  () => {
+  refreshRadarAfterMapChange
+);
 
-    clearTimeout(
-      moveTimer
-    );
-
-    moveTimer =
-      setTimeout(
-        () => {
-
-          if (
-            currentTime
-          ) {
-
-            selectTime(
-              currentTime,
-              true,
-              false
-            );
-          }
-
-        },
-        250
-      );
-  }
+map.on(
+  "zoomend",
+  refreshRadarAfterMapChange
 );
 
 /* =========================================================
