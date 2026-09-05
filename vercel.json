@@ -3,6 +3,10 @@
     {
       "source": "/baltrad_wsgi",
       "destination": "/api/baltrad"
+    },
+    {
+      "source": "/vector_wsgi",
+      "destination": "/api/baltrad"
     }
   ]
 }
