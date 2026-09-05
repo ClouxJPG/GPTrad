@@ -818,30 +818,10 @@ const VECTOR_TITLE =
 const FRAME_STEP =
   10 * 60 * 1000;
 
-
-/*
- * ВСЕГО 32 КАДРА.
- */
 const MAX_FRAMES = 32;
 
-
-/*
- * Кадры 17–32 загружаются
- * сразу после открытия сайта.
- *
- * В массиве:
- *
- * 1  = index 0
- * 17 = index 16
- * 32 = index 31
- */
 const PRELOAD_FROM_INDEX = 16;
 
-
-/*
- * Максимум одновременно
- * загружающихся кадров.
- */
 const PRELOAD_CONCURRENCY = 2;
 
 
@@ -891,23 +871,10 @@ let autoFollowLatest = true;
 let preloadStarted = false;
 
 
-/*
- * Кэш кадров.
- *
- * Теперь ключом является ВРЕМЯ,
- * а не BBOX.
- *
- * Это важно:
- * один кадр = одно WMS-изображение.
- */
 const radarCache =
   new Map();
 
 
-/*
- * Кэш Promise для кадров,
- * которые сейчас загружаются.
- */
 const radarLoading =
   new Map();
 
@@ -1209,10 +1176,6 @@ function extractTimesFromText(text) {
   }
 
 
-  /*
-   * Fallback.
-   */
-
   if (
     !result.length
   ) {
@@ -1278,10 +1241,6 @@ function parseTimeValue(
   }
 
 
-  /*
-   * Список времён.
-   */
-
   if (
     value.includes(",") &&
     !value.includes("/")
@@ -1313,10 +1272,6 @@ function parseTimeValue(
     return;
   }
 
-
-  /*
-   * Интервал start/end/step.
-   */
 
   const parts =
     value.split("/");
@@ -1459,10 +1414,6 @@ async function loadCapabilities() {
       );
 
 
-    /*
-     * Берём последние 32.
-     */
-
     if (
       parsed.length >
       MAX_FRAMES
@@ -1504,10 +1455,6 @@ async function loadCapabilities() {
       ];
 
 
-    /*
-     * Первый запуск.
-     */
-
     if (
       !currentTime
     ) {
@@ -1519,11 +1466,6 @@ async function loadCapabilities() {
       );
 
 
-      /*
-       * После появления первого кадра
-       * начинаем фоновую загрузку
-       * кадров 17–32.
-       */
       startInitialPreload();
 
     }
@@ -1596,8 +1538,17 @@ function createRadarLayer(time) {
         time:
           time,
 
+        /*
+         * ВАЖНО:
+         * новый слой создаётся полностью
+         * прозрачным.
+         *
+         * Поэтому он не успевает
+         * кратковременно появиться
+         * с opacity .72.
+         */
         opacity:
-          .72,
+          0,
 
         tileSize:
           256,
@@ -2012,15 +1963,15 @@ async function selectTime(
 
 
       /*
-       * Новый слой добавляется поверх
-       * старого, но пока прозрачный.
+       * Новый слой уже создан
+       * с opacity: 0.
+       *
+       * Поэтому здесь НЕ нужно
+       * дополнительно вызывать
+       * layer.setOpacity(0).
        *
        * Старый кадр остаётся видимым.
        */
-      layer.setOpacity(
-        0
-      );
-
 
       if (
         !map.hasLayer(layer)
