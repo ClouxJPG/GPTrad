@@ -102,6 +102,150 @@ body {
 }
 
 /* =========================
+   SEARCH
+========================= */
+
+.search-panel {
+  position: fixed;
+  z-index: 1150;
+
+  top: 60px;
+  left: 10px;
+
+  width: min(380px, calc(100vw - 20px));
+
+  background: rgba(20,20,20,.95);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border-radius: 10px;
+
+  padding: 10px;
+
+  box-shadow:
+    0 8px 30px rgba(0,0,0,.4);
+
+  transform: translateY(-8px);
+  opacity: 0;
+  pointer-events: none;
+
+  transition:
+    opacity .18s ease,
+    transform .18s ease;
+}
+
+.search-panel.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.search-input-wrap {
+  position: relative;
+}
+
+#placeSearch {
+  width: 100%;
+  height: 38px;
+
+  padding: 0 38px 0 11px;
+
+  border: 0;
+  outline: 0;
+
+  border-radius: 8px;
+
+  background: rgba(255,255,255,.1);
+  color: white;
+
+  font-size: 14px;
+}
+
+#placeSearch::placeholder {
+  color: rgba(255,255,255,.45);
+}
+
+.search-clear {
+  position: absolute;
+
+  right: 5px;
+  top: 5px;
+
+  width: 28px;
+  height: 28px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+  color: rgba(255,255,255,.7);
+
+  font-size: 20px;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-results {
+  margin-top: 7px;
+
+  max-height: 330px;
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.search-result {
+  padding: 9px 10px;
+
+  border-radius: 7px;
+
+  color: white;
+
+  cursor: pointer;
+}
+
+.search-result:active {
+  background: rgba(255,255,255,.15);
+}
+
+.search-result-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.search-result-desc {
+  margin-top: 3px;
+
+  font-size: 10px;
+
+  color: rgba(255,255,255,.55);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-message {
+  padding: 10px;
+
+  color: rgba(255,255,255,.5);
+
+  font-size: 11px;
+}
+
+.search-attribution {
+  margin-top: 7px;
+  padding: 3px 2px 0;
+
+  font-size: 9px;
+
+  color: rgba(255,255,255,.38);
+}
+
+/* =========================
    RADAR PANEL
 ========================= */
 
@@ -400,6 +544,11 @@ body {
     right: 8px;
   }
 
+  .search-panel {
+    top: 60px;
+    left: 8px;
+  }
+
   .radar-panel {
     top: 60px;
     right: 8px;
@@ -439,7 +588,7 @@ body {
   <button
     id="searchBtn"
     class="icon-btn"
-    title="Поиск координат"
+    title="Поиск"
   >⌕</button>
 
   <button
@@ -450,6 +599,51 @@ body {
 
 </div>
 
+
+<!-- =========================
+     SEARCH PANEL
+========================= -->
+
+<div
+  id="searchPanel"
+  class="search-panel"
+>
+
+  <div class="search-input-wrap">
+
+    <input
+      id="placeSearch"
+      type="search"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder="Город, посёлок, деревня…"
+    >
+
+    <button
+      id="searchClear"
+      class="search-clear"
+      type="button"
+    >×</button>
+
+  </div>
+
+  <div
+    id="searchResults"
+    class="search-results"
+  ></div>
+
+  <div class="search-attribution">
+    Поиск: OpenStreetMap Nominatim
+  </div>
+
+</div>
+
+
+<!-- =========================
+     RADAR PANEL
+========================= -->
 
 <div
   id="radarPanel"
@@ -618,39 +812,35 @@ const VECTOR_URL = "/vector_wsgi";
 
 const TARGET_LAYER = "bufr_dbz1";
 
-/*
- * Для векторов используем те же слои,
- * которые использует исходное демо.
- */
 const VECTOR_TITLE =
   "bufr_dbz1,bufr_novosib_dbz1,bufr_vlad_dbz1";
 
-/*
- * 10 минут между кадрами.
- */
 const FRAME_STEP =
   10 * 60 * 1000;
 
-/*
- * Всего показываем 28 кадров.
- *
- * 28 × 10 минут =
- * 4 часа 40 минут.
- */
-const MAX_FRAMES = 28;
 
 /*
- * При первом запуске заранее грузим
- * только последние 14 кадров.
+ * ВСЕГО 32 КАДРА.
  */
-const INITIAL_PRELOAD = 14;
+const MAX_FRAMES = 32;
+
 
 /*
- * Максимум одновременных фоновых
- * загрузок.
+ * Кадры 17–32 загружаются
+ * сразу после открытия сайта.
  *
- * Это важно для iPhone:
- * не отправляем сразу 14 тяжёлых WMS-запросов.
+ * В массиве:
+ *
+ * 1  = index 0
+ * 17 = index 16
+ * 32 = index 31
+ */
+const PRELOAD_FROM_INDEX = 16;
+
+
+/*
+ * Максимум одновременно
+ * загружающихся кадров.
  */
 const PRELOAD_CONCURRENCY = 2;
 
@@ -698,20 +888,28 @@ let playTimer = null;
 
 let autoFollowLatest = true;
 
-/*
- * Кеш WMS.
- *
- * Ключом является полный URL.
- *
- * Это важно, потому что URL содержит
- * BBOX текущего положения карты.
- */
-const radarCache = new Map();
+let preloadStarted = false;
+
 
 /*
- * Уже запущенная фоновая предзагрузка.
+ * Кэш кадров.
+ *
+ * Теперь ключом является ВРЕМЯ,
+ * а не BBOX.
+ *
+ * Это важно:
+ * один кадр = одно WMS-изображение.
  */
-let preloadStarted = false;
+const radarCache =
+  new Map();
+
+
+/*
+ * Кэш Promise для кадров,
+ * которые сейчас загружаются.
+ */
+const radarLoading =
+  new Map();
 
 
 /* =========================================================
@@ -763,18 +961,81 @@ const pixelTime =
 const pixelCoords =
   document.getElementById("pixelCoords");
 
+const searchPanel =
+  document.getElementById("searchPanel");
+
+const searchBtn =
+  document.getElementById("searchBtn");
+
+const placeSearch =
+  document.getElementById("placeSearch");
+
+const searchResults =
+  document.getElementById("searchResults");
+
+const searchClear =
+  document.getElementById("searchClear");
+
 
 /* =========================================================
    PANEL
 ========================================================= */
 
-panelBtn.addEventListener("click", () => {
-  radarPanel.classList.toggle("open");
-});
+panelBtn.addEventListener(
+  "click",
+  () => {
 
-panelClose.addEventListener("click", () => {
-  radarPanel.classList.remove("open");
-});
+    radarPanel.classList.toggle(
+      "open"
+    );
+
+    searchPanel.classList.remove(
+      "open"
+    );
+  }
+);
+
+
+panelClose.addEventListener(
+  "click",
+  () => {
+
+    radarPanel.classList.remove(
+      "open"
+    );
+  }
+);
+
+
+/* =========================================================
+   SEARCH PANEL
+========================================================= */
+
+searchBtn.addEventListener(
+  "click",
+  () => {
+
+    searchPanel.classList.toggle(
+      "open"
+    );
+
+    radarPanel.classList.remove(
+      "open"
+    );
+
+    if (
+      searchPanel.classList.contains(
+        "open"
+      )
+    ) {
+
+      setTimeout(
+        () => placeSearch.focus(),
+        50
+      );
+    }
+  }
+);
 
 
 /* =========================================================
@@ -792,9 +1053,15 @@ function setStatus(text) {
 
 function formatTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
+
     return "—";
   }
 
@@ -810,9 +1077,15 @@ function formatTime(iso) {
 
 function formatDateTime(iso) {
 
-  const d = new Date(iso);
+  const d =
+    new Date(iso);
 
-  if (Number.isNaN(d.getTime())) {
+  if (
+    Number.isNaN(
+      d.getTime()
+    )
+  ) {
+
     return "—";
   }
 
@@ -836,7 +1109,7 @@ function isUsableTime(date) {
 
 
 /* =========================================================
-   PARSE CAPABILITIES
+   CAPABILITIES
 ========================================================= */
 
 function extractTimesFromText(text) {
@@ -856,24 +1129,33 @@ function extractTimesFromText(text) {
 
     const layers =
       Array.from(
-        xml.getElementsByTagName("Layer")
+        xml.getElementsByTagName(
+          "Layer"
+        )
       );
 
     let targetLayer = null;
 
-    for (const layer of layers) {
+
+    for (
+      const layer of layers
+    ) {
 
       const names =
         Array.from(
           layer.children
         ).filter(
           el =>
-            el.localName.toLowerCase() === "name"
+            el.localName &&
+            el.localName.toLowerCase() ===
+            "name"
         );
+
 
       if (
         names.length &&
-        names[0].textContent.trim() === TARGET_LAYER
+        names[0].textContent.trim() ===
+        TARGET_LAYER
       ) {
 
         targetLayer = layer;
@@ -891,7 +1173,10 @@ function extractTimesFromText(text) {
           )
         );
 
-      for (const node of nodes) {
+
+      for (
+        const node of nodes
+      ) {
 
         const name =
           (
@@ -899,9 +1184,14 @@ function extractTimesFromText(text) {
             ""
           ).toLowerCase();
 
-        if (name !== "time") {
+
+        if (
+          name !== "time"
+        ) {
+
           continue;
         }
+
 
         parseTimeValue(
           node.textContent.trim(),
@@ -910,11 +1200,11 @@ function extractTimesFromText(text) {
       }
     }
 
-  } catch (e) {
+  } catch (error) {
 
     console.warn(
-      "XML parse error",
-      e
+      "Capabilities parse error:",
+      error
     );
   }
 
@@ -923,7 +1213,9 @@ function extractTimesFromText(text) {
    * Fallback.
    */
 
-  if (!result.length) {
+  if (
+    !result.length
+  ) {
 
     const regex =
       /20\d\d-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:\.\d+)?Z/g;
@@ -931,12 +1223,20 @@ function extractTimesFromText(text) {
     const matches =
       text.match(regex) || [];
 
-    for (const value of matches) {
+
+    for (
+      const value of matches
+    ) {
 
       const d =
         new Date(value);
 
-      if (!Number.isNaN(d.getTime())) {
+
+      if (
+        !Number.isNaN(
+          d.getTime()
+        )
+      ) {
 
         result.push(
           d.toISOString()
@@ -950,7 +1250,8 @@ function extractTimesFromText(text) {
     ...new Set(result)
   ]
     .map(
-      value => new Date(value)
+      value =>
+        new Date(value)
     )
     .filter(
       isUsableTime
@@ -961,7 +1262,8 @@ function extractTimesFromText(text) {
         b.getTime()
     )
     .map(
-      d => d.toISOString()
+      d =>
+        d.toISOString()
     );
 }
 
@@ -994,8 +1296,11 @@ function parseTimeValue(
           part.trim()
         );
 
+
       if (
-        !Number.isNaN(d.getTime())
+        !Number.isNaN(
+          d.getTime()
+        )
       ) {
 
         result.push(
@@ -1004,20 +1309,22 @@ function parseTimeValue(
       }
     }
 
+
     return;
   }
 
 
   /*
-   * Интервал:
-   *
-   * start/end/step
+   * Интервал start/end/step.
    */
 
   const parts =
     value.split("/");
 
-  if (parts.length >= 2) {
+
+  if (
+    parts.length >= 2
+  ) {
 
     const start =
       new Date(parts[0]);
@@ -1025,67 +1332,85 @@ function parseTimeValue(
     const end =
       new Date(parts[1]);
 
+
     if (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime())
+      Number.isNaN(
+        start.getTime()
+      ) ||
+      Number.isNaN(
+        end.getTime()
+      )
     ) {
 
-      let step =
-        FRAME_STEP;
+      return;
+    }
 
 
-      if (parts[2]) {
+    let step =
+      FRAME_STEP;
 
-        const match =
-          parts[2].match(
-            /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i
+
+    if (
+      parts[2]
+    ) {
+
+      const match =
+        parts[2].match(
+          /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i
+        );
+
+
+      if (match) {
+
+        const hours =
+          Number(
+            match[1] || 0
           );
 
-        if (match) {
+        const minutes =
+          Number(
+            match[2] || 0
+          );
 
-          const hours =
-            Number(match[1] || 0);
+        const seconds =
+          Number(
+            match[3] || 0
+          );
 
-          const minutes =
-            Number(match[2] || 0);
 
-          const seconds =
-            Number(match[3] || 0);
-
-          step =
-            (
-              hours * 3600 +
-              minutes * 60 +
-              seconds
-            ) * 1000;
-        }
+        step =
+          (
+            hours * 3600 +
+            minutes * 60 +
+            seconds
+          ) * 1000;
       }
+    }
 
 
-      const max =
-        Math.min(
-          end.getTime(),
-          Date.now() + 30 * 1000
-        );
+    const max =
+      Math.min(
+        end.getTime(),
+        Date.now() + 30 * 1000
+      );
 
 
-      for (
-        let t = start.getTime();
-        t <= max;
-        t += step
-      ) {
+    for (
+      let t = start.getTime();
+      t <= max;
+      t += step
+    ) {
 
-        result.push(
-          new Date(t).toISOString()
-        );
-      }
+      result.push(
+        new Date(t).toISOString()
+      );
     }
   }
 }
 
 
 /* =========================================================
-   GET CAPABILITIES
+   LOAD CAPABILITIES
 ========================================================= */
 
 async function loadCapabilities() {
@@ -1113,7 +1438,9 @@ async function loadCapabilities() {
       );
 
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
 
       throw new Error(
         "HTTP " +
@@ -1127,11 +1454,13 @@ async function loadCapabilities() {
 
 
     let parsed =
-      extractTimesFromText(text);
+      extractTimesFromText(
+        text
+      );
 
 
     /*
-     * Берём последние 28.
+     * Берём последние 32.
      */
 
     if (
@@ -1146,7 +1475,8 @@ async function loadCapabilities() {
     }
 
 
-    times = parsed;
+    times =
+      parsed;
 
 
     timeSlider.min = 0;
@@ -1158,7 +1488,9 @@ async function loadCapabilities() {
       );
 
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
 
       throw new Error(
         "Временные кадры не найдены"
@@ -1167,14 +1499,18 @@ async function loadCapabilities() {
 
 
     const newest =
-      times[times.length - 1];
+      times[
+        times.length - 1
+      ];
 
 
     /*
      * Первый запуск.
      */
 
-    if (!currentTime) {
+    if (
+      !currentTime
+    ) {
 
       await selectTime(
         newest,
@@ -1184,10 +1520,9 @@ async function loadCapabilities() {
 
 
       /*
-       * Только после того как
-       * первый кадр появился на карте,
-       * запускаем фоновую загрузку
-       * последних 14 кадров.
+       * После появления первого кадра
+       * начинаем фоновую загрузку
+       * кадров 17–32.
        */
       startInitialPreload();
 
@@ -1231,103 +1566,297 @@ async function loadCapabilities() {
 
 
 /* =========================================================
-   RADAR REQUEST
+   RADAR WMS
 ========================================================= */
 
-function getRadarRequest(time) {
+/*
+ * Теперь WMS работает как настоящий
+ * слой карты.
+ *
+ * Это принципиально отличается
+ * от старого ImageOverlay:
+ *
+ * ImageOverlay = одна картинка
+ * на географических bounds.
+ *
+ * WMS TileLayer = карта сама просит
+ * нужные тайлы при каждом zoom/pan.
+ */
+
+function createRadarLayer(time) {
+
+  const layer =
+    L.tileLayer.wms(
+      WMS_URL,
+      {
+        layers:
+          TARGET_LAYER,
+
+        styles:
+          "",
+
+        format:
+          "image/png",
+
+        transparent:
+          true,
+
+        version:
+          "1.1.1",
+
+        srs:
+          "EPSG:3857",
+
+        time:
+          time,
+
+        opacity:
+          .72,
+
+        tileSize:
+          256,
+
+        updateWhenZooming:
+          true,
+
+        updateWhenIdle:
+          true,
+
+        keepBuffer:
+          1,
+
+        crossOrigin:
+          true
+      }
+    );
+
+
+  return layer;
+}
+
+
+/*
+ * Для каждого времени создаём
+ * собственный WMS layer.
+ */
+const radarLayers =
+  new Map();
+
+
+function getRadarLayer(time) {
+
+  if (
+    radarLayers.has(time)
+  ) {
+
+    return radarLayers.get(time);
+  }
+
+
+  const layer =
+    createRadarLayer(
+      time
+    );
+
+
+  radarLayers.set(
+    time,
+    layer
+  );
+
+
+  return layer;
+}
+
+
+/* =========================================================
+   LOAD / PRELOAD RADAR FRAME
+========================================================= */
+
+function preloadRadarFrame(time) {
+
+  if (
+    radarCache.has(time)
+  ) {
+
+    return Promise.resolve(
+      radarCache.get(time)
+    );
+  }
+
+
+  if (
+    radarLoading.has(time)
+  ) {
+
+    return radarLoading.get(time);
+  }
+
+
+  /*
+   * Для фоновой загрузки используем
+   * WMS GetMap текущего viewport.
+   *
+   * Полученное изображение сохраняем
+   * как готовый кадр.
+   *
+   * При реальном отображении карта
+   * использует WMS TileLayer.
+   */
 
   const bounds =
     map.getBounds();
-
-  const south =
-    bounds.getSouth();
-
-  const west =
-    bounds.getWest();
-
-  const north =
-    bounds.getNorth();
-
-  const east =
-    bounds.getEast();
 
   const size =
     map.getSize();
 
 
-  const bbox = [
-    west,
-    south,
-    east,
-    north
-  ].join(",");
-
-
-  const width =
-    Math.max(
-      256,
-      Math.round(size.x)
-    );
-
-  const height =
-    Math.max(
-      256,
-      Math.round(size.y)
-    );
-
-
   const params =
     new URLSearchParams({
 
-      SERVICE: "WMS",
+      SERVICE:
+        "WMS",
 
-      VERSION: "1.1.1",
+      VERSION:
+        "1.1.1",
 
-      REQUEST: "GetMap",
+      REQUEST:
+        "GetMap",
 
-      LAYERS: TARGET_LAYER,
+      LAYERS:
+        TARGET_LAYER,
 
-      STYLES: "",
+      STYLES:
+        "",
 
-      FORMAT: "image/png",
+      FORMAT:
+        "image/png",
 
-      TRANSPARENT: "true",
+      TRANSPARENT:
+        "true",
 
-      SRS: "EPSG:4326",
+      SRS:
+        "EPSG:3857",
 
-      BBOX: bbox,
+      BBOX:
+        getProjectedBBox(
+          bounds
+        ),
 
-      WIDTH: width,
+      WIDTH:
+        Math.max(
+          256,
+          Math.round(
+            size.x
+          )
+        ),
 
-      HEIGHT: height,
+      HEIGHT:
+        Math.max(
+          256,
+          Math.round(
+            size.y
+          )
+        ),
 
-      TIME: time
+      TIME:
+        time
     });
 
 
-  return {
+  const url =
+    WMS_URL +
+    "?" +
+    params.toString();
 
-    url:
-      WMS_URL +
-      "?" +
-      params.toString(),
 
-    /*
-     * Очень важно:
-     * границы принадлежат именно
-     * этому WMS-запросу.
-     */
-    bounds:
-      L.latLngBounds(
-        [south, west],
-        [north, east]
-      )
-  };
+  const promise =
+    loadImage(
+      url
+    )
+    .then(
+      img => {
+
+        radarCache.set(
+          time,
+          {
+            src:
+              img.src,
+
+            loadedAt:
+              Date.now()
+          }
+        );
+
+
+        return radarCache.get(
+          time
+        );
+      }
+    )
+    .catch(
+      error => {
+
+        console.warn(
+          "Preload failed:",
+          time,
+          error
+        );
+
+        throw error;
+
+      }
+    )
+    .finally(
+      () => {
+
+        radarLoading.delete(
+          time
+        );
+      }
+    );
+
+
+  radarLoading.set(
+    time,
+    promise
+  );
+
+
+  return promise;
 }
 
 
 /* =========================================================
-   IMAGE CACHE
+   PROJECTED BBOX
+========================================================= */
+
+function getProjectedBBox(
+  bounds
+) {
+
+  const sw =
+    map.options.crs.project(
+      bounds.getSouthWest()
+    );
+
+  const ne =
+    map.options.crs.project(
+      bounds.getNorthEast()
+    );
+
+
+  return [
+    sw.x,
+    sw.y,
+    ne.x,
+    ne.y
+  ].join(",");
+}
+
+
+/* =========================================================
+   IMAGE LOADER
 ========================================================= */
 
 function loadImage(url) {
@@ -1338,92 +1867,65 @@ function loadImage(url) {
       const img =
         new Image();
 
-      img.onload = () => {
 
-        if (
-          !img.naturalWidth ||
-          !img.naturalHeight
-        ) {
+      img.onload =
+        () => {
+
+          if (
+            !img.naturalWidth ||
+            !img.naturalHeight
+          ) {
+
+            reject(
+              new Error(
+                "Пустое изображение"
+              )
+            );
+
+            return;
+          }
+
+
+          resolve(img);
+        };
+
+
+      img.onerror =
+        () => {
 
           reject(
             new Error(
-              "Пустое изображение"
+              "Изображение не загрузилось"
             )
           );
-
-          return;
-        }
-
-        resolve(img);
-      };
+        };
 
 
-      img.onerror = () => {
-
-        reject(
-          new Error(
-            "Изображение не загрузилось"
-          )
-        );
-      };
-
-
-      img.src = url;
+      img.src =
+        url;
     }
   );
 }
 
 
-function loadImageCached(url) {
-
-  /*
-   * Если этот URL уже грузится
-   * или был загружен —
-   * используем существующий Promise.
-   */
-  if (
-    radarCache.has(url)
-  ) {
-
-    return radarCache.get(url);
-  }
-
-
-  const promise =
-    loadImage(url)
-      .catch(error => {
-
-        /*
-         * Ошибочные запросы не держим
-         * в кеше — можно будет повторить.
-         */
-        radarCache.delete(url);
-
-        throw error;
-      });
-
-
-  radarCache.set(
-    url,
-    promise
-  );
-
-
-  return promise;
-}
-
-
 /* =========================================================
-   CANDIDATE FRAMES
+   GET CANDIDATE TIMES
 ========================================================= */
 
-function getCandidateTimes(time) {
+function getCandidateTimes(
+  time
+) {
 
   const index =
-    times.indexOf(time);
+    times.indexOf(
+      time
+    );
 
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
+
     return [time];
   }
 
@@ -1438,71 +1940,6 @@ function getCandidateTimes(time) {
 
 
 /* =========================================================
-   APPLY RADAR
-========================================================= */
-
-function applyRadarImage(
-  img,
-  bounds
-) {
-
-  if (!radarToggle.checked) {
-    return;
-  }
-
-
-  if (!currentRadarLayer) {
-
-    currentRadarLayer =
-      L.imageOverlay(
-        img.src,
-        bounds,
-        {
-          opacity: .72,
-          interactive: false
-        }
-      ).addTo(map);
-
-
-    return;
-  }
-
-
-  const element =
-    currentRadarLayer.getElement();
-
-
-  if (element) {
-
-    /*
-     * Сначала заменяем картинку.
-     */
-    element.src =
-      img.src;
-
-    /*
-     * И только после этого
-     * устанавливаем ИМЕННО ТЕ bounds,
-     * с которыми был сделан запрос.
-     */
-    currentRadarLayer.setBounds(
-      bounds
-    );
-
-  } else {
-
-    currentRadarLayer.setUrl(
-      img.src
-    );
-
-    currentRadarLayer.setBounds(
-      bounds
-    );
-  }
-}
-
-
-/* =========================================================
    SELECT RADAR TIME
 ========================================================= */
 
@@ -1512,7 +1949,10 @@ async function selectTime(
   allowFallback = true
 ) {
 
-  if (!requestedTime) {
+  if (
+    !requestedTime
+  ) {
+
     return;
   }
 
@@ -1523,7 +1963,9 @@ async function selectTime(
 
   const candidates =
     allowFallback
-      ? getCandidateTimes(requestedTime)
+      ? getCandidateTimes(
+          requestedTime
+        )
       : [requestedTime];
 
 
@@ -1539,77 +1981,268 @@ async function selectTime(
     }
 
 
-    /*
-     * BBOX создаём именно сейчас.
-     *
-     * Он будет сохранён вместе
-     * с результатом загрузки.
-     */
-    const request =
-      getRadarRequest(
-        candidateTime
-      );
-
-
     try {
 
-      if (!fromMapMove) {
+      if (
+        !fromMapMove
+      ) {
 
         setStatus(
           "Загрузка " +
-          formatTime(candidateTime) +
+          formatTime(
+            candidateTime
+          ) +
           "…"
         );
       }
 
 
       /*
-       * Грузим новый кадр,
-       * но старый пока НЕ трогаем.
+       * Если кадр уже был
+       * загружен заранее —
+       * сразу используем его.
        */
-      const img =
-        await loadImageCached(
-          request.url
-        );
-
-
       if (
-        requestId !== radarRequestId
+        radarCache.has(
+          candidateTime
+        )
       ) {
 
-        return;
-      }
+        /*
+         * Удаляем старый WMS layer.
+         */
+        if (
+          currentRadarLayer
+        ) {
 
-
-      try {
-
-        if (img.decode) {
-          await img.decode();
+          map.removeLayer(
+            currentRadarLayer
+          );
         }
 
-      } catch (_) {}
+
+        currentRadarLayer =
+          getRadarLayer(
+            candidateTime
+          );
 
 
-      if (
-        requestId !== radarRequestId
-      ) {
+        if (
+          radarToggle.checked
+        ) {
+
+          currentRadarLayer.addTo(
+            map
+          );
+        }
+
+
+        currentTime =
+          candidateTime;
+
+
+        updateTimelinePosition();
+
+
+        pixelInfo.style.display =
+          "none";
+
+
+        if (
+          vectorToggle.checked
+        ) {
+
+          loadVectors(
+            currentTime
+          );
+        }
+
 
         return;
       }
 
 
       /*
-       * Только теперь меняем изображение
-       * на карте.
+       * Кадр ещё не загружен.
+       *
+       * Для пользователя делаем
+       * приоритетную загрузку.
+       *
+       * Загружаем WMS слой.
        */
-      applyRadarImage(
-        img,
-        request.bounds
+      const layer =
+        getRadarLayer(
+          candidateTime
+        );
+
+
+      /*
+       * Старый слой пока оставляем.
+       */
+      layer.addTo(
+        map
       );
+
+
+      /*
+       * Делаем новый слой невидимым
+       * до завершения первой загрузки.
+       */
+      layer.setOpacity(
+        0
+      );
+
+
+      /*
+       * Ждём первый tile.
+       */
+      await new Promise(
+        (resolve, reject) => {
+
+          let finished =
+            false;
+
+
+          const timeout =
+            setTimeout(
+              () => {
+
+                if (
+                  finished
+                ) {
+
+                  return;
+                }
+
+
+                finished = true;
+
+                reject(
+                  new Error(
+                    "WMS timeout"
+                  )
+                );
+
+              },
+              20000
+            );
+
+
+          const done =
+            () => {
+
+              if (
+                finished
+              ) {
+
+                return;
+              }
+
+
+              finished = true;
+
+              clearTimeout(
+                timeout
+              );
+
+              resolve();
+            };
+
+
+          layer.once(
+            "tileload",
+            done
+          );
+
+
+          layer.once(
+            "tileerror",
+            () => {
+
+              if (
+                finished
+              ) {
+
+                return;
+              }
+
+
+              finished = true;
+
+              clearTimeout(
+                timeout
+              );
+
+              reject(
+                new Error(
+                  "WMS tile error"
+                )
+              );
+            }
+          );
+        }
+      );
+
+
+      if (
+        requestId !== radarRequestId
+      ) {
+
+        map.removeLayer(
+          layer
+        );
+
+        return;
+      }
+
+
+      /*
+       * Теперь новый слой можно
+       * показывать.
+       */
+      layer.setOpacity(
+        radarToggle.checked
+          ? .72
+          : 0
+      );
+
+
+      /*
+       * Старый слой убираем
+       * только после успешной загрузки.
+       */
+      if (
+        currentRadarLayer &&
+        currentRadarLayer !== layer
+      ) {
+
+        map.removeLayer(
+          currentRadarLayer
+        );
+      }
+
+
+      currentRadarLayer =
+        layer;
 
 
       currentTime =
         candidateTime;
+
+
+      /*
+       * Помечаем время как загруженное.
+       *
+       * TileLayer сам хранит тайлы
+       * внутри браузерного кэша.
+       */
+      radarCache.set(
+        candidateTime,
+        {
+          layer: true,
+          loadedAt: Date.now()
+        }
+      );
 
 
       updateTimelinePosition();
@@ -1619,25 +2252,25 @@ async function selectTime(
         "none";
 
 
-      if (!fromMapMove) {
-
-        setStatus(
-          "Отражаемость · " +
-          formatTime(currentTime)
-        );
-      }
-
-
-      /*
-       * Векторы всегда привязаны
-       * к реально показанному кадру.
-       */
       if (
         vectorToggle.checked
       ) {
 
         loadVectors(
           currentTime
+        );
+      }
+
+
+      if (
+        !fromMapMove
+      ) {
+
+        setStatus(
+          "Отражаемость · " +
+          formatTime(
+            currentTime
+          )
         );
       }
 
@@ -1653,10 +2286,23 @@ async function selectTime(
       );
 
 
-      /*
-       * Если выбранный кадр недоступен —
-       * пробуем предыдущий.
-       */
+      const layer =
+        radarLayers.get(
+          candidateTime
+        );
+
+
+      if (
+        layer &&
+        layer !== currentRadarLayer
+      ) {
+
+        map.removeLayer(
+          layer
+        );
+      }
+
+
       continue;
     }
   }
@@ -1666,8 +2312,6 @@ async function selectTime(
     requestId === radarRequestId
   ) {
 
-    updateTimelinePosition();
-
     setStatus(
       "Кадр временно недоступен"
     );
@@ -1676,43 +2320,67 @@ async function selectTime(
 
 
 /* =========================================================
-   INITIAL PRELOAD
+   INITIAL PRELOAD 17–32
 ========================================================= */
 
 async function startInitialPreload() {
 
-  if (preloadStarted) {
+  if (
+    preloadStarted
+  ) {
+
     return;
   }
 
-  preloadStarted = true;
+
+  preloadStarted =
+    true;
 
 
   /*
-   * Последние 14 кадров.
+   * 32 кадра:
    *
-   * Самый последний уже был загружен
-   * через selectTime(), поэтому начинаем
-   * с предыдущих.
+   * index 0  = кадр 1
+   * index 15 = кадр 16
+   * index 16 = кадр 17
+   * index 31 = кадр 32
+   *
+   * Поэтому берём slice(16).
    */
-  const start =
-    Math.max(
-      0,
-      times.length - INITIAL_PRELOAD
-    );
-
-
   const preloadTimes =
     times.slice(
-      start,
-      times.length - 1
+      PRELOAD_FROM_INDEX
     );
 
 
+  if (
+    !preloadTimes.length
+  ) {
+
+    return;
+  }
+
+
   /*
-   * Очередь с ограничением
-   * количества одновременных запросов.
+   * Самый новый кадр №32
+   * уже отображён на карте.
+   *
+   * Его можно исключить из
+   * отдельной фоновой загрузки.
    */
+  const newest =
+    times[
+      times.length - 1
+    ];
+
+
+  const queue =
+    preloadTimes.filter(
+      time =>
+        time !== newest
+    );
+
+
   let cursor = 0;
 
 
@@ -1720,7 +2388,7 @@ async function startInitialPreload() {
 
     while (
       cursor <
-      preloadTimes.length
+      queue.length
     ) {
 
       const index =
@@ -1728,33 +2396,39 @@ async function startInitialPreload() {
 
 
       const time =
-        preloadTimes[index];
+        queue[index];
 
 
       /*
-       * Если пользователь уже двигает карту,
-       * старый BBOX всё равно будет безопасен:
-       * этот URL просто останется в кеше.
+       * Если пользователь уже
+       * загрузил этот кадр —
+       * ничего не делаем.
        */
-      const request =
-        getRadarRequest(
+      if (
+        radarCache.has(
           time
-        );
+        )
+      ) {
+
+        continue;
+      }
 
 
       try {
 
-        await loadImageCached(
-          request.url
+        /*
+         * Фоновая загрузка.
+         */
+        await preloadRadarFrame(
+          time
         );
 
-      } catch (error) {
+      } catch (_) {
 
-        console.warn(
-          "Preload failed:",
-          time,
-          error
-        );
+        /*
+         * Ошибка одного кадра
+         * не останавливает остальные.
+         */
       }
     }
   }
@@ -1767,7 +2441,7 @@ async function startInitialPreload() {
     let i = 0;
     i < Math.min(
       PRELOAD_CONCURRENCY,
-      preloadTimes.length
+      queue.length
     );
     i++
   ) {
@@ -1781,16 +2455,25 @@ async function startInitialPreload() {
   await Promise.all(
     workers
   );
+
+
+  console.log(
+    "Фоновая загрузка кадров 17–32 завершена"
+  );
 }
 
 
 /* =========================================================
-   TIMELINE POSITION
+   TIMELINE
 ========================================================= */
 
 function updateTimelinePosition() {
 
-  if (!currentTime || !times.length) {
+  if (
+    !currentTime ||
+    !times.length
+  ) {
+
     return;
   }
 
@@ -1801,12 +2484,15 @@ function updateTimelinePosition() {
     );
 
 
-  if (index < 0) {
+  if (
+    index < 0
+  ) {
 
     let bestIndex = 0;
 
     let bestDiff =
       Infinity;
+
 
     const target =
       new Date(
@@ -1824,7 +2510,8 @@ function updateTimelinePosition() {
         Math.abs(
           new Date(
             times[i]
-          ).getTime() -
+          ).getTime()
+          -
           target
         );
 
@@ -1833,8 +2520,11 @@ function updateTimelinePosition() {
         diff < bestDiff
       ) {
 
-        bestDiff = diff;
-        bestIndex = i;
+        bestDiff =
+          diff;
+
+        bestIndex =
+          i;
       }
     }
 
@@ -1856,7 +2546,7 @@ function updateTimelinePosition() {
 
 
 /* =========================================================
-   TIMELINE INPUT
+   SLIDER
 ========================================================= */
 
 timeSlider.addEventListener(
@@ -1872,6 +2562,7 @@ timeSlider.addEventListener(
     if (
       !times[index]
     ) {
+
       return;
     }
 
@@ -1882,8 +2573,8 @@ timeSlider.addEventListener(
 
 
     /*
-     * Старый кадр теперь может быть
-     * загружен лениво именно здесь.
+     * Здесь кадр получает
+     * высший приоритет.
      */
     selectTime(
       times[index],
@@ -1902,7 +2593,10 @@ prevBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
+
       return;
     }
 
@@ -1946,7 +2640,10 @@ nextBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
+
       return;
     }
 
@@ -1990,29 +2687,42 @@ playBtn.addEventListener(
   "click",
   () => {
 
-    if (!times.length) {
+    if (
+      !times.length
+    ) {
+
       return;
     }
 
 
-    if (playing) {
+    if (
+      playing
+    ) {
 
-      playing = false;
+      playing =
+        false;
+
 
       clearInterval(
         playTimer
       );
 
-      playTimer = null;
+
+      playTimer =
+        null;
+
 
       playBtn.textContent =
         "▶";
+
 
       return;
     }
 
 
-    playing = true;
+    playing =
+      true;
+
 
     playBtn.textContent =
       "❚❚";
@@ -2070,25 +2780,19 @@ radarToggle.addEventListener(
   "change",
   () => {
 
-    if (!currentRadarLayer) {
+    if (
+      !currentRadarLayer
+    ) {
+
       return;
     }
 
 
-    if (
+    currentRadarLayer.setOpacity(
       radarToggle.checked
-    ) {
-
-      currentRadarLayer.setOpacity(
-        .72
-      );
-
-    } else {
-
-      currentRadarLayer.setOpacity(
-        0
-      );
-    }
+        ? .72
+        : 0
+    );
   }
 );
 
@@ -2098,7 +2802,8 @@ radarToggle.addEventListener(
 ========================================================= */
 
 const vectorLayer =
-  L.layerGroup().addTo(map);
+  L.layerGroup()
+    .addTo(map);
 
 
 /* =========================================================
@@ -2142,6 +2847,7 @@ function destination(
     Math.asin(
       Math.sin(lat1) *
       Math.cos(d) +
+
       Math.cos(lat1) *
       Math.sin(d) *
       Math.cos(brng)
@@ -2162,8 +2868,13 @@ function destination(
 
 
   return [
-    lon2 * 180 / Math.PI,
-    lat2 * 180 / Math.PI
+    lon2 *
+      180 /
+      Math.PI,
+
+    lat2 *
+      180 /
+      Math.PI
   ];
 }
 
@@ -2179,11 +2890,33 @@ function createVector(
   head
 ) {
 
+  /*
+   * BALTRAD:
+   * speed приходит в m/s.
+   *
+   * Переводим в km/h.
+   */
+  const speed =
+    dist;
+
+
+  /*
+   * Минимальная длина нужна,
+   * чтобы слабые векторы тоже
+   * были заметны на карте.
+   */
+  const vectorDistance =
+    Math.max(
+      speed,
+      3
+    );
+
+
   const end =
     destination(
       lon,
       lat,
-      dist,
+      vectorDistance,
       head
     );
 
@@ -2201,25 +2934,39 @@ function createVector(
     L.polyline(
       points,
       {
-        color: "#000000",
-        weight: 3,
-        opacity: .95,
-        interactive: false
+        color:
+          "#000000",
+
+        weight:
+          4,
+
+        opacity:
+          .95,
+
+        interactive:
+          false
       }
     );
 
 
   /*
-   * Белая основная линия.
+   * Белая линия.
    */
   const line =
     L.polyline(
       points,
       {
-        color: "#ffffff",
-        weight: 1.5,
-        opacity: 1,
-        interactive: false
+        color:
+          "#ffffff",
+
+        weight:
+          1.8,
+
+        opacity:
+          1,
+
+        interactive:
+          false
       }
     );
 
@@ -2254,51 +3001,156 @@ async function loadVectors(
 
 
   /*
-   * ВАЖНО:
-   * используем сразу три названия,
-   * как в исходном демо.
+   * Сначала пробуем точный запрос
+   * исходного демо.
    */
-  const url =
+  const urls = [
     VECTOR_URL +
-    "?time=" +
-    encodeURIComponent(time) +
-    "&title=" +
-    encodeURIComponent(
-      VECTOR_TITLE
-    );
+      "?time=" +
+      encodeURIComponent(
+        time
+      ) +
+      "&title=" +
+      encodeURIComponent(
+        VECTOR_TITLE
+      )
+  ];
+
+
+  /*
+   * Если ответ пустой,
+   * дополнительно попробуем
+   * отдельные названия.
+   */
+  const individualTitles = [
+    "bufr_dbz1",
+    "bufr_novosib_dbz1",
+    "bufr_vlad_dbz1"
+  ];
 
 
   try {
 
-    const response =
+    let data =
+      [];
+
+
+    let firstResponse =
       await fetch(
-        url,
+        urls[0],
         {
-          cache: "no-store"
+          cache:
+            "no-store"
         }
       );
 
 
-    if (!response.ok) {
+    if (
+      !firstResponse.ok
+    ) {
 
       throw new Error(
         "HTTP " +
-        response.status
+        firstResponse.status
       );
     }
 
 
-    const data =
-      await response.json();
+    const firstData =
+      await firstResponse.json();
+
+
+    if (
+      Array.isArray(
+        firstData
+      )
+    ) {
+
+      data =
+        firstData;
+    }
 
 
     /*
-     * Проверяем, что ответ ещё
-     * относится к текущему кадру.
+     * Если общий запрос пустой,
+     * пробуем отдельные title.
      */
     if (
-      requestId !== vectorRequestId ||
-      time !== currentTime ||
+      !data.length
+    ) {
+
+      for (
+        const title of individualTitles
+      ) {
+
+        try {
+
+          const response =
+            await fetch(
+              VECTOR_URL +
+                "?time=" +
+                encodeURIComponent(
+                  time
+                ) +
+                "&title=" +
+                encodeURIComponent(
+                  title
+                ),
+              {
+                cache:
+                  "no-store"
+              }
+            );
+
+
+          if (
+            !response.ok
+          ) {
+
+            continue;
+          }
+
+
+          const part =
+            await response.json();
+
+
+          if (
+            Array.isArray(
+              part
+            )
+          ) {
+
+            data =
+              data.concat(
+                part
+              );
+          }
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Vector fallback error:",
+            title,
+            error
+          );
+        }
+      }
+    }
+
+
+    /*
+     * Проверяем актуальность.
+     */
+    if (
+      requestId !==
+        vectorRequestId ||
+
+      time !==
+        currentTime ||
+
       !vectorToggle.checked
     ) {
 
@@ -2309,9 +3161,22 @@ async function loadVectors(
     vectorLayer.clearLayers();
 
 
-    if (!Array.isArray(data)) {
+    if (
+      !Array.isArray(
+        data
+      )
+    ) {
+
       return;
     }
+
+
+    /*
+     * Чтобы одинаковые векторы
+     * из fallback не дублировались.
+     */
+    const seen =
+      new Set();
 
 
     for (
@@ -2319,7 +3184,9 @@ async function loadVectors(
     ) {
 
       if (
-        !Array.isArray(item) ||
+        !Array.isArray(
+          item
+        ) ||
         item.length < 4
       ) {
 
@@ -2328,32 +3195,48 @@ async function loadVectors(
 
 
       const lat =
-        Number(item[0]);
+        Number(
+          item[0]
+        );
 
       const lon =
-        Number(item[1]);
+        Number(
+          item[1]
+        );
 
-      const dist =
-        Number(item[2]) * 3.6;
+      const speedMps =
+        Number(
+          item[2]
+        );
 
       const head =
-        Number(item[3]);
+        Number(
+          item[3]
+        );
 
 
       if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lon) ||
-        !Number.isFinite(dist) ||
-        !Number.isFinite(head)
+        !Number.isFinite(
+          lat
+        ) ||
+
+        !Number.isFinite(
+          lon
+        ) ||
+
+        !Number.isFinite(
+          speedMps
+        ) ||
+
+        !Number.isFinite(
+          head
+        )
       ) {
 
         continue;
       }
 
 
-      /*
-       * Отбрасываем явно битые координаты.
-       */
       if (
         lat < -90 ||
         lat > 90 ||
@@ -2365,11 +3248,40 @@ async function loadVectors(
       }
 
 
+      const key =
+        [
+          lat.toFixed(5),
+          lon.toFixed(5),
+          speedMps.toFixed(2),
+          head.toFixed(1)
+        ].join("|");
+
+
+      if (
+        seen.has(
+          key
+        )
+      ) {
+
+        continue;
+      }
+
+
+      seen.add(
+        key
+      );
+
+
+      const speedKmh =
+        speedMps *
+        3.6;
+
+
       const vector =
         createVector(
           lat,
           lon,
-          dist,
+          speedKmh,
           head
         );
 
@@ -2379,6 +3291,11 @@ async function loadVectors(
       );
     }
 
+
+    console.log(
+      "Vectors:",
+      data.length
+    );
 
   } catch (error) {
 
@@ -2410,7 +3327,9 @@ vectorToggle.addEventListener(
     }
 
 
-    if (currentTime) {
+    if (
+      currentTime
+    ) {
 
       loadVectors(
         currentTime
@@ -2445,27 +3364,30 @@ map.on(
           ) {
 
             /*
-             * Новый запрос получает
-             * новый BBOX карты.
+             * WMS TileLayer теперь
+             * самостоятельно подгружает
+             * правильные тайлы при zoom/pan.
              *
-             * При этом время не меняется.
+             * Поэтому здесь НЕ надо
+             * заново менять BBOX картинки.
              */
-            selectTime(
-              currentTime,
-              true,
-              false
-            );
+            if (
+              currentRadarLayer
+            ) {
+
+              currentRadarLayer.redraw();
+            }
           }
 
         },
-        250
+        150
       );
   }
 );
 
 
 /* =========================================================
-   MAP CLICK / PIXEL INFO
+   GETFEATUREINFO
 ========================================================= */
 
 map.on(
@@ -2484,7 +3406,6 @@ map.on(
     const bounds =
       map.getBounds();
 
-
     const size =
       map.getSize();
 
@@ -2498,44 +3419,57 @@ map.on(
     const params =
       new URLSearchParams({
 
-        SERVICE: "WMS",
+        SERVICE:
+          "WMS",
 
-        VERSION: "1.1.1",
+        VERSION:
+          "1.1.1",
 
-        REQUEST: "GetFeatureInfo",
+        REQUEST:
+          "GetFeatureInfo",
 
-        LAYERS: TARGET_LAYER,
+        LAYERS:
+          TARGET_LAYER,
 
-        QUERY_LAYERS: TARGET_LAYER,
+        QUERY_LAYERS:
+          TARGET_LAYER,
 
-        STYLES: "",
+        STYLES:
+          "",
 
         INFO_FORMAT:
           "text/html",
 
-        SRS: "EPSG:4326",
+        SRS:
+          "EPSG:3857",
 
         BBOX:
-          [
-            bounds.getWest(),
-            bounds.getSouth(),
-            bounds.getEast(),
-            bounds.getNorth()
-          ].join(","),
+          getProjectedBBox(
+            bounds
+          ),
 
         WIDTH:
-          Math.round(size.x),
+          Math.round(
+            size.x
+          ),
 
         HEIGHT:
-          Math.round(size.y),
+          Math.round(
+            size.y
+          ),
 
         X:
-          Math.round(point.x),
+          Math.round(
+            point.x
+          ),
 
         Y:
-          Math.round(point.y),
+          Math.round(
+            point.y
+          ),
 
-        TIME: currentTime
+        TIME:
+          currentTime
       });
 
 
@@ -2551,12 +3485,15 @@ map.on(
         await fetch(
           url,
           {
-            cache: "no-store"
+            cache:
+              "no-store"
           }
         );
 
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
 
         throw new Error(
           "HTTP " +
@@ -2597,9 +3534,13 @@ map.on(
 
 
       pixelCoords.textContent =
-        event.latlng.lat.toFixed(4) +
+        event.latlng.lat.toFixed(
+          4
+        ) +
         "°, " +
-        event.latlng.lng.toFixed(4) +
+        event.latlng.lng.toFixed(
+          4
+        ) +
         "°";
 
 
@@ -2607,18 +3548,24 @@ map.on(
         "block";
 
 
-      const margin = 10;
+      const margin =
+        10;
+
 
       let left =
-        event.containerPoint.x + 15;
+        event.containerPoint.x +
+        15;
+
 
       let top =
-        event.containerPoint.y + 15;
+        event.containerPoint.y +
+        15;
 
 
       if (
         left + 190 >
-        window.innerWidth - margin
+        window.innerWidth -
+        margin
       ) {
 
         left =
@@ -2629,7 +3576,8 @@ map.on(
 
       if (
         top + 130 >
-        window.innerHeight - margin
+        window.innerHeight -
+        margin
       ) {
 
         top =
@@ -2643,7 +3591,6 @@ map.on(
 
       pixelInfo.style.top =
         top + "px";
-
 
     } catch (error) {
 
@@ -2660,7 +3607,9 @@ map.on(
    DBZ PARSER
 ========================================================= */
 
-function parseDbz(text) {
+function parseDbz(
+  text
+) {
 
   const explicit =
     text.match(
@@ -2668,7 +3617,9 @@ function parseDbz(text) {
     );
 
 
-  if (explicit) {
+  if (
+    explicit
+  ) {
 
     const value =
       Number(
@@ -2677,7 +3628,9 @@ function parseDbz(text) {
 
 
     if (
-      Number.isFinite(value)
+      Number.isFinite(
+        value
+      )
     ) {
 
       return value;
@@ -2691,7 +3644,10 @@ function parseDbz(text) {
     );
 
 
-  if (!rawMatch) {
+  if (
+    !rawMatch
+  ) {
+
     return null;
   }
 
@@ -2703,27 +3659,24 @@ function parseDbz(text) {
 
 
   if (
-    !Number.isFinite(raw)
+    !Number.isFinite(
+      raw
+    )
   ) {
 
     return null;
   }
 
 
-  /*
-   * BALTRAD DBZH:
-   *
-   * dBZ = raw * 0.5 - 32
-   *
-   * 255 = NoData
-   */
   if (
     raw >= 0 &&
     raw <= 254
   ) {
 
     return (
-      raw * .5 - 32
+      raw *
+      .5 -
+      32
     );
   }
 
@@ -2751,7 +3704,9 @@ map.on(
 ========================================================= */
 
 document
-  .getElementById("locateBtn")
+  .getElementById(
+    "locateBtn"
+  )
   .addEventListener(
     "click",
     () => {
@@ -2792,9 +3747,14 @@ document
         },
 
         {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000
+          enableHighAccuracy:
+            true,
+
+          timeout:
+            10000,
+
+          maximumAge:
+            30000
         }
       );
     }
@@ -2802,84 +3762,758 @@ document
 
 
 /* =========================================================
-   COORDINATE SEARCH
+   PLACE SEARCH
 ========================================================= */
 
-document
-  .getElementById("searchBtn")
-  .addEventListener(
-    "click",
-    () => {
+let searchTimer =
+  null;
 
-      const value =
-        prompt(
-          "Введите координаты:\n\nНапример:\n54.74, 55.97"
-        );
+let searchController =
+  null;
+
+let lastSearchTime =
+  0;
 
 
-      if (!value) {
-        return;
-      }
+/*
+ * Не чаще примерно одного запроса
+ * в секунду к публичному Nominatim.
+ */
+const SEARCH_MIN_INTERVAL =
+  1100;
 
 
-      const parts =
-        value
-          .replace(
-            ";",
-            ","
+function normalizeSearch(
+  value
+) {
+
+  return value
+    .trim()
+    .toLocaleLowerCase(
+      "ru-RU"
+    );
+}
+
+
+function getPlaceType(
+  result
+) {
+
+  const type =
+    (
+      result.type ||
+      result.addresstype ||
+      ""
+    ).toLowerCase();
+
+
+  const address =
+    result.address ||
+    {};
+
+
+  if (
+    type === "city" ||
+    address.city
+  ) {
+
+    return "Город";
+  }
+
+
+  if (
+    type === "town" ||
+    address.town
+  ) {
+
+    return "Город";
+  }
+
+
+  if (
+    type === "village" ||
+    address.village
+  ) {
+
+    return "Деревня / село";
+  }
+
+
+  if (
+    type === "hamlet" ||
+    address.hamlet
+  ) {
+
+    return "Деревня / хутор";
+  }
+
+
+  if (
+    type === "municipality"
+  ) {
+
+    return "Муниципалитет";
+  }
+
+
+  if (
+    type === "suburb" ||
+    type === "neighbourhood"
+  ) {
+
+    return "Район";
+  }
+
+
+  return "Населённый пункт";
+}
+
+
+function getPlaceName(
+  result
+) {
+
+  if (
+    result.name
+  ) {
+
+    return result.name;
+  }
+
+
+  const address =
+    result.address ||
+    {};
+
+
+  return (
+    address.city ||
+    address.town ||
+    address.village ||
+    address.hamlet ||
+    result.display_name ||
+    "Без названия"
+  );
+}
+
+
+function getPlaceDescription(
+  result
+) {
+
+  const address =
+    result.address ||
+    {};
+
+
+  const parts = [];
+
+
+  const region =
+    address.state ||
+    address.region;
+
+
+  const district =
+    address.county ||
+    address.city_district;
+
+
+  const country =
+    address.country;
+
+
+  if (
+    region
+  ) {
+
+    parts.push(
+      region
+    );
+  }
+
+
+  if (
+    district
+  ) {
+
+    parts.push(
+      district
+    );
+  }
+
+
+  if (
+    country
+  ) {
+
+    parts.push(
+      country
+    );
+  }
+
+
+  if (
+    parts.length
+  ) {
+
+    return parts.join(
+      " · "
+    );
+  }
+
+
+  return result.display_name ||
+    "";
+}
+
+
+/*
+ * Сортируем так, чтобы
+ *
+ * "Моск"
+ *
+ * прежде всего показывал
+ *
+ * "Москва"
+ *
+ * а не случайные совпадения.
+ */
+function sortSearchResults(
+  results,
+  query
+) {
+
+  const normalized =
+    normalizeSearch(
+      query
+    );
+
+
+  return results
+    .map(
+      (result, index) => {
+
+        const name =
+          normalizeSearch(
+            getPlaceName(
+              result
+            )
+          );
+
+
+        let score =
+          0;
+
+
+        if (
+          name === normalized
+        ) {
+
+          score =
+            1000;
+
+        } else if (
+          name.startsWith(
+            normalized
           )
-          .split(",");
+        ) {
+
+          score =
+            900;
+
+        } else if (
+          name.includes(
+            normalized
+          )
+        ) {
+
+          score =
+            700;
+        }
 
 
-      if (
-        parts.length < 2
-      ) {
+        score +=
+          Number(
+            result.importance ||
+            0
+          ) * 10;
 
-        alert(
-          "Неверный формат координат"
-        );
 
-        return;
+        return {
+          result,
+          score,
+          index
+        };
       }
+    )
+    .sort(
+      (a,b) => {
+
+        if (
+          b.score !==
+          a.score
+        ) {
+
+          return b.score -
+            a.score;
+        }
 
 
-      const lat =
-        Number(
-          parts[0].trim()
-        );
-
-      const lon =
-        Number(
-          parts[1].trim()
-        );
-
-
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lon) ||
-        lat < -90 ||
-        lat > 90 ||
-        lon < -180 ||
-        lon > 180
-      ) {
-
-        alert(
-          "Неверные координаты"
-        );
-
-        return;
+        return a.index -
+          b.index;
       }
+    )
+    .map(
+      item =>
+        item.result
+    );
+}
 
 
-      map.setView(
-        [lat, lon],
-        Math.max(
-          map.getZoom(),
-          8
+function showSearchMessage(
+  text
+) {
+
+  searchResults.innerHTML =
+    "";
+
+
+  const div =
+    document.createElement(
+      "div"
+    );
+
+
+  div.className =
+    "search-message";
+
+
+  div.textContent =
+    text;
+
+
+  searchResults.appendChild(
+    div
+  );
+}
+
+
+function renderSearchResults(
+  results
+) {
+
+  searchResults.innerHTML =
+    "";
+
+
+  if (
+    !results.length
+  ) {
+
+    showSearchMessage(
+      "Ничего не найдено"
+    );
+
+    return;
+  }
+
+
+  for (
+    const result of results
+  ) {
+
+    const item =
+      document.createElement(
+        "div"
+      );
+
+
+    item.className =
+      "search-result";
+
+
+    const name =
+      document.createElement(
+        "div"
+      );
+
+
+    name.className =
+      "search-result-name";
+
+
+    name.textContent =
+      getPlaceName(
+        result
+      );
+
+
+    const desc =
+      document.createElement(
+        "div"
+      );
+
+
+    desc.className =
+      "search-result-desc";
+
+
+    desc.textContent =
+      getPlaceType(
+        result
+      ) +
+      " · " +
+      getPlaceDescription(
+        result
+      );
+
+
+    item.appendChild(
+      name
+    );
+
+
+    item.appendChild(
+      desc
+    );
+
+
+    item.addEventListener(
+      "click",
+      () => {
+
+        const lat =
+          Number(
+            result.lat
+          );
+
+        const lon =
+          Number(
+            result.lon
+          );
+
+
+        if (
+          !Number.isFinite(
+            lat
+          ) ||
+          !Number.isFinite(
+            lon
+          )
+        ) {
+
+          return;
+        }
+
+
+        map.flyTo(
+          [lat, lon],
+          Math.max(
+            map.getZoom(),
+            10
+          ),
+          {
+            duration:
+              .7
+          }
+        );
+
+
+        searchPanel.classList.remove(
+          "open"
+        );
+
+
+        placeSearch.blur();
+
+
+        pixelInfo.style.display =
+          "none";
+      }
+    );
+
+
+    searchResults.appendChild(
+      item
+    );
+  }
+}
+
+
+async function searchPlaces(
+  query
+) {
+
+  const normalized =
+    normalizeSearch(
+      query
+    );
+
+
+  if (
+    normalized.length < 2
+  ) {
+
+    searchResults.innerHTML =
+      "";
+
+    return;
+  }
+
+
+  /*
+   * Отменяем предыдущий запрос.
+   */
+  if (
+    searchController
+  ) {
+
+    searchController.abort();
+  }
+
+
+  searchController =
+    new AbortController();
+
+
+  /*
+   * Соблюдаем паузу между запросами.
+   */
+  const elapsed =
+    Date.now() -
+    lastSearchTime;
+
+
+  if (
+    elapsed <
+    SEARCH_MIN_INTERVAL
+  ) {
+
+    await new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          SEARCH_MIN_INTERVAL -
+          elapsed
         )
+    );
+  }
+
+
+  lastSearchTime =
+    Date.now();
+
+
+  showSearchMessage(
+    "Поиск…"
+  );
+
+
+  try {
+
+    const params =
+      new URLSearchParams({
+
+        q:
+          query.trim(),
+
+        format:
+          "jsonv2",
+
+        addressdetails:
+          "1",
+
+        namedetails:
+          "1",
+
+        limit:
+          "10",
+
+        featureType:
+          "settlement",
+
+        "accept-language":
+          "ru"
+      });
+
+
+    const response =
+      await fetch(
+        "https://nominatim.openstreetmap.org/search?" +
+        params.toString(),
+        {
+          signal:
+            searchController.signal,
+
+          cache:
+            "no-store"
+        }
+      );
+
+
+    if (
+      !response.ok
+    ) {
+
+      throw new Error(
+        "HTTP " +
+        response.status
       );
     }
-  );
+
+
+    const data =
+      await response.json();
+
+
+    /*
+     * Проверяем, что пользователь
+     * не успел изменить запрос.
+     */
+    if (
+      normalizeSearch(
+        placeSearch.value
+      ) !==
+      normalized
+    ) {
+
+      return;
+    }
+
+
+    const sorted =
+      sortSearchResults(
+        Array.isArray(data)
+          ? data
+          : [],
+        query
+      );
+
+
+    renderSearchResults(
+      sorted
+    );
+
+  } catch (error) {
+
+    if (
+      error.name ===
+      "AbortError"
+    ) {
+
+      return;
+    }
+
+
+    console.warn(
+      "Place search error:",
+      error
+    );
+
+
+    showSearchMessage(
+      "Ошибка поиска"
+    );
+  }
+}
+
+
+/* =========================================================
+   SEARCH INPUT
+========================================================= */
+
+placeSearch.addEventListener(
+  "input",
+  () => {
+
+    const value =
+      placeSearch.value.trim();
+
+
+    searchClear.style.display =
+      value
+        ? "flex"
+        : "none";
+
+
+    clearTimeout(
+      searchTimer
+    );
+
+
+    if (
+      value.length < 2
+    ) {
+
+      searchResults.innerHTML =
+        "";
+
+      return;
+    }
+
+
+    searchTimer =
+      setTimeout(
+        () => {
+
+          searchPlaces(
+            value
+          );
+
+        },
+        650
+      );
+  }
+);
+
+
+/* =========================================================
+   SEARCH CLEAR
+========================================================= */
+
+searchClear.addEventListener(
+  "click",
+  () => {
+
+    placeSearch.value =
+      "";
+
+    searchResults.innerHTML =
+      "";
+
+    searchClear.style.display =
+      "none";
+
+
+    placeSearch.focus();
+  }
+);
+
+
+/* =========================================================
+   ESCAPE
+========================================================= */
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key ===
+      "Escape"
+    ) {
+
+      searchPanel.classList.remove(
+        "open"
+      );
+
+      radarPanel.classList.remove(
+        "open"
+      );
+    }
+  }
+);
 
 
 /* =========================================================
