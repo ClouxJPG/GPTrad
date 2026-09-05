@@ -1,8 +1,19 @@
-const UPSTREAM = "https://www.nowcast.ru/baltrad_wsgi";
+const UPSTREAMS = {
+  "/baltrad_wsgi": "https://www.nowcast.ru/baltrad_wsgi",
+  "/vector_wsgi": "https://www.nowcast.ru/vector_wsgi"
+};
 
 module.exports = async function handler(req, res) {
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    return res.status(204).end();
+  }
+
   if (req.method !== "GET") {
-    return res.status(405).send("GET only");
+    res.setHeader("Allow", "GET, OPTIONS");
+    return res.status(405).send("Method Not Allowed");
   }
 
   const incoming = new URL(
@@ -10,62 +21,82 @@ module.exports = async function handler(req, res) {
     "https://gptrad-proxy.invalid"
   );
 
-  const url = new URL(UPSTREAM);
-  url.search = incoming.search;
+  // Determine which endpoint was requested.
+  const pathname = incoming.pathname;
 
-  const results = {};
+  const upstreamBase = UPSTREAMS[pathname];
 
-  // TEST A — максимально похож на браузер
+  if (!upstreamBase) {
+    return res.status(404).send("Unknown proxy endpoint");
+  }
+
+  const upstream = new URL(upstreamBase);
+
+  // Preserve ALL query parameters.
+  upstream.search = incoming.search;
+
   try {
-    const r = await fetch(url.toString(), {
+    const response = await fetch(upstream.toString(), {
       method: "GET",
       headers: {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://www.nowcast.ru/",
-        "Origin": "https://www.nowcast.ru",
-        "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) " +
-          "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
-          "Version/18.7 Mobile/15E148 Safari/604.1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "same-origin"
+        "Accept": req.headers.accept || "*/*",
+        "User-Agent": "GPTrad-Vercel-Proxy/1.0"
       }
     });
 
-    results.browserLike = {
-      status: r.status,
-      contentType: r.headers.get("content-type"),
-      body: (await r.text()).slice(0, 500)
-    };
-  } catch (e) {
-    results.browserLike = {
-      error: e.message
-    };
+    const body = Buffer.from(
+      await response.arrayBuffer()
+    );
+
+    res.status(response.status);
+
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      "*"
+    );
+
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, OPTIONS"
+    );
+
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "*"
+    );
+
+    const contentType =
+      response.headers.get("content-type");
+
+    if (contentType) {
+      res.setHeader(
+        "Content-Type",
+        contentType
+      );
+    }
+
+    const cacheControl =
+      response.headers.get("cache-control");
+
+    if (cacheControl) {
+      res.setHeader(
+        "Cache-Control",
+        cacheControl
+      );
+    }
+
+    return res.end(body);
+
+  } catch (error) {
+    console.error(
+      "Nowcast proxy error:",
+      error
+    );
+
+    return res
+      .status(502)
+      .send(
+        "Bad Gateway: unable to reach Nowcast."
+      );
   }
-
-  // TEST B — простой серверный запрос
-  try {
-    const r = await fetch(url.toString(), {
-      method: "GET"
-    });
-
-    results.simple = {
-      status: r.status,
-      contentType: r.headers.get("content-type"),
-      body: (await r.text()).slice(0, 500)
-    };
-  } catch (e) {
-    results.simple = {
-      error: e.message
-    };
-  }
-
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-
-  return res.status(200).send(
-    JSON.stringify(results, null, 2)
-  );
 };
