@@ -135,8 +135,6 @@ body {
   transform: translateX(0);
 }
 
-/* Заголовок панели */
-
 .panel-head {
   display: flex;
   align-items: center;
@@ -181,7 +179,6 @@ body {
 
 .panel-section {
   padding: 8px 0;
-
   border-top: 1px solid rgba(255,255,255,.08);
 }
 
@@ -427,7 +424,6 @@ body {
 
 <div id="map"></div>
 
-<!-- Верхняя панель -->
 <div class="topbar">
 
   <div class="logo">GPTrad</div>
@@ -455,7 +451,6 @@ body {
 </div>
 
 
-<!-- Панель радара -->
 <div
   id="radarPanel"
   class="radar-panel"
@@ -524,7 +519,6 @@ body {
 </div>
 
 
-<!-- Статус -->
 <div
   id="status"
   class="status"
@@ -533,11 +527,11 @@ body {
 </div>
 
 
-<!-- Информация о пикселе -->
 <div
   id="pixelInfo"
   class="pixel-info"
 >
+
   <div
     id="pixelValue"
     class="pixel-value"
@@ -559,10 +553,10 @@ body {
   >
     Отражаемость
   </div>
+
 </div>
 
 
-<!-- Таймлайн -->
 <div class="timeline">
 
   <div class="time-top">
@@ -625,14 +619,40 @@ const VECTOR_URL = "/vector_wsgi";
 const TARGET_LAYER = "bufr_dbz1";
 
 /*
- * 10 минут между кадрами.
+ * Для векторов используем те же слои,
+ * которые использует исходное демо.
  */
-const FRAME_STEP = 10 * 60 * 1000;
+const VECTOR_TITLE =
+  "bufr_dbz1,bufr_novosib_dbz1,bufr_vlad_dbz1";
 
 /*
- * Показываем последние 18 кадров.
+ * 10 минут между кадрами.
  */
-const MAX_FRAMES = 18;
+const FRAME_STEP =
+  10 * 60 * 1000;
+
+/*
+ * Всего показываем 28 кадров.
+ *
+ * 28 × 10 минут =
+ * 4 часа 40 минут.
+ */
+const MAX_FRAMES = 28;
+
+/*
+ * При первом запуске заранее грузим
+ * только последние 14 кадров.
+ */
+const INITIAL_PRELOAD = 14;
+
+/*
+ * Максимум одновременных фоновых
+ * загрузок.
+ *
+ * Это важно для iPhone:
+ * не отправляем сразу 14 тяжёлых WMS-запросов.
+ */
+const PRELOAD_CONCURRENCY = 2;
 
 
 /* =========================================================
@@ -668,8 +688,6 @@ let currentTime = null;
 
 let currentRadarLayer = null;
 
-let radarBounds = null;
-
 let radarRequestId = 0;
 
 let vectorRequestId = 0;
@@ -678,13 +696,22 @@ let playing = false;
 
 let playTimer = null;
 
-/*
- * Автоматически идти за последним кадром.
- *
- * Если пользователь вручную выбрал старый кадр —
- * отключаем follow.
- */
 let autoFollowLatest = true;
+
+/*
+ * Кеш WMS.
+ *
+ * Ключом является полный URL.
+ *
+ * Это важно, потому что URL содержит
+ * BBOX текущего положения карты.
+ */
+const radarCache = new Map();
+
+/*
+ * Уже запущенная фоновая предзагрузка.
+ */
+let preloadStarted = false;
 
 
 /* =========================================================
@@ -801,12 +828,6 @@ function formatDateTime(iso) {
 }
 
 
-/*
- * Разрешаем только времена,
- * которые уже наступили.
- *
- * 30 секунд запаса — только на рассинхронизацию часов.
- */
 function isUsableTime(date) {
 
   return date.getTime()
@@ -821,11 +842,6 @@ function isUsableTime(date) {
 function extractTimesFromText(text) {
 
   const result = [];
-
-  /*
-   * Сначала пытаемся найти именно Layer,
-   * соответствующий bufr_dbz1.
-   */
 
   try {
 
@@ -859,6 +875,7 @@ function extractTimesFromText(text) {
         names.length &&
         names[0].textContent.trim() === TARGET_LAYER
       ) {
+
         targetLayer = layer;
         break;
       }
@@ -886,17 +903,15 @@ function extractTimesFromText(text) {
           continue;
         }
 
-        const value =
-          node.textContent.trim();
-
         parseTimeValue(
-          value,
+          node.textContent.trim(),
           result
         );
       }
     }
 
   } catch (e) {
+
     console.warn(
       "XML parse error",
       e
@@ -905,9 +920,7 @@ function extractTimesFromText(text) {
 
 
   /*
-   * Fallback:
-   * если точный Layer не найден,
-   * ищем временные строки по всему XML.
+   * Fallback.
    */
 
   if (!result.length) {
@@ -962,10 +975,9 @@ function parseTimeValue(
     return;
   }
 
+
   /*
-   * Обычный список:
-   *
-   * time1,time2,time3
+   * Список времён.
    */
 
   if (
@@ -1021,6 +1033,7 @@ function parseTimeValue(
       let step =
         FRAME_STEP;
 
+
       if (parts[2]) {
 
         const match =
@@ -1049,15 +1062,12 @@ function parseTimeValue(
       }
 
 
-      /*
-       * Не генерируем бесконечный диапазон.
-       */
-
       const max =
         Math.min(
           end.getTime(),
           Date.now() + 30 * 1000
         );
+
 
       for (
         let t = start.getTime();
@@ -1084,6 +1094,7 @@ async function loadCapabilities() {
     "Загрузка радара…"
   );
 
+
   const url =
     WMS_URL +
     "?SERVICE=WMS" +
@@ -1101,6 +1112,7 @@ async function loadCapabilities() {
         }
       );
 
+
     if (!response.ok) {
 
       throw new Error(
@@ -1109,15 +1121,17 @@ async function loadCapabilities() {
       );
     }
 
+
     const text =
       await response.text();
+
 
     let parsed =
       extractTimesFromText(text);
 
 
     /*
-     * Оставляем последние кадры.
+     * Берём последние 28.
      */
 
     if (
@@ -1168,18 +1182,21 @@ async function loadCapabilities() {
         true
       );
 
-    } else if (
+
+      /*
+       * Только после того как
+       * первый кадр появился на карте,
+       * запускаем фоновую загрузку
+       * последних 14 кадров.
+       */
+      startInitialPreload();
+
+    }
+
+    else if (
       autoFollowLatest &&
       currentTime !== newest
     ) {
-
-      /*
-       * Появился новый кадр.
-       *
-       * Если он ещё не готов,
-       * selectTime автоматически
-       * откатится на предыдущий.
-       */
 
       await selectTime(
         newest,
@@ -1187,7 +1204,9 @@ async function loadCapabilities() {
         true
       );
 
-    } else {
+    }
+
+    else {
 
       updateTimelinePosition();
     }
@@ -1212,10 +1231,10 @@ async function loadCapabilities() {
 
 
 /* =========================================================
-   RADAR URL
+   RADAR REQUEST
 ========================================================= */
 
-function getRadarUrl(time) {
+function getRadarRequest(time) {
 
   const bounds =
     map.getBounds();
@@ -1234,6 +1253,27 @@ function getRadarUrl(time) {
 
   const size =
     map.getSize();
+
+
+  const bbox = [
+    west,
+    south,
+    east,
+    north
+  ].join(",");
+
+
+  const width =
+    Math.max(
+      256,
+      Math.round(size.x)
+    );
+
+  const height =
+    Math.max(
+      256,
+      Math.round(size.y)
+    );
 
 
   const params =
@@ -1255,40 +1295,39 @@ function getRadarUrl(time) {
 
       SRS: "EPSG:4326",
 
-      BBOX:
-        [
-          west,
-          south,
-          east,
-          north
-        ].join(","),
+      BBOX: bbox,
 
-      WIDTH:
-        Math.max(
-          256,
-          Math.round(size.x)
-        ),
+      WIDTH: width,
 
-      HEIGHT:
-        Math.max(
-          256,
-          Math.round(size.y)
-        ),
+      HEIGHT: height,
 
       TIME: time
     });
 
 
-  return (
-    WMS_URL +
-    "?" +
-    params.toString()
-  );
+  return {
+
+    url:
+      WMS_URL +
+      "?" +
+      params.toString(),
+
+    /*
+     * Очень важно:
+     * границы принадлежат именно
+     * этому WMS-запросу.
+     */
+    bounds:
+      L.latLngBounds(
+        [south, west],
+        [north, east]
+      )
+  };
 }
 
 
 /* =========================================================
-   LOAD RADAR FRAME
+   IMAGE CACHE
 ========================================================= */
 
 function loadImage(url) {
@@ -1335,6 +1374,45 @@ function loadImage(url) {
 }
 
 
+function loadImageCached(url) {
+
+  /*
+   * Если этот URL уже грузится
+   * или был загружен —
+   * используем существующий Promise.
+   */
+  if (
+    radarCache.has(url)
+  ) {
+
+    return radarCache.get(url);
+  }
+
+
+  const promise =
+    loadImage(url)
+      .catch(error => {
+
+        /*
+         * Ошибочные запросы не держим
+         * в кеше — можно будет повторить.
+         */
+        radarCache.delete(url);
+
+        throw error;
+      });
+
+
+  radarCache.set(
+    url,
+    promise
+  );
+
+
+  return promise;
+}
+
+
 /* =========================================================
    CANDIDATE FRAMES
 ========================================================= */
@@ -1344,20 +1422,11 @@ function getCandidateTimes(time) {
   const index =
     times.indexOf(time);
 
+
   if (index < 0) {
     return [time];
   }
 
-  /*
-   * Сначала пробуем выбранный кадр,
-   * затем предыдущие.
-   *
-   * Например:
-   *
-   * 10:40
-   * 10:30
-   * 10:20
-   */
 
   return times
     .slice(
@@ -1365,6 +1434,71 @@ function getCandidateTimes(time) {
       index + 1
     )
     .reverse();
+}
+
+
+/* =========================================================
+   APPLY RADAR
+========================================================= */
+
+function applyRadarImage(
+  img,
+  bounds
+) {
+
+  if (!radarToggle.checked) {
+    return;
+  }
+
+
+  if (!currentRadarLayer) {
+
+    currentRadarLayer =
+      L.imageOverlay(
+        img.src,
+        bounds,
+        {
+          opacity: .72,
+          interactive: false
+        }
+      ).addTo(map);
+
+
+    return;
+  }
+
+
+  const element =
+    currentRadarLayer.getElement();
+
+
+  if (element) {
+
+    /*
+     * Сначала заменяем картинку.
+     */
+    element.src =
+      img.src;
+
+    /*
+     * И только после этого
+     * устанавливаем ИМЕННО ТЕ bounds,
+     * с которыми был сделан запрос.
+     */
+    currentRadarLayer.setBounds(
+      bounds
+    );
+
+  } else {
+
+    currentRadarLayer.setUrl(
+      img.src
+    );
+
+    currentRadarLayer.setBounds(
+      bounds
+    );
+  }
 }
 
 
@@ -1397,22 +1531,22 @@ async function selectTime(
     const candidateTime of candidates
   ) {
 
-    /*
-     * Пользователь уже выбрал
-     * другой кадр.
-     *
-     * Старый запрос отменяем.
-     */
-
     if (
       requestId !== radarRequestId
     ) {
+
       return;
     }
 
 
-    const url =
-      getRadarUrl(
+    /*
+     * BBOX создаём именно сейчас.
+     *
+     * Он будет сохранён вместе
+     * с результатом загрузки.
+     */
+    const request =
+      getRadarRequest(
         candidateTime
       );
 
@@ -1430,27 +1564,22 @@ async function selectTime(
 
 
       /*
-       * Загружаем картинку отдельно.
-       *
-       * Старый кадр при этом остаётся
-       * на карте.
+       * Грузим новый кадр,
+       * но старый пока НЕ трогаем.
        */
-
       const img =
-        await loadImage(url);
+        await loadImageCached(
+          request.url
+        );
 
 
       if (
         requestId !== radarRequestId
       ) {
+
         return;
       }
 
-
-      /*
-       * Даём браузеру декодировать
-       * изображение до замены старого.
-       */
 
       try {
 
@@ -1464,64 +1593,19 @@ async function selectTime(
       if (
         requestId !== radarRequestId
       ) {
+
         return;
       }
 
 
       /*
-       * Первый радарный слой.
+       * Только теперь меняем изображение
+       * на карте.
        */
-
-      if (!currentRadarLayer) {
-
-        currentRadarLayer =
-          L.imageOverlay(
-            img.src,
-            map.getBounds(),
-            {
-              opacity: .72,
-              interactive: false
-            }
-          ).addTo(map);
-
-      } else {
-
-        /*
-         * Очень важно:
-         *
-         * НЕ удаляем старый слой.
-         *
-         * Просто заменяем картинку
-         * внутри уже существующего overlay.
-         *
-         * Поэтому карта не мигает
-         * и старый кадр остаётся до момента,
-         * когда новый полностью готов.
-         */
-
-        const element =
-          currentRadarLayer.getElement();
-
-        if (element) {
-
-          element.src =
-            img.src;
-
-          currentRadarLayer.setBounds(
-            map.getBounds()
-          );
-
-        } else {
-
-          currentRadarLayer.setUrl(
-            img.src
-          );
-
-          currentRadarLayer.setBounds(
-            map.getBounds()
-          );
-        }
-      }
+      applyRadarImage(
+        img,
+        request.bounds
+      );
 
 
       currentTime =
@@ -1529,6 +1613,7 @@ async function selectTime(
 
 
       updateTimelinePosition();
+
 
       pixelInfo.style.display =
         "none";
@@ -1544,11 +1629,9 @@ async function selectTime(
 
 
       /*
-       * Загружаем векторы именно
-       * для фактически отображаемого
-       * кадра.
+       * Векторы всегда привязаны
+       * к реально показанному кадру.
        */
-
       if (
         vectorToggle.checked
       ) {
@@ -1571,24 +1654,13 @@ async function selectTime(
 
 
       /*
-       * Пробуем предыдущий кадр.
-       *
-       * Это как раз исправляет ситуацию:
-       *
-       * 10:40 есть в capabilities,
-       * но WMS ещё не успел его отдать.
-       *
-       * Тогда автоматически берём 10:30.
+       * Если выбранный кадр недоступен —
+       * пробуем предыдущий.
        */
-
       continue;
     }
   }
 
-
-  /*
-   * Ни один кадр не загрузился.
-   */
 
   if (
     requestId === radarRequestId
@@ -1600,6 +1672,115 @@ async function selectTime(
       "Кадр временно недоступен"
     );
   }
+}
+
+
+/* =========================================================
+   INITIAL PRELOAD
+========================================================= */
+
+async function startInitialPreload() {
+
+  if (preloadStarted) {
+    return;
+  }
+
+  preloadStarted = true;
+
+
+  /*
+   * Последние 14 кадров.
+   *
+   * Самый последний уже был загружен
+   * через selectTime(), поэтому начинаем
+   * с предыдущих.
+   */
+  const start =
+    Math.max(
+      0,
+      times.length - INITIAL_PRELOAD
+    );
+
+
+  const preloadTimes =
+    times.slice(
+      start,
+      times.length - 1
+    );
+
+
+  /*
+   * Очередь с ограничением
+   * количества одновременных запросов.
+   */
+  let cursor = 0;
+
+
+  async function worker() {
+
+    while (
+      cursor <
+      preloadTimes.length
+    ) {
+
+      const index =
+        cursor++;
+
+
+      const time =
+        preloadTimes[index];
+
+
+      /*
+       * Если пользователь уже двигает карту,
+       * старый BBOX всё равно будет безопасен:
+       * этот URL просто останется в кеше.
+       */
+      const request =
+        getRadarRequest(
+          time
+        );
+
+
+      try {
+
+        await loadImageCached(
+          request.url
+        );
+
+      } catch (error) {
+
+        console.warn(
+          "Preload failed:",
+          time,
+          error
+        );
+      }
+    }
+  }
+
+
+  const workers = [];
+
+
+  for (
+    let i = 0;
+    i < Math.min(
+      PRELOAD_CONCURRENCY,
+      preloadTimes.length
+    );
+    i++
+  ) {
+
+    workers.push(
+      worker()
+    );
+  }
+
+
+  await Promise.all(
+    workers
+  );
 }
 
 
@@ -1647,14 +1828,19 @@ function updateTimelinePosition() {
           target
         );
 
-      if (diff < bestDiff) {
+
+      if (
+        diff < bestDiff
+      ) {
 
         bestDiff = diff;
         bestIndex = i;
       }
     }
 
-    index = bestIndex;
+
+    index =
+      bestIndex;
   }
 
 
@@ -1690,16 +1876,15 @@ timeSlider.addEventListener(
     }
 
 
-    /*
-     * Если выбрали последний кадр —
-     * снова следуем за новыми кадрами.
-     */
-
     autoFollowLatest =
       index ===
       times.length - 1;
 
 
+    /*
+     * Старый кадр теперь может быть
+     * загружен лениво именно здесь.
+     */
     selectTime(
       times[index],
       false,
@@ -1916,12 +2101,9 @@ const vectorLayer =
   L.layerGroup().addTo(map);
 
 
-/*
- * Расчёт конечной точки.
- *
- * dist — расстояние в км.
- * head — направление в градусах.
- */
+/* =========================================================
+   DESTINATION
+========================================================= */
 
 function destination(
   lon,
@@ -1986,16 +2168,9 @@ function destination(
 }
 
 
-/*
- * Один белый вектор с тонкой
- * чёрной обводкой.
- *
- * Нижняя линия:
- * чёрная, 3 px.
- *
- * Верхняя:
- * белая, 1.5 px.
- */
+/* =========================================================
+   CREATE VECTOR
+========================================================= */
 
 function createVector(
   lat,
@@ -2019,23 +2194,24 @@ function createVector(
   ];
 
 
+  /*
+   * Чёрная обводка.
+   */
   const outline =
     L.polyline(
       points,
       {
         color: "#000000",
         weight: 3,
-        opacity: .9,
-
-        /*
-         * Вектор не должен
-         * мешать кликам карты.
-         */
+        opacity: .95,
         interactive: false
       }
     );
 
 
+  /*
+   * Белая основная линия.
+   */
   const line =
     L.polyline(
       points,
@@ -2043,7 +2219,6 @@ function createVector(
         color: "#ffffff",
         weight: 1.5,
         opacity: 1,
-
         interactive: false
       }
     );
@@ -2078,13 +2253,18 @@ async function loadVectors(
     ++vectorRequestId;
 
 
+  /*
+   * ВАЖНО:
+   * используем сразу три названия,
+   * как в исходном демо.
+   */
   const url =
     VECTOR_URL +
     "?time=" +
     encodeURIComponent(time) +
     "&title=" +
     encodeURIComponent(
-      TARGET_LAYER
+      VECTOR_TITLE
     );
 
 
@@ -2113,14 +2293,13 @@ async function loadVectors(
 
 
     /*
-     * Если пользователь уже
-     * переключил кадр —
-     * старый ответ не рисуем.
+     * Проверяем, что ответ ещё
+     * относится к текущему кадру.
      */
-
     if (
       requestId !== vectorRequestId ||
-      time !== currentTime
+      time !== currentTime ||
+      !vectorToggle.checked
     ) {
 
       return;
@@ -2143,6 +2322,7 @@ async function loadVectors(
         !Array.isArray(item) ||
         item.length < 4
       ) {
+
         continue;
       }
 
@@ -2153,11 +2333,6 @@ async function loadVectors(
       const lon =
         Number(item[1]);
 
-      /*
-       * Nowcast отдаёт расстояние
-       * в м/с, далее исходный код
-       * переводит его в км/ч.
-       */
       const dist =
         Number(item[2]) * 3.6;
 
@@ -2171,6 +2346,21 @@ async function loadVectors(
         !Number.isFinite(dist) ||
         !Number.isFinite(head)
       ) {
+
+        continue;
+      }
+
+
+      /*
+       * Отбрасываем явно битые координаты.
+       */
+      if (
+        lat < -90 ||
+        lat > 90 ||
+        lon < -180 ||
+        lon > 180
+      ) {
+
         continue;
       }
 
@@ -2188,6 +2378,7 @@ async function loadVectors(
         vector
       );
     }
+
 
   } catch (error) {
 
@@ -2207,11 +2398,6 @@ vectorToggle.addEventListener(
   "change",
   () => {
 
-    /*
-     * Отключили —
-     * полностью удаляем векторы.
-     */
-
     if (
       !vectorToggle.checked
     ) {
@@ -2223,11 +2409,6 @@ vectorToggle.addEventListener(
       return;
     }
 
-
-    /*
-     * Включили —
-     * загружаем текущий кадр.
-     */
 
     if (currentTime) {
 
@@ -2244,6 +2425,7 @@ vectorToggle.addEventListener(
 ========================================================= */
 
 let moveTimer = null;
+
 
 map.on(
   "moveend",
@@ -2263,10 +2445,11 @@ map.on(
           ) {
 
             /*
-             * При перемещении карты
-             * НЕ откатываем время.
+             * Новый запрос получает
+             * новый BBOX карты.
+             *
+             * При этом время не меняется.
              */
-
             selectTime(
               currentTime,
               true,
@@ -2293,17 +2476,10 @@ map.on(
       !currentTime ||
       !radarToggle.checked
     ) {
+
       return;
     }
 
-
-    /*
-     * WMS GetFeatureInfo.
-     *
-     * Это используется для
-     * получения значения dBZ
-     * в выбранной точке.
-     */
 
     const bounds =
       map.getBounds();
@@ -2381,6 +2557,7 @@ map.on(
 
 
       if (!response.ok) {
+
         throw new Error(
           "HTTP " +
           response.status
@@ -2391,11 +2568,6 @@ map.on(
       const text =
         await response.text();
 
-
-      /*
-       * Пытаемся вытащить
-       * число dBZ из ответа.
-       */
 
       const dbz =
         parseDbz(
@@ -2435,11 +2607,6 @@ map.on(
         "block";
 
 
-      /*
-       * Не даём карточке
-       * вылезти за экран.
-       */
-
       const margin = 10;
 
       let left =
@@ -2477,6 +2644,7 @@ map.on(
       pixelInfo.style.top =
         top + "px";
 
+
     } catch (error) {
 
       console.warn(
@@ -2494,10 +2662,6 @@ map.on(
 
 function parseDbz(text) {
 
-  /*
-   * Сначала ищем явный dBZ.
-   */
-
   const explicit =
     text.match(
       /dBZ[^0-9-]*(-?\d+(?:\.\d+)?)/i
@@ -2511,17 +2675,15 @@ function parseDbz(text) {
         explicit[1]
       );
 
+
     if (
       Number.isFinite(value)
     ) {
+
       return value;
     }
   }
 
-
-  /*
-   * Ищем RAW value.
-   */
 
   const rawMatch =
     text.match(
@@ -2543,6 +2705,7 @@ function parseDbz(text) {
   if (
     !Number.isFinite(raw)
   ) {
+
     return null;
   }
 
@@ -2554,7 +2717,6 @@ function parseDbz(text) {
    *
    * 255 = NoData
    */
-
   if (
     raw >= 0 &&
     raw <= 254
@@ -2577,6 +2739,7 @@ function parseDbz(text) {
 map.on(
   "movestart",
   () => {
+
     pixelInfo.style.display =
       "none";
   }
@@ -2722,19 +2885,6 @@ document
 /* =========================================================
    PERIODIC UPDATE
 ========================================================= */
-
-/*
- * Проверяем новые кадры примерно
- * раз в минуту.
- *
- * Если autoFollowLatest включён,
- * сайт будет пытаться взять новый
- * последний кадр.
- *
- * Если он ещё не готов —
- * автоматически останется на
- * предыдущем рабочем кадре.
- */
 
 setInterval(
   () => {
