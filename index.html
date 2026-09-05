@@ -2,11 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
->
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
 <title>GPTrad</title>
 
@@ -16,7 +13,6 @@
 />
 
 <style>
-
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -28,480 +24,376 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   background: #111;
 }
 
 #map {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: #111;
+  width: 100%;
+  height: 100%;
+  background: #d9d9d9;
 }
 
-
-/* =========================================================
+/* =========================
    TOP BAR
-========================================================= */
+========================= */
 
 .topbar {
-  position: absolute;
+  position: fixed;
   z-index: 1000;
-
   top: 10px;
   left: 10px;
   right: 10px;
 
-  height: 46px;
+  height: 44px;
 
   display: flex;
   align-items: center;
 
-  padding: 6px 8px;
+  padding: 0 8px;
 
   background: rgba(20,20,20,.88);
-
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
-  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 10px;
 
-  border-radius: 13px;
+  box-shadow:
+    0 4px 20px rgba(0,0,0,.28);
 
   color: white;
 }
 
 .logo {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: .3px;
-  padding-left: 5px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-left: 5px;
 }
 
-.status {
-  margin-left: auto;
+.top-spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+
+  border: 0;
+  outline: 0;
+
+  border-radius: 8px;
+
+  background: rgba(255,255,255,.08);
+  color: white;
+
+  font-size: 20px;
 
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 
-  font-size: 12px;
-  opacity: .85;
+  cursor: pointer;
 }
 
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #777;
+.icon-btn:active {
+  background: rgba(255,255,255,.18);
 }
 
-.status-dot.ok {
-  background: #42d77d;
-}
+/* =========================
+   RADAR PANEL
+========================= */
 
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-.map-button {
-  position: absolute;
-  z-index: 1000;
-
-  width: 42px;
-  height: 42px;
-
-  border: 0;
-  border-radius: 12px;
-
-  background: rgba(20,20,20,.88);
-  color: white;
-
-  font-size: 19px;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  border: 1px solid rgba(255,255,255,.10);
-}
-
-#locateButton {
-  top: 66px;
-  left: 10px;
-}
-
-#searchButton {
-  top: 66px;
-  right: 10px;
-}
-
-#layersButton {
-  top: 116px;
-  right: 10px;
-}
-
-
-/* =========================================================
-   SEARCH
-========================================================= */
-
-.search-box {
-  position: absolute;
+.radar-panel {
+  position: fixed;
   z-index: 1100;
 
-  top: 66px;
-  left: 60px;
-  right: 60px;
-
-  display: none;
-}
-
-.search-box.open {
-  display: flex;
-}
-
-.search-box input {
-  width: 100%;
-  height: 42px;
-
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 12px;
-
-  background: rgba(20,20,20,.94);
-  color: white;
-
-  padding: 0 13px;
-
-  outline: none;
-
-  font-size: 14px;
-}
-
-
-/* =========================================================
-   SIDE PANEL
-========================================================= */
-
-.panel {
-  position: absolute;
-  z-index: 1050;
-
-  top: 116px;
+  top: 64px;
   right: 10px;
 
-  width: 220px;
+  width: 245px;
 
-  padding: 12px;
+  background: rgba(20,20,20,.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 
-  background: rgba(20,20,20,.92);
+  border-radius: 10px;
 
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  border: 1px solid rgba(255,255,255,.10);
-
-  border-radius: 14px;
+  padding: 11px;
 
   color: white;
 
-  transform:
-    translateX(
-      calc(100% + 20px)
-    );
+  box-shadow:
+    0 8px 30px rgba(0,0,0,.35);
 
-  transition:
-    transform .22s ease;
+  transform: translateX(calc(100% + 20px));
+  transition: transform .22s ease;
 }
 
-.panel.open {
+.radar-panel.open {
   transform: translateX(0);
 }
 
+/* Заголовок панели */
+
+.panel-head {
+  display: flex;
+  align-items: center;
+
+  height: 30px;
+
+  margin-bottom: 8px;
+}
+
+.panel-close {
+  width: 28px;
+  height: 28px;
+
+  margin-right: 4px;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: rgba(255,255,255,.9);
+
+  border-radius: 7px;
+
+  font-size: 25px;
+  line-height: 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+}
+
+.panel-close:active {
+  background: rgba(255,255,255,.12);
+}
+
 .panel-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
+}
 
-  margin-bottom: 10px;
+.panel-section {
+  padding: 8px 0;
 
-  opacity: .9;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.panel-section:first-of-type {
+  border-top: 0;
+}
+
+.panel-label {
+  font-size: 11px;
+  opacity: .58;
+  margin-bottom: 7px;
 }
 
 .layer-row {
   display: flex;
   align-items: center;
 
-  gap: 9px;
-
-  padding: 8px 0;
+  min-height: 34px;
 
   font-size: 13px;
 }
 
 .layer-row input {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
+
+  margin: 0 8px 0 0;
+
+  accent-color: white;
 }
 
+.layer-row span {
+  flex: 1;
+}
 
-/* =========================================================
-   PIXEL INFO
-========================================================= */
+/* =========================
+   STATUS
+========================= */
 
-.pixel-info {
+.status {
+  position: fixed;
+  z-index: 1001;
 
-  position: absolute;
-  z-index: 2000;
+  left: 10px;
+  bottom: 94px;
 
-  top: 50%;
-  left: 50%;
+  padding: 7px 10px;
 
-  transform:
-    translate(-50%, -50%);
+  border-radius: 7px;
 
-  width: 190px;
-
-  padding:
-    11px 12px 12px;
-
-  background:
-    rgba(8,8,8,.97);
-
+  background: rgba(20,20,20,.82);
   color: white;
 
-  border:
-    1px solid
-    rgba(255,255,255,.12);
-
-  border-radius: 6px;
-
-  box-shadow:
-    0 10px 28px
-    rgba(0,0,0,.45);
-
-  display: none;
-}
-
-.pixel-info.open {
-  display: block;
-}
-
-.pixel-close {
-
-  position: absolute;
-
-  top: 2px;
-  right: 4px;
-
-  width: 25px;
-  height: 25px;
-
-  border: 0;
-
-  background: transparent;
-
-  color:
-    rgba(255,255,255,.72);
-
-  font-size: 21px;
-
-  line-height: 25px;
-
-  padding: 0;
-}
-
-.pixel-value {
-
-  margin-top: 2px;
-
-  font-size: 20px;
-
-  font-weight: 800;
-
-  line-height: 1.15;
-}
-
-.pixel-time {
-
-  margin-top: 7px;
-
   font-size: 11px;
 
-  color:
-    rgba(255,255,255,.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  pointer-events: none;
+
+  opacity: .9;
 }
 
-.pixel-coords {
-
-  margin-top: 3px;
-
-  font-size: 9px;
-
-  color:
-    rgba(255,255,255,.42);
-}
-
-.pixel-phenomenon {
-
-  margin-top: 8px;
-
-  padding-top: 7px;
-
-  border-top:
-    1px solid
-    rgba(255,255,255,.10);
-
-  font-size: 11px;
-
-  color:
-    rgba(255,255,255,.82);
-}
-
-
-/* =========================================================
-   TIMELINE
-========================================================= */
+/* =========================
+   TIME PANEL
+========================= */
 
 .timeline {
-
-  position: absolute;
+  position: fixed;
   z-index: 1000;
 
   left: 10px;
   right: 10px;
-
   bottom: 10px;
 
-  padding:
-    9px 11px 8px;
+  height: 68px;
 
-  background:
-    rgba(20,20,20,.92);
+  padding: 9px 12px 8px;
+
+  background: rgba(20,20,20,.9);
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 
-  border:
-    1px solid
-    rgba(255,255,255,.10);
-
-  border-radius: 14px;
+  border-radius: 10px;
 
   color: white;
+
+  box-shadow:
+    0 5px 25px rgba(0,0,0,.3);
 }
 
-.timeline-top {
-
+.time-top {
   display: flex;
   align-items: center;
 
-  justify-content: space-between;
-
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
-.timeline-label {
+.time-title {
+  font-size: 10px;
+  opacity: .55;
+}
+
+.time-value {
+  margin-left: auto;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-button {
+  width: 29px;
+  height: 27px;
+
+  border: 0;
+  outline: 0;
+
+  border-radius: 6px;
+
+  background: rgba(255,255,255,.08);
+  color: white;
+
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+.time-button:active {
+  background: rgba(255,255,255,.18);
+}
+
+#timeSlider {
+  flex: 1;
+  height: 20px;
+  margin: 0;
+}
+
+/* =========================
+   PIXEL INFO
+========================= */
+
+.pixel-info {
+  position: fixed;
+  z-index: 1200;
+
+  display: none;
+
+  width: 190px;
+
+  padding: 11px 12px 12px;
+
+  background: rgba(18,18,18,.94);
+
+  color: white;
+
+  border-radius: 6px;
+
+  box-shadow:
+    0 6px 25px rgba(0,0,0,.4);
+
+  pointer-events: none;
+}
+
+.pixel-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.pixel-time {
+  margin-top: 5px;
 
   font-size: 11px;
   opacity: .65;
 }
 
-.current-time {
+.pixel-coords {
+  margin-top: 4px;
 
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 9px;
+  opacity: .5;
 }
 
-.timeline-controls {
+.pixel-phenomenon {
+  margin-top: 6px;
 
-  display: flex;
-  align-items: center;
-
-  gap: 7px;
+  font-size: 11px;
+  opacity: .8;
 }
 
-.time-button {
-
-  width: 34px;
-  height: 30px;
-
-  border: 0;
-
-  border-radius: 9px;
-
-  background:
-    rgba(255,255,255,.10);
-
-  color: white;
-
-  font-size: 14px;
-}
-
-#timeSlider {
-
-  width: 100%;
-  height: 25px;
-
-  margin: 0;
-
-  accent-color: white;
-}
-
-.timeline-bottom {
-
-  display: flex;
-
-  justify-content: space-between;
-
-  font-size: 10px;
-
-  opacity: .55;
-}
-
-
-/* =========================================================
-   RADAR
-========================================================= */
-
-.radar-layer {
-  image-rendering: auto;
-}
-
-
-/* =========================================================
+/* =========================
    LEAFLET
-========================================================= */
+========================= */
 
 .leaflet-control-zoom {
-
-  margin-top: 175px !important;
-  margin-left: 10px !important;
+  margin-top: 65px !important;
 }
 
 .leaflet-control-attribution {
-
-  background:
-    rgba(0,0,0,.45) !important;
-
-  color:
-    rgba(255,255,255,.65) !important;
+  font-size: 8px;
 }
 
-.leaflet-control-attribution a {
-
-  color:
-    rgba(255,255,255,.8) !important;
-}
-
-
-/* =========================================================
+/* =========================
    MOBILE
-========================================================= */
+========================= */
 
 @media (max-width: 600px) {
 
@@ -511,25 +403,10 @@ body {
     right: 8px;
   }
 
-  #locateButton {
-    top: 62px;
-    left: 8px;
-  }
-
-  #searchButton {
-    top: 62px;
+  .radar-panel {
+    top: 60px;
     right: 8px;
-  }
-
-  #layersButton {
-    top: 112px;
-    right: 8px;
-  }
-
-  .panel {
-    top: 112px;
-    right: 8px;
-    width: 205px;
+    width: 230px;
   }
 
   .timeline {
@@ -538,8 +415,11 @@ body {
     bottom: 8px;
   }
 
+  .status {
+    left: 8px;
+    bottom: 86px;
+  }
 }
-
 </style>
 </head>
 
@@ -547,452 +427,235 @@ body {
 
 <div id="map"></div>
 
-
-<!-- ======================================================
-     TOP
-====================================================== -->
-
+<!-- Верхняя панель -->
 <div class="topbar">
 
-  <div class="logo">
-    GPTrad
-  </div>
+  <div class="logo">GPTrad</div>
 
-  <div class="status">
-
-    <span
-      class="status-dot"
-      id="statusDot"
-    ></span>
-
-    <span id="statusText">
-      Загрузка радара…
-    </span>
-
-  </div>
-
-</div>
-
-
-<!-- ======================================================
-     BUTTONS
-====================================================== -->
-
-<button
-  class="map-button"
-  id="locateButton"
-  title="Моё местоположение"
->
-  ⦿
-</button>
-
-
-<button
-  class="map-button"
-  id="searchButton"
-  title="Поиск"
->
-  ⌕
-</button>
-
-
-<button
-  class="map-button"
-  id="layersButton"
-  title="Слои"
->
-  ☰
-</button>
-
-
-<!-- ======================================================
-     SEARCH
-====================================================== -->
-
-<div
-  class="search-box"
-  id="searchBox"
->
-
-  <input
-    id="searchInput"
-    type="text"
-    inputmode="text"
-    autocomplete="off"
-    placeholder="53.20, 50.15"
-  >
-
-</div>
-
-
-<!-- ======================================================
-     PANEL
-====================================================== -->
-
-<div
-  class="panel"
-  id="panel"
->
-
-  <div class="panel-title">
-    Радар
-  </div>
-
-
-  <div class="layer-row">
-
-    <input
-      type="checkbox"
-      id="radarToggle"
-      checked
-    >
-
-    <label for="radarToggle">
-      Отражаемость
-    </label>
-
-  </div>
-
-
-  <div class="layer-row">
-
-    <input
-      type="checkbox"
-      id="vectorToggle"
-    >
-
-    <label for="vectorToggle">
-      Вектор движения
-    </label>
-
-  </div>
-
-</div>
-
-
-<!-- ======================================================
-     PIXEL INFO
-====================================================== -->
-
-<div
-  class="pixel-info"
-  id="pixelInfo"
->
+  <div class="top-spacer"></div>
 
   <button
-    class="pixel-close"
-    id="pixelClose"
-  >
-    ×
-  </button>
+    id="locateBtn"
+    class="icon-btn"
+    title="Моё местоположение"
+  >⌖</button>
+
+  <button
+    id="searchBtn"
+    class="icon-btn"
+    title="Поиск координат"
+  >⌕</button>
+
+  <button
+    id="panelBtn"
+    class="icon-btn"
+    title="Радар"
+  >☰</button>
+
+</div>
 
 
+<!-- Панель радара -->
+<div
+  id="radarPanel"
+  class="radar-panel"
+>
+
+  <div class="panel-head">
+
+    <button
+      id="panelClose"
+      class="panel-close"
+      aria-label="Закрыть"
+    >×</button>
+
+    <div class="panel-title">
+      Радар
+    </div>
+
+  </div>
+
+
+  <div class="panel-section">
+
+    <div class="panel-label">
+      Отражаемость
+    </div>
+
+    <label class="layer-row">
+
+      <input
+        id="radarToggle"
+        type="checkbox"
+        checked
+      >
+
+      <span>
+        Отражаемость
+      </span>
+
+    </label>
+
+  </div>
+
+
+  <div class="panel-section">
+
+    <div class="panel-label">
+      Движение
+    </div>
+
+    <label class="layer-row">
+
+      <input
+        id="vectorToggle"
+        type="checkbox"
+        checked
+      >
+
+      <span>
+        Векторы движения
+      </span>
+
+    </label>
+
+  </div>
+
+</div>
+
+
+<!-- Статус -->
+<div
+  id="status"
+  class="status"
+>
+  Загрузка радара…
+</div>
+
+
+<!-- Информация о пикселе -->
+<div
+  id="pixelInfo"
+  class="pixel-info"
+>
   <div
-    class="pixel-value"
     id="pixelValue"
-  >
-    —
-  </div>
-
+    class="pixel-value"
+  >—</div>
 
   <div
-    class="pixel-time"
     id="pixelTime"
-  >
-    —
-  </div>
-
+    class="pixel-time"
+  >—</div>
 
   <div
-    class="pixel-coords"
     id="pixelCoords"
-  >
-    —
-  </div>
-
+    class="pixel-coords"
+  >—</div>
 
   <div
-    class="pixel-phenomenon"
     id="pixelPhenomenon"
+    class="pixel-phenomenon"
   >
     Отражаемость
   </div>
-
 </div>
 
 
-<!-- ======================================================
-     TIMELINE
-====================================================== -->
-
+<!-- Таймлайн -->
 <div class="timeline">
 
-  <div class="timeline-top">
+  <div class="time-top">
 
-    <div>
-
-      <div class="timeline-label">
-        Время
-      </div>
-
-      <div
-        class="current-time"
-        id="currentTime"
-      >
-        —
-      </div>
-
+    <div class="time-title">
+      Время
     </div>
 
-
-    <div class="timeline-controls">
-
-      <button
-        class="time-button"
-        id="prevButton"
-      >
-        ‹
-      </button>
-
-
-      <button
-        class="time-button"
-        id="playButton"
-      >
-        ▶
-      </button>
-
-
-      <button
-        class="time-button"
-        id="nextButton"
-      >
-        ›
-      </button>
-
+    <div
+      id="timeValue"
+      class="time-value"
+    >
+      —
     </div>
 
   </div>
 
 
-  <input
-    id="timeSlider"
-    type="range"
-    min="0"
-    max="0"
-    value="0"
-  >
+  <div class="timeline-controls">
 
+    <button
+      id="prevBtn"
+      class="time-button"
+    >‹</button>
 
-  <div class="timeline-bottom">
+    <button
+      id="playBtn"
+      class="time-button"
+    >▶</button>
 
-    <span id="timelineStart">
-      —
-    </span>
+    <input
+      id="timeSlider"
+      type="range"
+      min="0"
+      max="0"
+      value="0"
+      step="1"
+    >
 
-    <span id="timelineEnd">
-      —
-    </span>
+    <button
+      id="nextBtn"
+      class="time-button"
+    >›</button>
 
   </div>
 
 </div>
 
 
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-></script>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-
 /* =========================================================
    CONFIG
 ========================================================= */
 
-const WMS_URL =
-  "/baltrad_wsgi";
+const WMS_URL = "/baltrad_wsgi";
+const VECTOR_URL = "/vector_wsgi";
 
-const VECTOR_URL =
-  "/vector_wsgi";
-
-const TARGET_LAYER =
-  "bufr_dbz1";
-
+const TARGET_LAYER = "bufr_dbz1";
 
 /*
- * Сколько кадров показываем.
- *
- * 18 кадров × 10 минут =
- * 3 часа.
+ * 10 минут между кадрами.
  */
+const FRAME_STEP = 10 * 60 * 1000;
 
-const MAX_FRAMES =
-  18;
-
-
-const CAPABILITIES_INTERVAL =
-  60 * 1000;
+/*
+ * Показываем последние 18 кадров.
+ */
+const MAX_FRAMES = 18;
 
 
 /* =========================================================
    MAP
 ========================================================= */
 
-const map =
-  L.map("map", {
-
-    zoomControl: true,
-
-    preferCanvas: true,
-
-    zoomAnimation: true,
-
-    fadeAnimation: false,
-
-    markerZoomAnimation: false
-
-  })
-  .setView(
-    [54.7, 55.9],
-    5
-  );
+const map = L.map("map", {
+  zoomControl: true,
+  attributionControl: true,
+  preferCanvas: true
+}).setView(
+  [54.74, 55.97],
+  6
+);
 
 
 L.tileLayer(
   "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
   {
-
     maxZoom: 18,
-
-    attribution:
-      "&copy; OpenStreetMap"
-
+    attribution: "© OpenStreetMap"
   }
 ).addTo(map);
-
-
-/* =========================================================
-   DOM
-========================================================= */
-
-const radarToggle =
-  document.getElementById(
-    "radarToggle"
-  );
-
-const vectorToggle =
-  document.getElementById(
-    "vectorToggle"
-  );
-
-const panel =
-  document.getElementById(
-    "panel"
-  );
-
-const layersButton =
-  document.getElementById(
-    "layersButton"
-  );
-
-const locateButton =
-  document.getElementById(
-    "locateButton"
-  );
-
-const searchButton =
-  document.getElementById(
-    "searchButton"
-  );
-
-const searchBox =
-  document.getElementById(
-    "searchBox"
-  );
-
-const searchInput =
-  document.getElementById(
-    "searchInput"
-  );
-
-const timeSlider =
-  document.getElementById(
-    "timeSlider"
-  );
-
-const currentTimeEl =
-  document.getElementById(
-    "currentTime"
-  );
-
-const timelineStart =
-  document.getElementById(
-    "timelineStart"
-  );
-
-const timelineEnd =
-  document.getElementById(
-    "timelineEnd"
-  );
-
-const prevButton =
-  document.getElementById(
-    "prevButton"
-  );
-
-const nextButton =
-  document.getElementById(
-    "nextButton"
-  );
-
-const playButton =
-  document.getElementById(
-    "playButton"
-  );
-
-const statusDot =
-  document.getElementById(
-    "statusDot"
-  );
-
-const statusText =
-  document.getElementById(
-    "statusText"
-  );
-
-
-/* Pixel info */
-
-const pixelInfo =
-  document.getElementById(
-    "pixelInfo"
-  );
-
-const pixelClose =
-  document.getElementById(
-    "pixelClose"
-  );
-
-const pixelValue =
-  document.getElementById(
-    "pixelValue"
-  );
-
-const pixelTime =
-  document.getElementById(
-    "pixelTime"
-  );
-
-const pixelCoords =
-  document.getElementById(
-    "pixelCoords"
-  );
-
-const pixelPhenomenon =
-  document.getElementById(
-    "pixelPhenomenon"
-  );
 
 
 /* =========================================================
@@ -1005,42 +668,1211 @@ let currentTime = null;
 
 let currentRadarLayer = null;
 
-let vectorLayer =
-  L.layerGroup();
+let radarBounds = null;
+
+let radarRequestId = 0;
+
+let vectorRequestId = 0;
 
 let playing = false;
 
 let playTimer = null;
 
-let capabilitiesTimer = null;
-
-
 /*
- * ID последнего запроса радара.
+ * Автоматически идти за последним кадром.
  *
- * Если пользователь быстро промотал:
- *
- * 09:30 → 09:40 → 09:50
- *
- * ответы от 09:30 и 09:40,
- * пришедшие позже, будут проигнорированы.
+ * Если пользователь вручную выбрал старый кадр —
+ * отключаем follow.
  */
+let autoFollowLatest = true;
 
-let radarRequestId = 0;
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const radarPanel =
+  document.getElementById("radarPanel");
+
+const panelBtn =
+  document.getElementById("panelBtn");
+
+const panelClose =
+  document.getElementById("panelClose");
+
+const radarToggle =
+  document.getElementById("radarToggle");
+
+const vectorToggle =
+  document.getElementById("vectorToggle");
+
+const statusEl =
+  document.getElementById("status");
+
+const timeSlider =
+  document.getElementById("timeSlider");
+
+const timeValue =
+  document.getElementById("timeValue");
+
+const prevBtn =
+  document.getElementById("prevBtn");
+
+const nextBtn =
+  document.getElementById("nextBtn");
+
+const playBtn =
+  document.getElementById("playBtn");
+
+const pixelInfo =
+  document.getElementById("pixelInfo");
+
+const pixelValue =
+  document.getElementById("pixelValue");
+
+const pixelTime =
+  document.getElementById("pixelTime");
+
+const pixelCoords =
+  document.getElementById("pixelCoords");
 
 
 /* =========================================================
    PANEL
 ========================================================= */
 
-layersButton.addEventListener(
+panelBtn.addEventListener("click", () => {
+  radarPanel.classList.toggle("open");
+});
+
+panelClose.addEventListener("click", () => {
+  radarPanel.classList.remove("open");
+});
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+
+/* =========================================================
+   TIME HELPERS
+========================================================= */
+
+function formatTime(iso) {
+
+  const d = new Date(iso);
+
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
+
+  return d.toLocaleTimeString(
+    "ru-RU",
+    {
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
+}
+
+
+function formatDateTime(iso) {
+
+  const d = new Date(iso);
+
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
+
+  return d.toLocaleString(
+    "ru-RU",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
+}
+
+
+/*
+ * Разрешаем только времена,
+ * которые уже наступили.
+ *
+ * 30 секунд запаса — только на рассинхронизацию часов.
+ */
+function isUsableTime(date) {
+
+  return date.getTime()
+    <= Date.now() + 30 * 1000;
+}
+
+
+/* =========================================================
+   PARSE CAPABILITIES
+========================================================= */
+
+function extractTimesFromText(text) {
+
+  const result = [];
+
+  /*
+   * Сначала пытаемся найти именно Layer,
+   * соответствующий bufr_dbz1.
+   */
+
+  try {
+
+    const parser =
+      new DOMParser();
+
+    const xml =
+      parser.parseFromString(
+        text,
+        "text/xml"
+      );
+
+    const layers =
+      Array.from(
+        xml.getElementsByTagName("Layer")
+      );
+
+    let targetLayer = null;
+
+    for (const layer of layers) {
+
+      const names =
+        Array.from(
+          layer.children
+        ).filter(
+          el =>
+            el.localName.toLowerCase() === "name"
+        );
+
+      if (
+        names.length &&
+        names[0].textContent.trim() === TARGET_LAYER
+      ) {
+        targetLayer = layer;
+        break;
+      }
+    }
+
+
+    if (targetLayer) {
+
+      const nodes =
+        Array.from(
+          targetLayer.querySelectorAll(
+            "Dimension, Extent"
+          )
+        );
+
+      for (const node of nodes) {
+
+        const name =
+          (
+            node.getAttribute("name") ||
+            ""
+          ).toLowerCase();
+
+        if (name !== "time") {
+          continue;
+        }
+
+        const value =
+          node.textContent.trim();
+
+        parseTimeValue(
+          value,
+          result
+        );
+      }
+    }
+
+  } catch (e) {
+    console.warn(
+      "XML parse error",
+      e
+    );
+  }
+
+
+  /*
+   * Fallback:
+   * если точный Layer не найден,
+   * ищем временные строки по всему XML.
+   */
+
+  if (!result.length) {
+
+    const regex =
+      /20\d\d-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:\.\d+)?Z/g;
+
+    const matches =
+      text.match(regex) || [];
+
+    for (const value of matches) {
+
+      const d =
+        new Date(value);
+
+      if (!Number.isNaN(d.getTime())) {
+
+        result.push(
+          d.toISOString()
+        );
+      }
+    }
+  }
+
+
+  return [
+    ...new Set(result)
+  ]
+    .map(
+      value => new Date(value)
+    )
+    .filter(
+      isUsableTime
+    )
+    .sort(
+      (a,b) =>
+        a.getTime() -
+        b.getTime()
+    )
+    .map(
+      d => d.toISOString()
+    );
+}
+
+
+function parseTimeValue(
+  value,
+  result
+) {
+
+  if (!value) {
+    return;
+  }
+
+  /*
+   * Обычный список:
+   *
+   * time1,time2,time3
+   */
+
+  if (
+    value.includes(",") &&
+    !value.includes("/")
+  ) {
+
+    for (
+      const part of value.split(",")
+    ) {
+
+      const d =
+        new Date(
+          part.trim()
+        );
+
+      if (
+        !Number.isNaN(d.getTime())
+      ) {
+
+        result.push(
+          d.toISOString()
+        );
+      }
+    }
+
+    return;
+  }
+
+
+  /*
+   * Интервал:
+   *
+   * start/end/step
+   */
+
+  const parts =
+    value.split("/");
+
+  if (parts.length >= 2) {
+
+    const start =
+      new Date(parts[0]);
+
+    const end =
+      new Date(parts[1]);
+
+    if (
+      !Number.isNaN(start.getTime()) &&
+      !Number.isNaN(end.getTime())
+    ) {
+
+      let step =
+        FRAME_STEP;
+
+      if (parts[2]) {
+
+        const match =
+          parts[2].match(
+            /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i
+          );
+
+        if (match) {
+
+          const hours =
+            Number(match[1] || 0);
+
+          const minutes =
+            Number(match[2] || 0);
+
+          const seconds =
+            Number(match[3] || 0);
+
+          step =
+            (
+              hours * 3600 +
+              minutes * 60 +
+              seconds
+            ) * 1000;
+        }
+      }
+
+
+      /*
+       * Не генерируем бесконечный диапазон.
+       */
+
+      const max =
+        Math.min(
+          end.getTime(),
+          Date.now() + 30 * 1000
+        );
+
+      for (
+        let t = start.getTime();
+        t <= max;
+        t += step
+      ) {
+
+        result.push(
+          new Date(t).toISOString()
+        );
+      }
+    }
+  }
+}
+
+
+/* =========================================================
+   GET CAPABILITIES
+========================================================= */
+
+async function loadCapabilities() {
+
+  setStatus(
+    "Загрузка радара…"
+  );
+
+  const url =
+    WMS_URL +
+    "?SERVICE=WMS" +
+    "&VERSION=1.1.1" +
+    "&REQUEST=GetCapabilities";
+
+
+  try {
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " +
+        response.status
+      );
+    }
+
+    const text =
+      await response.text();
+
+    let parsed =
+      extractTimesFromText(text);
+
+
+    /*
+     * Оставляем последние кадры.
+     */
+
+    if (
+      parsed.length >
+      MAX_FRAMES
+    ) {
+
+      parsed =
+        parsed.slice(
+          -MAX_FRAMES
+        );
+    }
+
+
+    times = parsed;
+
+
+    timeSlider.min = 0;
+
+    timeSlider.max =
+      Math.max(
+        0,
+        times.length - 1
+      );
+
+
+    if (!times.length) {
+
+      throw new Error(
+        "Временные кадры не найдены"
+      );
+    }
+
+
+    const newest =
+      times[times.length - 1];
+
+
+    /*
+     * Первый запуск.
+     */
+
+    if (!currentTime) {
+
+      await selectTime(
+        newest,
+        false,
+        true
+      );
+
+    } else if (
+      autoFollowLatest &&
+      currentTime !== newest
+    ) {
+
+      /*
+       * Появился новый кадр.
+       *
+       * Если он ещё не готов,
+       * selectTime автоматически
+       * откатится на предыдущий.
+       */
+
+      await selectTime(
+        newest,
+        false,
+        true
+      );
+
+    } else {
+
+      updateTimelinePosition();
+    }
+
+
+    setStatus(
+      "Готово"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Capabilities error:",
+      error
+    );
+
+    setStatus(
+      "Ошибка загрузки радара"
+    );
+  }
+}
+
+
+/* =========================================================
+   RADAR URL
+========================================================= */
+
+function getRadarUrl(time) {
+
+  const bounds =
+    map.getBounds();
+
+  const south =
+    bounds.getSouth();
+
+  const west =
+    bounds.getWest();
+
+  const north =
+    bounds.getNorth();
+
+  const east =
+    bounds.getEast();
+
+  const size =
+    map.getSize();
+
+
+  const params =
+    new URLSearchParams({
+
+      SERVICE: "WMS",
+
+      VERSION: "1.1.1",
+
+      REQUEST: "GetMap",
+
+      LAYERS: TARGET_LAYER,
+
+      STYLES: "",
+
+      FORMAT: "image/png",
+
+      TRANSPARENT: "true",
+
+      SRS: "EPSG:4326",
+
+      BBOX:
+        [
+          west,
+          south,
+          east,
+          north
+        ].join(","),
+
+      WIDTH:
+        Math.max(
+          256,
+          Math.round(size.x)
+        ),
+
+      HEIGHT:
+        Math.max(
+          256,
+          Math.round(size.y)
+        ),
+
+      TIME: time
+    });
+
+
+  return (
+    WMS_URL +
+    "?" +
+    params.toString()
+  );
+}
+
+
+/* =========================================================
+   LOAD RADAR FRAME
+========================================================= */
+
+function loadImage(url) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const img =
+        new Image();
+
+      img.onload = () => {
+
+        if (
+          !img.naturalWidth ||
+          !img.naturalHeight
+        ) {
+
+          reject(
+            new Error(
+              "Пустое изображение"
+            )
+          );
+
+          return;
+        }
+
+        resolve(img);
+      };
+
+
+      img.onerror = () => {
+
+        reject(
+          new Error(
+            "Изображение не загрузилось"
+          )
+        );
+      };
+
+
+      img.src = url;
+    }
+  );
+}
+
+
+/* =========================================================
+   CANDIDATE FRAMES
+========================================================= */
+
+function getCandidateTimes(time) {
+
+  const index =
+    times.indexOf(time);
+
+  if (index < 0) {
+    return [time];
+  }
+
+  /*
+   * Сначала пробуем выбранный кадр,
+   * затем предыдущие.
+   *
+   * Например:
+   *
+   * 10:40
+   * 10:30
+   * 10:20
+   */
+
+  return times
+    .slice(
+      0,
+      index + 1
+    )
+    .reverse();
+}
+
+
+/* =========================================================
+   SELECT RADAR TIME
+========================================================= */
+
+async function selectTime(
+  requestedTime,
+  fromMapMove = false,
+  allowFallback = true
+) {
+
+  if (!requestedTime) {
+    return;
+  }
+
+
+  const requestId =
+    ++radarRequestId;
+
+
+  const candidates =
+    allowFallback
+      ? getCandidateTimes(requestedTime)
+      : [requestedTime];
+
+
+  for (
+    const candidateTime of candidates
+  ) {
+
+    /*
+     * Пользователь уже выбрал
+     * другой кадр.
+     *
+     * Старый запрос отменяем.
+     */
+
+    if (
+      requestId !== radarRequestId
+    ) {
+      return;
+    }
+
+
+    const url =
+      getRadarUrl(
+        candidateTime
+      );
+
+
+    try {
+
+      if (!fromMapMove) {
+
+        setStatus(
+          "Загрузка " +
+          formatTime(candidateTime) +
+          "…"
+        );
+      }
+
+
+      /*
+       * Загружаем картинку отдельно.
+       *
+       * Старый кадр при этом остаётся
+       * на карте.
+       */
+
+      const img =
+        await loadImage(url);
+
+
+      if (
+        requestId !== radarRequestId
+      ) {
+        return;
+      }
+
+
+      /*
+       * Даём браузеру декодировать
+       * изображение до замены старого.
+       */
+
+      try {
+
+        if (img.decode) {
+          await img.decode();
+        }
+
+      } catch (_) {}
+
+
+      if (
+        requestId !== radarRequestId
+      ) {
+        return;
+      }
+
+
+      /*
+       * Первый радарный слой.
+       */
+
+      if (!currentRadarLayer) {
+
+        currentRadarLayer =
+          L.imageOverlay(
+            img.src,
+            map.getBounds(),
+            {
+              opacity: .72,
+              interactive: false
+            }
+          ).addTo(map);
+
+      } else {
+
+        /*
+         * Очень важно:
+         *
+         * НЕ удаляем старый слой.
+         *
+         * Просто заменяем картинку
+         * внутри уже существующего overlay.
+         *
+         * Поэтому карта не мигает
+         * и старый кадр остаётся до момента,
+         * когда новый полностью готов.
+         */
+
+        const element =
+          currentRadarLayer.getElement();
+
+        if (element) {
+
+          element.src =
+            img.src;
+
+          currentRadarLayer.setBounds(
+            map.getBounds()
+          );
+
+        } else {
+
+          currentRadarLayer.setUrl(
+            img.src
+          );
+
+          currentRadarLayer.setBounds(
+            map.getBounds()
+          );
+        }
+      }
+
+
+      currentTime =
+        candidateTime;
+
+
+      updateTimelinePosition();
+
+      pixelInfo.style.display =
+        "none";
+
+
+      if (!fromMapMove) {
+
+        setStatus(
+          "Отражаемость · " +
+          formatTime(currentTime)
+        );
+      }
+
+
+      /*
+       * Загружаем векторы именно
+       * для фактически отображаемого
+       * кадра.
+       */
+
+      if (
+        vectorToggle.checked
+      ) {
+
+        loadVectors(
+          currentTime
+        );
+      }
+
+
+      return;
+
+    } catch (error) {
+
+      console.warn(
+        "Frame unavailable:",
+        candidateTime,
+        error
+      );
+
+
+      /*
+       * Пробуем предыдущий кадр.
+       *
+       * Это как раз исправляет ситуацию:
+       *
+       * 10:40 есть в capabilities,
+       * но WMS ещё не успел его отдать.
+       *
+       * Тогда автоматически берём 10:30.
+       */
+
+      continue;
+    }
+  }
+
+
+  /*
+   * Ни один кадр не загрузился.
+   */
+
+  if (
+    requestId === radarRequestId
+  ) {
+
+    updateTimelinePosition();
+
+    setStatus(
+      "Кадр временно недоступен"
+    );
+  }
+}
+
+
+/* =========================================================
+   TIMELINE POSITION
+========================================================= */
+
+function updateTimelinePosition() {
+
+  if (!currentTime || !times.length) {
+    return;
+  }
+
+
+  let index =
+    times.indexOf(
+      currentTime
+    );
+
+
+  if (index < 0) {
+
+    let bestIndex = 0;
+
+    let bestDiff =
+      Infinity;
+
+    const target =
+      new Date(
+        currentTime
+      ).getTime();
+
+
+    for (
+      let i = 0;
+      i < times.length;
+      i++
+    ) {
+
+      const diff =
+        Math.abs(
+          new Date(
+            times[i]
+          ).getTime() -
+          target
+        );
+
+      if (diff < bestDiff) {
+
+        bestDiff = diff;
+        bestIndex = i;
+      }
+    }
+
+    index = bestIndex;
+  }
+
+
+  timeSlider.value =
+    index;
+
+
+  timeValue.textContent =
+    formatDateTime(
+      currentTime
+    );
+}
+
+
+/* =========================================================
+   TIMELINE INPUT
+========================================================= */
+
+timeSlider.addEventListener(
+  "input",
+  () => {
+
+    const index =
+      Number(
+        timeSlider.value
+      );
+
+
+    if (
+      !times[index]
+    ) {
+      return;
+    }
+
+
+    /*
+     * Если выбрали последний кадр —
+     * снова следуем за новыми кадрами.
+     */
+
+    autoFollowLatest =
+      index ===
+      times.length - 1;
+
+
+    selectTime(
+      times[index],
+      false,
+      true
+    );
+  }
+);
+
+
+/* =========================================================
+   PREVIOUS
+========================================================= */
+
+prevBtn.addEventListener(
   "click",
   () => {
 
-    panel.classList.toggle(
-      "open"
-    );
+    if (!times.length) {
+      return;
+    }
 
+
+    let index =
+      Number(
+        timeSlider.value
+      );
+
+
+    index =
+      Math.max(
+        0,
+        index - 1
+      );
+
+
+    timeSlider.value =
+      index;
+
+
+    autoFollowLatest =
+      index ===
+      times.length - 1;
+
+
+    selectTime(
+      times[index],
+      false,
+      true
+    );
+  }
+);
+
+
+/* =========================================================
+   NEXT
+========================================================= */
+
+nextBtn.addEventListener(
+  "click",
+  () => {
+
+    if (!times.length) {
+      return;
+    }
+
+
+    let index =
+      Number(
+        timeSlider.value
+      );
+
+
+    index =
+      Math.min(
+        times.length - 1,
+        index + 1
+      );
+
+
+    timeSlider.value =
+      index;
+
+
+    autoFollowLatest =
+      index ===
+      times.length - 1;
+
+
+    selectTime(
+      times[index],
+      false,
+      true
+    );
+  }
+);
+
+
+/* =========================================================
+   PLAY
+========================================================= */
+
+playBtn.addEventListener(
+  "click",
+  () => {
+
+    if (!times.length) {
+      return;
+    }
+
+
+    if (playing) {
+
+      playing = false;
+
+      clearInterval(
+        playTimer
+      );
+
+      playTimer = null;
+
+      playBtn.textContent =
+        "▶";
+
+      return;
+    }
+
+
+    playing = true;
+
+    playBtn.textContent =
+      "❚❚";
+
+
+    playTimer =
+      setInterval(
+        () => {
+
+          let index =
+            Number(
+              timeSlider.value
+            );
+
+
+          index++;
+
+
+          if (
+            index >=
+            times.length
+          ) {
+
+            index = 0;
+          }
+
+
+          timeSlider.value =
+            index;
+
+
+          autoFollowLatest =
+            index ===
+            times.length - 1;
+
+
+          selectTime(
+            times[index],
+            false,
+            true
+          );
+
+        },
+        900
+      );
   }
 );
 
@@ -1057,1305 +1889,212 @@ radarToggle.addEventListener(
       return;
     }
 
-    currentRadarLayer.setOpacity(
-      radarToggle.checked
-        ? 0.78
-        : 0
-    );
-
-  }
-);
-
-
-/* =========================================================
-   VECTOR TOGGLE
-========================================================= */
-
-vectorToggle.addEventListener(
-  "change",
-  () => {
 
     if (
-      vectorToggle.checked
+      radarToggle.checked
     ) {
 
-      vectorLayer.addTo(
-        map
+      currentRadarLayer.setOpacity(
+        .72
       );
-
-      if (currentTime) {
-        loadVectors(
-          currentTime
-        );
-      }
 
     } else {
 
-      map.removeLayer(
-        vectorLayer
+      currentRadarLayer.setOpacity(
+        0
       );
-
     }
-
   }
 );
 
 
 /* =========================================================
-   TIME FORMAT
+   VECTOR LAYER
 ========================================================= */
 
-function formatTimeLocal(
-  iso
+const vectorLayer =
+  L.layerGroup().addTo(map);
+
+
+/*
+ * Расчёт конечной точки.
+ *
+ * dist — расстояние в км.
+ * head — направление в градусах.
+ */
+
+function destination(
+  lon,
+  lat,
+  dist,
+  bearing
 ) {
 
-  if (!iso) {
-    return "—";
-  }
+  const R =
+    6371;
+
+
+  const brng =
+    bearing *
+    Math.PI /
+    180;
+
+
+  const lat1 =
+    lat *
+    Math.PI /
+    180;
+
+
+  const lon1 =
+    lon *
+    Math.PI /
+    180;
 
 
   const d =
-    new Date(iso);
+    dist / R;
 
 
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
-    return iso;
-  }
-
-
-  return d.toLocaleString(
-    [],
-    {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    }
-  );
-
-}
-
-
-function formatShortTime(
-  iso
-) {
-
-  if (!iso) {
-    return "—";
-  }
-
-
-  const d =
-    new Date(iso);
-
-
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
-    return iso;
-  }
-
-
-  return d.toLocaleTimeString(
-    [],
-    {
-      hour: "2-digit",
-      minute: "2-digit"
-    }
-  );
-
-}
-
-
-/* =========================================================
-   NORMALIZE TIME
-========================================================= */
-
-function normalizeTime(
-  value
-) {
-
-  if (!value) {
-    return null;
-  }
-
-
-  const d =
-    new Date(
-      String(value).trim()
+  const lat2 =
+    Math.asin(
+      Math.sin(lat1) *
+      Math.cos(d) +
+      Math.cos(lat1) *
+      Math.sin(d) *
+      Math.cos(brng)
     );
 
 
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
-    return null;
-  }
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(brng) *
+      Math.sin(d) *
+      Math.cos(lat1),
 
-
-  return d.toISOString();
-
-}
-
-
-/* =========================================================
-   TEN MINUTE FRAME
-========================================================= */
-
-function isTenMinuteFrame(
-  iso
-) {
-
-  const d =
-    new Date(iso);
-
-
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
-    return false;
-  }
-
-
-  return (
-    d.getUTCMinutes() % 10 === 0 &&
-    d.getUTCSeconds() === 0
-  );
-
-}
-
-
-/* =========================================================
-   CAPABILITIES
-========================================================= */
-
-async function getCapabilities() {
-
-  const url =
-    WMS_URL +
-    "?SERVICE=WMS" +
-    "&VERSION=1.1.1" +
-    "&REQUEST=GetCapabilities" +
-    "&_=" +
-    Date.now();
-
-
-  const response =
-    await fetch(
-      url,
-      {
-        cache:
-          "no-store"
-      }
+      Math.cos(d) -
+      Math.sin(lat1) *
+      Math.sin(lat2)
     );
-
-
-  if (!response.ok) {
-
-    throw new Error(
-      "GetCapabilities HTTP " +
-      response.status
-    );
-
-  }
-
-
-  return response.text();
-
-}
-
-
-/* =========================================================
-   EXTRACT TIMES
-========================================================= */
-
-function extractTimesFromXML(
-  xmlText
-) {
-
-  const found =
-    new Set();
-
-
-  /*
-   * Обычные ISO времена.
-   */
-
-  const matches =
-    xmlText.match(
-      /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g
-    );
-
-
-  if (matches) {
-
-    for (
-      const value of matches
-    ) {
-
-      const t =
-        normalizeTime(
-          value
-        );
-
-
-      if (
-        t &&
-        isTenMinuteFrame(t)
-      ) {
-
-        found.add(t);
-
-      }
-
-    }
-
-  }
-
-
-  /*
-   * WMS time intervals.
-   */
-
-  try {
-
-    const parser =
-      new DOMParser();
-
-
-    const xml =
-      parser.parseFromString(
-        xmlText,
-        "text/xml"
-      );
-
-
-    const nodes =
-      xml.querySelectorAll(
-        "Dimension[name='time'], Extent[name='time']"
-      );
-
-
-    for (
-      const node of nodes
-    ) {
-
-      const text =
-        node.textContent || "";
-
-
-      const values =
-        text
-          .split(",")
-          .map(
-            v => v.trim()
-          );
-
-
-      for (
-        const value of values
-      ) {
-
-        if (
-          !value.includes("/")
-        ) {
-
-          const t =
-            normalizeTime(
-              value
-            );
-
-
-          if (
-            t &&
-            isTenMinuteFrame(t)
-          ) {
-
-            found.add(t);
-
-          }
-
-          continue;
-        }
-
-
-        const parts =
-          value.split("/");
-
-
-        if (
-          parts.length < 2
-        ) {
-          continue;
-        }
-
-
-        const start =
-          new Date(
-            parts[0]
-          );
-
-        const end =
-          new Date(
-            parts[1]
-          );
-
-
-        if (
-          Number.isNaN(
-            start.getTime()
-          ) ||
-          Number.isNaN(
-            end.getTime()
-          )
-        ) {
-          continue;
-        }
-
-
-        let step =
-          10 * 60 * 1000;
-
-
-        if (
-          parts[2]
-        ) {
-
-          const match =
-            parts[2].match(
-              /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i
-            );
-
-
-          if (match) {
-
-            const hours =
-              Number(
-                match[1] || 0
-              );
-
-            const minutes =
-              Number(
-                match[2] || 0
-              );
-
-            const seconds =
-              Number(
-                match[3] || 0
-              );
-
-
-            const calculated =
-              (
-                hours * 3600 +
-                minutes * 60 +
-                seconds
-              ) * 1000;
-
-
-            if (
-              calculated > 0
-            ) {
-
-              step =
-                calculated;
-
-            }
-
-          }
-
-        }
-
-
-        for (
-          let t =
-            start.getTime();
-
-          t <=
-            end.getTime();
-
-          t += step
-        ) {
-
-          const d =
-            new Date(t);
-
-
-          if (
-            d.getUTCMinutes() % 10 === 0 &&
-            d.getUTCSeconds() === 0
-          ) {
-
-            found.add(
-              d.toISOString()
-            );
-
-          }
-
-        }
-
-      }
-
-    }
-
-  } catch (error) {
-
-    console.warn(
-      "Capabilities XML:",
-      error
-    );
-
-  }
 
 
   return [
-    ...found
-  ].sort(
-    (a, b) =>
-      new Date(a) -
-      new Date(b)
-  );
-
+    lon2 * 180 / Math.PI,
+    lat2 * 180 / Math.PI
+  ];
 }
 
 
-/* =========================================================
-   UPDATE TIMES
-========================================================= */
-
-async function updateTimes() {
-
-  try {
-
-    const xml =
-      await getCapabilities();
-
-
-    let discovered =
-      extractTimesFromXML(
-        xml
-      );
-
-
-    /*
-     * Не показываем будущее.
-     */
-
-    const now =
-      Date.now();
-
-
-    discovered =
-      discovered.filter(
-        iso =>
-          new Date(iso).getTime()
-          <=
-          now + 90 * 1000
-      );
-
-
-    /*
-     * Оставляем последние MAX_FRAMES.
-     */
-
-    if (
-      discovered.length >
-      MAX_FRAMES
-    ) {
-
-      discovered =
-        discovered.slice(
-          -MAX_FRAMES
-        );
-
-    }
-
-
-    times =
-      discovered;
-
-
-    timeSlider.min =
-      "0";
-
-
-    timeSlider.max =
-      String(
-        Math.max(
-          0,
-          times.length - 1
-        )
-      );
-
-
-    /*
-     * Первый запуск.
-     */
-
-    if (
-      !currentTime &&
-      times.length
-    ) {
-
-      timeSlider.value =
-        String(
-          times.length - 1
-        );
-
-
-      selectTime(
-        times[
-          times.length - 1
-        ]
-      );
-
-    }
-
-
-    /*
-     * Сохраняем выбранный кадр.
-     */
-
-    else if (
-      currentTime &&
-      times.includes(
-        currentTime
-      )
-    ) {
-
-      timeSlider.value =
-        String(
-          times.indexOf(
-            currentTime
-          )
-        );
-
-    }
-
-
-    /*
-     * Если выбранный кадр
-     * больше недоступен.
-     */
-
-    else if (
-      times.length
-    ) {
-
-      selectTime(
-        times[
-          times.length - 1
-        ]
-      );
-
-    }
-
-
-    updateTimelineLabels();
-
-
-    statusDot.classList.add(
-      "ok"
-    );
-
-
-    statusText.textContent =
-      "Готово";
-
-
-  } catch (error) {
-
-    console.error(
-      "Capabilities:",
-      error
-    );
-
-
-    /*
-     * Существующий радар
-     * не трогаем.
-     */
-
-    if (!currentRadarLayer) {
-
-      statusText.textContent =
-        "Ошибка загрузки радара";
-
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   TIMELINE LABELS
-========================================================= */
-
-function updateTimelineLabels() {
-
-  if (!times.length) {
-
-    timelineStart.textContent =
-      "—";
-
-    timelineEnd.textContent =
-      "—";
-
-    return;
-
-  }
-
-
-  timelineStart.textContent =
-    formatShortTime(
-      times[0]
-    );
-
-
-  timelineEnd.textContent =
-    formatShortTime(
-      times[
-        times.length - 1
-      ]
-    );
-
-
-  if (currentTime) {
-
-    currentTimeEl.textContent =
-      formatTimeLocal(
-        currentTime
-      );
-
-  }
-
-}
-
-
-/* =========================================================
-   RADAR URL
-========================================================= */
-
-function buildRadarURL(
-  bounds,
-  width,
-  height,
-  time
+/*
+ * Один белый вектор с тонкой
+ * чёрной обводкой.
+ *
+ * Нижняя линия:
+ * чёрная, 3 px.
+ *
+ * Верхняя:
+ * белая, 1.5 px.
+ */
+
+function createVector(
+  lat,
+  lon,
+  dist,
+  head
 ) {
 
-  const sw =
-    bounds.getSouthWest();
-
-
-  const ne =
-    bounds.getNorthEast();
-
-
-  const swPoint =
-    L.CRS.EPSG3857.project(
-      L.latLng(
-        sw.lat,
-        sw.lng
-      )
+  const end =
+    destination(
+      lon,
+      lat,
+      dist,
+      head
     );
 
 
-  const nePoint =
-    L.CRS.EPSG3857.project(
-      L.latLng(
-        ne.lat,
-        ne.lng
-      )
+  const points = [
+    [lat, lon],
+    [end[1], end[0]]
+  ];
+
+
+  const outline =
+    L.polyline(
+      points,
+      {
+        color: "#000000",
+        weight: 3,
+        opacity: .9,
+
+        /*
+         * Вектор не должен
+         * мешать кликам карты.
+         */
+        interactive: false
+      }
     );
 
 
-  const bbox = [
-    swPoint.x,
-    swPoint.y,
-    nePoint.x,
-    nePoint.y
-  ].join(",");
+  const line =
+    L.polyline(
+      points,
+      {
+        color: "#ffffff",
+        weight: 1.5,
+        opacity: 1,
+
+        interactive: false
+      }
+    );
 
 
-  const params =
-    new URLSearchParams();
-
-
-  params.set(
-    "SERVICE",
-    "WMS"
-  );
-
-  params.set(
-    "VERSION",
-    "1.1.1"
-  );
-
-  params.set(
-    "REQUEST",
-    "GetMap"
-  );
-
-  params.set(
-    "LAYERS",
-    TARGET_LAYER
-  );
-
-  params.set(
-    "STYLES",
-    ""
-  );
-
-  params.set(
-    "FORMAT",
-    "image/png"
-  );
-
-  params.set(
-    "TRANSPARENT",
-    "true"
-  );
-
-  params.set(
-    "SRS",
-    "EPSG:3857"
-  );
-
-  params.set(
-    "BBOX",
-    bbox
-  );
-
-  params.set(
-    "WIDTH",
-    String(
-      Math.min(
-        2048,
-        Math.max(
-          256,
-          Math.round(width)
-        )
-      )
-    )
-  );
-
-  params.set(
-    "HEIGHT",
-    String(
-      Math.min(
-        2048,
-        Math.max(
-          256,
-          Math.round(height)
-        )
-      )
-    )
-  );
-
-  params.set(
-    "TIME",
-    time
-  );
-
-
-  return (
-    WMS_URL +
-    "?" +
-    params.toString()
-  );
-
+  return L.layerGroup([
+    outline,
+    line
+  ]);
 }
 
 
 /* =========================================================
-   LOAD RADAR
-========================================================= */
-
-function selectTime(
-  time,
-  force = false
-) {
-
-  if (!time) {
-    return;
-  }
-
-
-  if (
-    !force &&
-    currentTime === time &&
-    currentRadarLayer
-  ) {
-
-    return;
-
-  }
-
-
-  /*
-   * Новый ID запроса.
-   */
-
-  const requestId =
-    ++radarRequestId;
-
-
-  const bounds =
-    map.getBounds();
-
-
-  const size =
-    map.getSize();
-
-
-  const url =
-    buildRadarURL(
-      bounds,
-      size.x,
-      size.y,
-      time
-    );
-
-
-  /*
-   * Временный Image.
-   *
-   * Он НЕ добавляется на карту,
-   * пока полностью не загрузится.
-   */
-
-  const img =
-    new Image();
-
-
-  img.crossOrigin =
-    "anonymous";
-
-
-  img.onload =
-    () => {
-
-      /*
-       * Пользователь уже выбрал
-       * другой кадр.
-       *
-       * Этот результат устарел.
-       */
-
-      if (
-        requestId !==
-        radarRequestId
-      ) {
-
-        return;
-
-      }
-
-
-      const newLayer =
-        L.imageOverlay(
-          img.src,
-          bounds,
-          {
-
-            opacity:
-              radarToggle.checked
-                ? 0.78
-                : 0,
-
-            interactive:
-              false,
-
-            className:
-              "radar-layer"
-
-          }
-        );
-
-
-      /*
-       * Новый слой добавляется
-       * только теперь.
-       */
-
-      newLayer.addTo(
-        map
-      );
-
-
-      const oldLayer =
-        currentRadarLayer;
-
-
-      currentRadarLayer =
-        newLayer;
-
-
-      currentTime =
-        time;
-
-
-      updateTimelineUI();
-
-
-      /*
-       * Новый кадр виден.
-       */
-
-      newLayer.setOpacity(
-        radarToggle.checked
-          ? 0.78
-          : 0
-      );
-
-
-      /*
-       * Старый кадр удаляем
-       * СРАЗУ после готовности нового.
-       *
-       * Поэтому два полноценных кадра
-       * одновременно не остаются.
-       */
-
-      if (
-        oldLayer &&
-        map.hasLayer(
-          oldLayer
-        )
-      ) {
-
-        map.removeLayer(
-          oldLayer
-        );
-
-      }
-
-
-      /*
-       * Векторы.
-       */
-
-      if (
-        vectorToggle.checked
-      ) {
-
-        loadVectors(
-          time
-        );
-
-      }
-
-    };
-
-
-  img.onerror =
-    error => {
-
-      console.warn(
-        "Radar image error:",
-        error
-      );
-
-      /*
-       * Старый слой вообще
-       * не трогаем.
-       */
-
-    };
-
-
-  /*
-   * Запускаем загрузку.
-   */
-
-  img.src =
-    url;
-
-}
-
-
-/* =========================================================
-   TIMELINE UI
-========================================================= */
-
-function updateTimelineUI() {
-
-  if (!currentTime) {
-    return;
-  }
-
-
-  const index =
-    times.indexOf(
-      currentTime
-    );
-
-
-  if (index >= 0) {
-
-    timeSlider.value =
-      String(index);
-
-  }
-
-
-  currentTimeEl.textContent =
-    formatTimeLocal(
-      currentTime
-    );
-
-
-  updateTimelineLabels();
-
-}
-
-
-/* =========================================================
-   SLIDER
-========================================================= */
-
-timeSlider.addEventListener(
-  "input",
-  () => {
-
-    const index =
-      Number(
-        timeSlider.value
-      );
-
-
-    if (
-      index < 0 ||
-      index >= times.length
-    ) {
-      return;
-    }
-
-
-    selectTime(
-      times[index]
-    );
-
-  }
-);
-
-
-/* =========================================================
-   PREVIOUS
-========================================================= */
-
-prevButton.addEventListener(
-  "click",
-  () => {
-
-    if (!times.length) {
-      return;
-    }
-
-
-    let index =
-      times.indexOf(
-        currentTime
-      );
-
-
-    if (index < 0) {
-
-      index =
-        times.length - 1;
-
-    }
-
-
-    index =
-      Math.max(
-        0,
-        index - 1
-      );
-
-
-    selectTime(
-      times[index]
-    );
-
-  }
-);
-
-
-/* =========================================================
-   NEXT
-========================================================= */
-
-nextButton.addEventListener(
-  "click",
-  () => {
-
-    if (!times.length) {
-      return;
-    }
-
-
-    let index =
-      times.indexOf(
-        currentTime
-      );
-
-
-    if (index < 0) {
-      index = 0;
-    }
-
-
-    index =
-      Math.min(
-        times.length - 1,
-        index + 1
-      );
-
-
-    selectTime(
-      times[index]
-    );
-
-  }
-);
-
-
-/* =========================================================
-   PLAY
-========================================================= */
-
-playButton.addEventListener(
-  "click",
-  () => {
-
-    if (!times.length) {
-      return;
-    }
-
-
-    playing =
-      !playing;
-
-
-    if (!playing) {
-
-      clearInterval(
-        playTimer
-      );
-
-      playTimer =
-        null;
-
-      playButton.textContent =
-        "▶";
-
-      return;
-
-    }
-
-
-    playButton.textContent =
-      "Ⅱ";
-
-
-    playTimer =
-      setInterval(
-        () => {
-
-          if (!times.length) {
-            return;
-          }
-
-
-          let index =
-            times.indexOf(
-              currentTime
-            );
-
-
-          if (index < 0) {
-            index = 0;
-          }
-
-
-          index++;
-
-
-          if (
-            index >=
-            times.length
-          ) {
-
-            playing =
-              false;
-
-            clearInterval(
-              playTimer
-            );
-
-            playTimer =
-              null;
-
-            playButton.textContent =
-              "▶";
-
-            return;
-
-          }
-
-
-          selectTime(
-            times[index]
-          );
-
-        },
-        900
-      );
-
-  }
-);
-
-
-/* =========================================================
-   VECTOR DATA
+   LOAD VECTORS
 ========================================================= */
 
 async function loadVectors(
   time
 ) {
 
+  if (
+    !vectorToggle.checked
+  ) {
+
+    vectorLayer.clearLayers();
+
+    return;
+  }
+
+
+  const requestId =
+    ++vectorRequestId;
+
+
+  const url =
+    VECTOR_URL +
+    "?time=" +
+    encodeURIComponent(time) +
+    "&title=" +
+    encodeURIComponent(
+      TARGET_LAYER
+    );
+
+
   try {
-
-    const url =
-      VECTOR_URL +
-      "?time=" +
-      encodeURIComponent(
-        time
-      ) +
-      "&title=" +
-      encodeURIComponent(
-        TARGET_LAYER
-      );
-
 
     const response =
       await fetch(
         url,
         {
-          cache:
-            "no-store"
+          cache: "no-store"
         }
       );
 
@@ -2363,10 +2102,9 @@ async function loadVectors(
     if (!response.ok) {
 
       throw new Error(
-        "Vector HTTP " +
+        "HTTP " +
         response.status
       );
-
     }
 
 
@@ -2374,7 +2112,27 @@ async function loadVectors(
       await response.json();
 
 
+    /*
+     * Если пользователь уже
+     * переключил кадр —
+     * старый ответ не рисуем.
+     */
+
+    if (
+      requestId !== vectorRequestId ||
+      time !== currentTime
+    ) {
+
+      return;
+    }
+
+
     vectorLayer.clearLayers();
+
+
+    if (!Array.isArray(data)) {
+      return;
+    }
 
 
     for (
@@ -2390,703 +2148,93 @@ async function loadVectors(
 
 
       const lat =
-        Number(
-          item[0]
-        );
+        Number(item[0]);
 
       const lon =
-        Number(
-          item[1]
-        );
+        Number(item[1]);
 
-      const distance =
-        Number(
-          item[2]
-        ) * 3.6;
+      /*
+       * Nowcast отдаёт расстояние
+       * в м/с, далее исходный код
+       * переводит его в км/ч.
+       */
+      const dist =
+        Number(item[2]) * 3.6;
 
-      const heading =
-        Number(
-          item[3]
-        );
+      const head =
+        Number(item[3]);
 
 
       if (
         !Number.isFinite(lat) ||
         !Number.isFinite(lon) ||
-        !Number.isFinite(distance) ||
-        !Number.isFinite(heading)
+        !Number.isFinite(dist) ||
+        !Number.isFinite(head)
       ) {
         continue;
       }
 
 
-      const destination =
-        destinationPoint(
+      const vector =
+        createVector(
           lat,
           lon,
-          distance,
-          heading
+          dist,
+          head
         );
 
 
-      L.polyline(
-        [
-          [lat, lon],
-
-          [
-            destination.lat,
-            destination.lon
-          ]
-        ],
-        {
-
-          color:
-            "#ffffff",
-
-          weight:
-            1.5,
-
-          opacity:
-            .75
-
-        }
-      ).addTo(
-        vectorLayer
+      vectorLayer.addLayer(
+        vector
       );
-
     }
 
   } catch (error) {
 
     console.warn(
-      "Vector:",
+      "Vector error:",
       error
     );
-
   }
-
 }
 
 
 /* =========================================================
-   DESTINATION
+   VECTOR TOGGLE
 ========================================================= */
 
-function destinationPoint(
-  lat,
-  lon,
-  distanceKm,
-  bearing
-) {
-
-  const R =
-    6371;
-
-
-  const brng =
-    bearing *
-    Math.PI /
-    180;
-
-
-  const d =
-    distanceKm / R;
-
-
-  const lat1 =
-    lat *
-    Math.PI /
-    180;
-
-
-  const lon1 =
-    lon *
-    Math.PI /
-    180;
-
-
-  const lat2 =
-    Math.asin(
-      Math.sin(lat1) *
-      Math.cos(d) +
-
-      Math.cos(lat1) *
-      Math.sin(d) *
-      Math.cos(brng)
-    );
-
-
-  const lon2 =
-    lon1 +
-
-    Math.atan2(
-      Math.sin(brng) *
-      Math.sin(d) *
-      Math.cos(lat1),
-
-      Math.cos(d) -
-      Math.sin(lat1) *
-      Math.sin(lat2)
-    );
-
-
-  return {
-
-    lat:
-      lat2 *
-      180 /
-      Math.PI,
-
-    lon:
-      lon2 *
-      180 /
-      Math.PI
-
-  };
-
-}
-
-
-/* =========================================================
-   PIXEL INFO CLOSE
-========================================================= */
-
-pixelClose.addEventListener(
-  "click",
+vectorToggle.addEventListener(
+  "change",
   () => {
 
-    pixelInfo.classList.remove(
-      "open"
-    );
-
-  }
-);
-
-
-/* =========================================================
-   FEATURE INFO URL
-========================================================= */
-
-function buildFeatureInfoURL(
-  latlng
-) {
-
-  if (!currentTime) {
-    return null;
-  }
-
-
-  const bounds =
-    map.getBounds();
-
-
-  const size =
-    map.getSize();
-
-
-  const sw =
-    bounds.getSouthWest();
-
-
-  const ne =
-    bounds.getNorthEast();
-
-
-  const swPoint =
-    L.CRS.EPSG3857.project(
-      L.latLng(
-        sw.lat,
-        sw.lng
-      )
-    );
-
-
-  const nePoint =
-    L.CRS.EPSG3857.project(
-      L.latLng(
-        ne.lat,
-        ne.lng
-      )
-    );
-
-
-  const bbox = [
-    swPoint.x,
-    swPoint.y,
-    nePoint.x,
-    nePoint.y
-  ].join(",");
-
-
-  const containerPoint =
-    map.latLngToContainerPoint(
-      latlng
-    );
-
-
-  const x =
-    Math.round(
-      containerPoint.x
-    );
-
-
-  const y =
-    Math.round(
-      containerPoint.y
-    );
-
-
-  const params =
-    new URLSearchParams();
-
-
-  params.set(
-    "SERVICE",
-    "WMS"
-  );
-
-  params.set(
-    "VERSION",
-    "1.1.1"
-  );
-
-  params.set(
-    "REQUEST",
-    "GetFeatureInfo"
-  );
-
-  params.set(
-    "LAYERS",
-    TARGET_LAYER
-  );
-
-  params.set(
-    "QUERY_LAYERS",
-    TARGET_LAYER
-  );
-
-  params.set(
-    "STYLES",
-    ""
-  );
-
-  params.set(
-    "SRS",
-    "EPSG:3857"
-  );
-
-  params.set(
-    "BBOX",
-    bbox
-  );
-
-  params.set(
-    "WIDTH",
-    String(
-      Math.round(
-        size.x
-      )
-    )
-  );
-
-  params.set(
-    "HEIGHT",
-    String(
-      Math.round(
-        size.y
-      )
-    )
-  );
-
-  params.set(
-    "X",
-    String(x)
-  );
-
-  params.set(
-    "Y",
-    String(y)
-  );
-
-  params.set(
-    "INFO_FORMAT",
-    "text/html"
-  );
-
-  params.set(
-    "FEATURE_COUNT",
-    "1"
-  );
-
-  params.set(
-    "TIME",
-    currentTime
-  );
-
-
-  return (
-    WMS_URL +
-    "?" +
-    params.toString()
-  );
-
-}
-
-
-/* =========================================================
-   DBZ PARSER
-========================================================= */
-
-function parseDBZ(
-  text
-) {
-
-  /*
-   * Убираем HTML.
-   */
-
-  const temp =
-    document.createElement(
-      "div"
-    );
-
-
-  temp.innerHTML =
-    text;
-
-
-  const plain =
-    (
-      temp.textContent ||
-      temp.innerText ||
-      ""
-    )
-    .replace(
-      /\s+/g,
-      " "
-    )
-    .trim();
-
-
-  /*
-   * -------------------------------------------------------
-   * 1. Если сервер уже отдал dBZ,
-   *    используем его напрямую.
-   *
-   *    Например:
-   *    "38.5 dBZ"
-   * -------------------------------------------------------
-   */
-
-  const dbzMatch =
-    plain.match(
-      /(-?\d+(?:[.,]\d+)?)\s*dBz/i
-    );
-
-
-  if (dbzMatch) {
-
-    const value =
-      Number(
-        dbzMatch[1]
-          .replace(",", ".")
-      );
-
-
-    if (
-      Number.isFinite(value) &&
-      value >= -40 &&
-      value <= 90
-    ) {
-
-      return {
-        value:
-          Math.round(
-            value * 10
-          ) / 10,
-
-        source:
-          "decoded"
-
-      };
-
-    }
-
-  }
-
-
-  /*
-   * -------------------------------------------------------
-   * 2. Ищем сырое значение.
-   *
-   * BALTRAD DBZH:
-   *
-   * raw × 0.5 - 32
-   *
-   * Например:
-   *
-   * raw = 140
-   *
-   * 140 × 0.5 - 32 = 38 dBZ
-   * -------------------------------------------------------
-   */
-
-  const rawPatterns = [
-
-    /(?:value_0|value|dbzh|dbz|bufr_dbz1)[^0-9-]*(-?\d+(?:[.,]\d+)?)/i,
-
-    /(?:reflectivity)[^0-9-]*(-?\d+(?:[.,]\d+)?)/i
-
-  ];
-
-
-  for (
-    const pattern of rawPatterns
-  ) {
-
-    const match =
-      plain.match(
-        pattern
-      );
-
-
-    if (!match) {
-      continue;
-    }
-
-
-    const raw =
-      Number(
-        match[1]
-          .replace(",", ".")
-      );
-
-
-    if (
-      !Number.isFinite(raw)
-    ) {
-      continue;
-    }
-
-
     /*
-     * 255 = no data / outside radar
+     * Отключили —
+     * полностью удаляем векторы.
      */
 
     if (
-      raw === 255
+      !vectorToggle.checked
     ) {
 
-      return {
-        value:
-          null,
+      ++vectorRequestId;
 
-        source:
-          "nodata"
-
-      };
-
-    }
-
-
-    /*
-     * Если это 8-bit BALTRAD
-     * значение.
-     */
-
-    if (
-      raw >= 0 &&
-      raw <= 254
-    ) {
-
-      const dbz =
-        raw * 0.5 - 32;
-
-
-      /*
-       * Реальный физический диапазон
-       * оставляем разумным.
-       */
-
-      if (
-        dbz >= -40 &&
-        dbz <= 90
-      ) {
-
-        return {
-          value:
-            Math.round(
-              dbz * 10
-            ) / 10,
-
-          source:
-            "raw8bit"
-
-        };
-
-      }
-
-    }
-
-
-    /*
-     * Если сервер уже вернул
-     * значение в разумном dBZ.
-     */
-
-    if (
-      raw >= -40 &&
-      raw <= 90
-    ) {
-
-      return {
-        value:
-          Math.round(
-            raw * 10
-          ) / 10,
-
-        source:
-          "direct"
-
-      };
-
-    }
-
-  }
-
-
-  return {
-    value:
-      null,
-
-    source:
-      "unknown",
-
-    raw:
-      plain
-
-  };
-
-}
-
-
-/* =========================================================
-   PIXEL CLICK
-========================================================= */
-
-map.on(
-  "click",
-  async event => {
-
-    /*
-     * Открываем маленькую карточку.
-     */
-
-    pixelInfo.classList.add(
-      "open"
-    );
-
-
-    pixelValue.textContent =
-      "…";
-
-
-    pixelTime.textContent =
-      currentTime
-        ? formatTimeLocal(
-            currentTime
-          )
-        : "—";
-
-
-    pixelCoords.textContent =
-      event.latlng.lat.toFixed(4) +
-      ", " +
-      event.latlng.lng.toFixed(4);
-
-
-    pixelPhenomenon.textContent =
-      "Отражаемость";
-
-
-    const url =
-      buildFeatureInfoURL(
-        event.latlng
-      );
-
-
-    if (!url) {
-
-      pixelValue.textContent =
-        "Нет данных";
+      vectorLayer.clearLayers();
 
       return;
-
     }
 
 
-    try {
+    /*
+     * Включили —
+     * загружаем текущий кадр.
+     */
 
-      const response =
-        await fetch(
-          url,
-          {
-            cache:
-              "no-store"
-          }
-        );
+    if (currentTime) {
 
-
-      if (!response.ok) {
-
-        throw new Error(
-          "FeatureInfo HTTP " +
-          response.status
-        );
-
-      }
-
-
-      const text =
-        await response.text();
-
-
-      const result =
-        parseDBZ(
-          text
-        );
-
-
-      if (
-        result.value !==
-        null
-      ) {
-
-        pixelValue.textContent =
-          result.value +
-          " dBZ";
-
-      } else {
-
-        pixelValue.textContent =
-          "Нет данных";
-
-      }
-
-
-    } catch (error) {
-
-      console.warn(
-        "FeatureInfo:",
-        error
+      loadVectors(
+        currentTime
       );
-
-
-      pixelValue.textContent =
-        "Нет данных";
-
     }
-
   }
 );
 
@@ -3095,13 +2243,51 @@ map.on(
    MAP MOVE
 ========================================================= */
 
-let mapMoveTimer =
-  null;
-
+let moveTimer = null;
 
 map.on(
   "moveend",
   () => {
+
+    clearTimeout(
+      moveTimer
+    );
+
+
+    moveTimer =
+      setTimeout(
+        () => {
+
+          if (
+            currentTime
+          ) {
+
+            /*
+             * При перемещении карты
+             * НЕ откатываем время.
+             */
+
+            selectTime(
+              currentTime,
+              true,
+              false
+            );
+          }
+
+        },
+        250
+      );
+  }
+);
+
+
+/* =========================================================
+   MAP CLICK / PIXEL INFO
+========================================================= */
+
+map.on(
+  "click",
+  async event => {
 
     if (
       !currentTime ||
@@ -3111,32 +2297,288 @@ map.on(
     }
 
 
-    clearTimeout(
-      mapMoveTimer
+    /*
+     * WMS GetFeatureInfo.
+     *
+     * Это используется для
+     * получения значения dBZ
+     * в выбранной точке.
+     */
+
+    const bounds =
+      map.getBounds();
+
+
+    const size =
+      map.getSize();
+
+
+    const point =
+      map.latLngToContainerPoint(
+        event.latlng
+      );
+
+
+    const params =
+      new URLSearchParams({
+
+        SERVICE: "WMS",
+
+        VERSION: "1.1.1",
+
+        REQUEST: "GetFeatureInfo",
+
+        LAYERS: TARGET_LAYER,
+
+        QUERY_LAYERS: TARGET_LAYER,
+
+        STYLES: "",
+
+        INFO_FORMAT:
+          "text/html",
+
+        SRS: "EPSG:4326",
+
+        BBOX:
+          [
+            bounds.getWest(),
+            bounds.getSouth(),
+            bounds.getEast(),
+            bounds.getNorth()
+          ].join(","),
+
+        WIDTH:
+          Math.round(size.x),
+
+        HEIGHT:
+          Math.round(size.y),
+
+        X:
+          Math.round(point.x),
+
+        Y:
+          Math.round(point.y),
+
+        TIME: currentTime
+      });
+
+
+    const url =
+      WMS_URL +
+      "?" +
+      params.toString();
+
+
+    try {
+
+      const response =
+        await fetch(
+          url,
+          {
+            cache: "no-store"
+          }
+        );
+
+
+      if (!response.ok) {
+        throw new Error(
+          "HTTP " +
+          response.status
+        );
+      }
+
+
+      const text =
+        await response.text();
+
+
+      /*
+       * Пытаемся вытащить
+       * число dBZ из ответа.
+       */
+
+      const dbz =
+        parseDbz(
+          text
+        );
+
+
+      if (
+        dbz === null
+      ) {
+
+        pixelValue.textContent =
+          "Нет данных";
+
+      } else {
+
+        pixelValue.textContent =
+          dbz.toFixed(1) +
+          " dBZ";
+      }
+
+
+      pixelTime.textContent =
+        formatDateTime(
+          currentTime
+        );
+
+
+      pixelCoords.textContent =
+        event.latlng.lat.toFixed(4) +
+        "°, " +
+        event.latlng.lng.toFixed(4) +
+        "°";
+
+
+      pixelInfo.style.display =
+        "block";
+
+
+      /*
+       * Не даём карточке
+       * вылезти за экран.
+       */
+
+      const margin = 10;
+
+      let left =
+        event.containerPoint.x + 15;
+
+      let top =
+        event.containerPoint.y + 15;
+
+
+      if (
+        left + 190 >
+        window.innerWidth - margin
+      ) {
+
+        left =
+          event.containerPoint.x -
+          205;
+      }
+
+
+      if (
+        top + 130 >
+        window.innerHeight - margin
+      ) {
+
+        top =
+          event.containerPoint.y -
+          145;
+      }
+
+
+      pixelInfo.style.left =
+        left + "px";
+
+      pixelInfo.style.top =
+        top + "px";
+
+    } catch (error) {
+
+      console.warn(
+        "GetFeatureInfo error:",
+        error
+      );
+    }
+  }
+);
+
+
+/* =========================================================
+   DBZ PARSER
+========================================================= */
+
+function parseDbz(text) {
+
+  /*
+   * Сначала ищем явный dBZ.
+   */
+
+  const explicit =
+    text.match(
+      /dBZ[^0-9-]*(-?\d+(?:\.\d+)?)/i
     );
 
 
-    mapMoveTimer =
-      setTimeout(
-        () => {
+  if (explicit) {
 
-          /*
-           * Перерисовываем текущий кадр
-           * для нового viewport.
-           *
-           * Старый остаётся до полной
-           * загрузки нового.
-           */
-
-          selectTime(
-            currentTime,
-            true
-          );
-
-        },
-        250
+    const value =
+      Number(
+        explicit[1]
       );
 
+    if (
+      Number.isFinite(value)
+    ) {
+      return value;
+    }
+  }
+
+
+  /*
+   * Ищем RAW value.
+   */
+
+  const rawMatch =
+    text.match(
+      /(?:value_0|value|dbzh|dbz|bufr_dbz1|reflectivity)[^0-9-]*(-?\d+(?:\.\d+)?)/i
+    );
+
+
+  if (!rawMatch) {
+    return null;
+  }
+
+
+  const raw =
+    Number(
+      rawMatch[1]
+    );
+
+
+  if (
+    !Number.isFinite(raw)
+  ) {
+    return null;
+  }
+
+
+  /*
+   * BALTRAD DBZH:
+   *
+   * dBZ = raw * 0.5 - 32
+   *
+   * 255 = NoData
+   */
+
+  if (
+    raw >= 0 &&
+    raw <= 254
+  ) {
+
+    return (
+      raw * .5 - 32
+    );
+  }
+
+
+  return null;
+}
+
+
+/* =========================================================
+   CLOSE PIXEL INFO
+========================================================= */
+
+map.on(
+  "movestart",
+  () => {
+    pixelInfo.style.display =
+      "none";
   }
 );
 
@@ -3145,275 +2587,170 @@ map.on(
    GEOLOCATION
 ========================================================= */
 
-let userMarker =
-  null;
+document
+  .getElementById("locateBtn")
+  .addEventListener(
+    "click",
+    () => {
 
+      if (
+        !navigator.geolocation
+      ) {
 
-locateButton.addEventListener(
-  "click",
-  () => {
-
-    if (
-      !navigator.geolocation
-    ) {
-      return;
-    }
-
-
-    navigator.geolocation.getCurrentPosition(
-
-      position => {
-
-        const lat =
-          position.coords.latitude;
-
-        const lon =
-          position.coords.longitude;
-
-
-        map.setView(
-          [lat, lon],
-          Math.max(
-            map.getZoom(),
-            7
-          )
-        );
-
-
-        if (userMarker) {
-
-          map.removeLayer(
-            userMarker
-          );
-
-        }
-
-
-        userMarker =
-          L.circleMarker(
-            [lat, lon],
-            {
-
-              radius:
-                7,
-
-              weight:
-                2,
-
-              fillOpacity:
-                .85
-
-            }
-          ).addTo(
-            map
-          );
-
-      },
-
-      error => {
-
-        console.warn(
-          "Geolocation:",
-          error
-        );
-
-      },
-
-      {
-
-        enableHighAccuracy:
-          true,
-
-        timeout:
-          10000,
-
-        maximumAge:
-          30000
-
+        return;
       }
 
-    );
 
-  }
-);
+      navigator.geolocation.getCurrentPosition(
+        position => {
+
+          const lat =
+            position.coords.latitude;
+
+          const lon =
+            position.coords.longitude;
+
+
+          map.setView(
+            [lat, lon],
+            Math.max(
+              map.getZoom(),
+              8
+            )
+          );
+        },
+
+        error => {
+
+          console.warn(
+            "Geolocation error:",
+            error
+          );
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000
+        }
+      );
+    }
+  );
 
 
 /* =========================================================
-   SEARCH
+   COORDINATE SEARCH
 ========================================================= */
 
-searchButton.addEventListener(
-  "click",
-  () => {
+document
+  .getElementById("searchBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-    searchBox.classList.toggle(
-      "open"
-    );
-
-
-    if (
-      searchBox.classList.contains(
-        "open"
-      )
-    ) {
-
-      setTimeout(
-        () => {
-
-          searchInput.focus();
-
-        },
-        50
-      );
-
-    }
-
-  }
-);
-
-
-searchInput.addEventListener(
-  "keydown",
-  event => {
-
-    if (
-      event.key !==
-      "Enter"
-    ) {
-      return;
-    }
-
-
-    const text =
-      searchInput.value.trim();
-
-
-    const parts =
-      text
-        .split(",")
-        .map(
-          value =>
-            Number(
-              value.trim()
-            )
+      const value =
+        prompt(
+          "Введите координаты:\n\nНапример:\n54.74, 55.97"
         );
 
 
-    if (
-      parts.length !== 2 ||
-      !Number.isFinite(
-        parts[0]
-      ) ||
-      !Number.isFinite(
-        parts[1]
-      )
-    ) {
-      return;
+      if (!value) {
+        return;
+      }
+
+
+      const parts =
+        value
+          .replace(
+            ";",
+            ","
+          )
+          .split(",");
+
+
+      if (
+        parts.length < 2
+      ) {
+
+        alert(
+          "Неверный формат координат"
+        );
+
+        return;
+      }
+
+
+      const lat =
+        Number(
+          parts[0].trim()
+        );
+
+      const lon =
+        Number(
+          parts[1].trim()
+        );
+
+
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        lat < -90 ||
+        lat > 90 ||
+        lon < -180 ||
+        lon > 180
+      ) {
+
+        alert(
+          "Неверные координаты"
+        );
+
+        return;
+      }
+
+
+      map.setView(
+        [lat, lon],
+        Math.max(
+          map.getZoom(),
+          8
+        )
+      );
     }
+  );
 
 
-    const lat =
-      parts[0];
+/* =========================================================
+   PERIODIC UPDATE
+========================================================= */
 
-    const lon =
-      parts[1];
+/*
+ * Проверяем новые кадры примерно
+ * раз в минуту.
+ *
+ * Если autoFollowLatest включён,
+ * сайт будет пытаться взять новый
+ * последний кадр.
+ *
+ * Если он ещё не готов —
+ * автоматически останется на
+ * предыдущем рабочем кадре.
+ */
 
+setInterval(
+  () => {
 
-    if (
-      lat < -90 ||
-      lat > 90 ||
-      lon < -180 ||
-      lon > 180
-    ) {
-      return;
-    }
+    loadCapabilities();
 
-
-    map.setView(
-      [lat, lon],
-      8
-    );
-
-
-    searchBox.classList.remove(
-      "open"
-    );
-
-  }
+  },
+  60 * 1000
 );
 
 
 /* =========================================================
-   AUTOMATIC NEW FRAMES
+   START
 ========================================================= */
 
-async function checkForNewFrames() {
-
-  const oldNewest =
-    times.length
-      ? times[
-          times.length - 1
-        ]
-      : null;
-
-
-  const wasAtNewest =
-    currentTime ===
-    oldNewest;
-
-
-  await updateTimes();
-
-
-  const newNewest =
-    times.length
-      ? times[
-          times.length - 1
-        ]
-      : null;
-
-
-  /*
-   * Если пользователь был
-   * на последнем кадре —
-   * автоматически идём на новый.
-   */
-
-  if (
-    wasAtNewest &&
-    newNewest &&
-    newNewest !== oldNewest
-  ) {
-
-    selectTime(
-      newNewest
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   INIT
-========================================================= */
-
-(async function init() {
-
-  statusText.textContent =
-    "Загрузка радара…";
-
-
-  await updateTimes();
-
-
-  capabilitiesTimer =
-    setInterval(
-      checkForNewFrames,
-      CAPABILITIES_INTERVAL
-    );
-
-})();
+loadCapabilities();
 
 </script>
 
