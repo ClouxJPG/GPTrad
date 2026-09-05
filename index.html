@@ -829,10 +829,6 @@ body {
 
   </div>
 
-  <!-- =====================================================
-       DANGEROUS PHENOMENA
-  ====================================================== -->
-
   <div class="panel-section">
 
     <div class="panel-label">
@@ -993,13 +989,6 @@ const WMS_URL = "/baltrad_wsgi";
 
 const TARGET_LAYER = "bufr_dbz1";
 
-/*
- * Опасные явления.
- *
- * Точное имя слоя заранее не фиксируем:
- * оно автоматически определяется из GetCapabilities.
- */
-
 let DANGER_LAYER = null;
 
 const FRAME_STEP =
@@ -1049,20 +1038,16 @@ L.tileLayer(
 ).addTo(map);
 
 /* =========================================================
-   LIGHTNING PANE
+   PANES
 ========================================================= */
 
 map.createPane(
-  "lightningPane"
+  "radarPane"
 );
 
 map.getPane(
-  "lightningPane"
-).style.zIndex = 450;
-
-/* =========================================================
-   DANGER PANE
-========================================================= */
+  "radarPane"
+).style.zIndex = 400;
 
 map.createPane(
   "dangerPane"
@@ -1071,6 +1056,14 @@ map.createPane(
 map.getPane(
   "dangerPane"
 ).style.zIndex = 410;
+
+map.createPane(
+  "lightningPane"
+);
+
+map.getPane(
+  "lightningPane"
+).style.zIndex = 450;
 
 /* =========================================================
    STATE
@@ -1101,6 +1094,14 @@ const dangerCache = new Map();
 let preloadStarted = false;
 
 let radarOpacity = 0.72;
+
+/*
+ * Последний реально показанный URL.
+ *
+ * Используется только для контроля состояния.
+ */
+
+let currentRadarUrl = null;
 
 /* =========================================================
    LIGHTNING STATE
@@ -1234,7 +1235,7 @@ const lightningColor =
   );
 
 /* =========================================================
-   LOAD LIGHTNING SETTINGS
+   LIGHTNING SETTINGS
 ========================================================= */
 
 function loadLightningSettings() {
@@ -1367,7 +1368,9 @@ panelBtn.addEventListener(
     );
 
     if (
-      radarPanel.classList.contains("open")
+      radarPanel.classList.contains(
+        "open"
+      )
     ) {
 
       settingsPanel.classList.remove(
@@ -1458,7 +1461,7 @@ opacitySlider.addEventListener(
 );
 
 /* =========================================================
-   LIGHTNING PANEL OPEN/CLOSE
+   LIGHTNING PANEL
 ========================================================= */
 
 function toggleLightningSettings() {
@@ -1473,20 +1476,28 @@ lightningMain.addEventListener(
   "click",
   event => {
 
-    toggleLightningSettings();
-
     if (
-      event.target !== lightningToggle
+      event.target ===
+      lightningToggle
     ) {
 
-      lightningToggle.checked =
-        !lightningToggle.checked;
-
-      lightningToggle.dispatchEvent(
-        new Event("change")
-      );
+      return;
 
     }
+
+    toggleLightningSettings();
+
+    lightningToggle.checked =
+      !lightningToggle.checked;
+
+    lightningToggle.dispatchEvent(
+      new Event(
+        "change",
+        {
+          bubbles: true
+        }
+      )
+    );
 
   }
 );
@@ -1509,7 +1520,9 @@ lightningToggle.addEventListener(
         )
       ) {
 
-        lightningLayer.addTo(map);
+        lightningLayer.addTo(
+          map
+        );
 
       }
 
@@ -1535,7 +1548,8 @@ lightningToggle.addEventListener(
 
       }
 
-      lightningLastKey = "";
+      lightningLastKey =
+        "";
 
     }
 
@@ -1568,7 +1582,8 @@ document
 
           saveLightningSettings();
 
-          lightningLastKey = "";
+          lightningLastKey =
+            "";
 
           if (
             lightningToggle.checked
@@ -1604,7 +1619,8 @@ lightningSize.addEventListener(
 
     saveLightningSettings();
 
-    lightningLastKey = "";
+    lightningLastKey =
+      "";
 
     if (
       lightningToggle.checked
@@ -1632,7 +1648,8 @@ lightningColor.addEventListener(
 
     saveLightningSettings();
 
-    lightningLastKey = "";
+    lightningLastKey =
+      "";
 
     if (
       lightningToggle.checked
@@ -1722,22 +1739,8 @@ function isUsableTime(date) {
 }
 
 /* =========================================================
-   DANGER LAYER DISCOVERY
+   DANGER DISCOVERY
 ========================================================= */
-
-/*
- * Ищем слой опасных явлений в GetCapabilities.
- *
- * Приоритет:
- *
- * 1. название явно содержит danger/hazard
- * 2. название содержит "опас"
- * 3. title содержит danger/hazard
- * 4. title содержит "опас"
- * 5. phenomena + thunder/hail/etc.
- *
- * buf/dbz слои исключаются.
- */
 
 function findDangerLayerFromCapabilities(text) {
 
@@ -1781,8 +1784,7 @@ function findDangerLayerFromCapabilities(text) {
       }
 
       const name =
-        nameNode.textContent
-          .trim();
+        nameNode.textContent.trim();
 
       if (!name) {
         continue;
@@ -1816,7 +1818,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         continue;
+
       }
 
       let score = 0;
@@ -1826,7 +1830,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 100;
+
       }
 
       if (
@@ -1834,7 +1840,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 100;
+
       }
 
       if (
@@ -1842,7 +1850,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 40;
+
       }
 
       if (
@@ -1850,7 +1860,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 40;
+
       }
 
       if (
@@ -1858,7 +1870,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 25;
+
       }
 
       if (
@@ -1866,7 +1880,9 @@ function findDangerLayerFromCapabilities(text) {
           combined
         )
       ) {
+
         score += 25;
+
       }
 
       if (
@@ -1920,17 +1936,6 @@ function findDangerLayerFromCapabilities(text) {
 ========================================================= */
 
 function updateDangerLabel() {
-
-  if (
-    DANGER_LAYER
-  ) {
-
-    dangerLabel.textContent =
-      "Опасные явления";
-
-    return;
-
-  }
 
   dangerLabel.textContent =
     "Опасные явления";
@@ -2017,7 +2022,9 @@ function extractTimesFromText(text) {
         if (
           name !== "time"
         ) {
+
           continue;
+
         }
 
         parseTimeValue(
@@ -2259,11 +2266,6 @@ async function loadCapabilities() {
     const text =
       await response.text();
 
-    /*
-     * Ищем опасные явления
-     * в том же GetCapabilities.
-     */
-
     const discoveredDangerLayer =
       findDangerLayerFromCapabilities(
         text
@@ -2354,10 +2356,6 @@ async function loadCapabilities() {
 
     }
 
-    setStatus(
-      "Готово"
-    );
-
     if (
       lightningToggle.checked &&
       currentTime
@@ -2376,6 +2374,19 @@ async function loadCapabilities() {
 
       refreshDanger(
         true
+      );
+
+    }
+
+    if (
+      !dangerToggle.checked
+    ) {
+
+      setStatus(
+        "Отражаемость · " +
+        formatTime(
+          currentTime
+        )
       );
 
     }
@@ -2432,13 +2443,17 @@ function getProjectedBounds() {
 
   return {
 
-    south: sw.y,
+    south:
+      sw.y,
 
-    west: sw.x,
+    west:
+      sw.x,
 
-    north: ne.y,
+    north:
+      ne.y,
 
-    east: ne.x,
+    east:
+      ne.x,
 
     latLngBounds:
       L.latLngBounds(
@@ -2480,28 +2495,36 @@ function getRadarRequest(
   const width =
     Math.max(
       256,
-      Math.round(size.x)
+      Math.round(
+        size.x
+      )
     );
 
   const height =
     Math.max(
       256,
-      Math.round(size.y)
+      Math.round(
+        size.y
+      )
     );
 
   const params =
     new URLSearchParams({
 
-      SERVICE: "WMS",
+      SERVICE:
+        "WMS",
 
-      VERSION: "1.1.1",
+      VERSION:
+        "1.1.1",
 
-      REQUEST: "GetMap",
+      REQUEST:
+        "GetMap",
 
       LAYERS:
         TARGET_LAYER,
 
-      STYLES: "",
+      STYLES:
+        "",
 
       FORMAT:
         "image/png",
@@ -2534,14 +2557,17 @@ function getRadarRequest(
       params.toString(),
 
     bounds:
-      projected.latLngBounds
+      projected.latLngBounds,
+
+    width,
+    height
 
   };
 
 }
 
 /* =========================================================
-   IMAGE
+   GENERIC IMAGE LOADER
 ========================================================= */
 
 function loadImage(
@@ -2554,15 +2580,42 @@ function loadImage(
       const img =
         new Image();
 
+      let settled =
+        false;
+
+      const fail =
+        error => {
+
+          if (settled) {
+            return;
+          }
+
+          settled =
+            true;
+
+          reject(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "Изображение не загрузилось"
+                )
+          );
+
+        };
+
       img.onload =
         () => {
+
+          if (settled) {
+            return;
+          }
 
           if (
             !img.naturalWidth ||
             !img.naturalHeight
           ) {
 
-            reject(
+            fail(
               new Error(
                 "Пустое изображение"
               )
@@ -2572,6 +2625,9 @@ function loadImage(
 
           }
 
+          settled =
+            true;
+
           resolve(img);
 
         };
@@ -2579,7 +2635,7 @@ function loadImage(
       img.onerror =
         () => {
 
-          reject(
+          fail(
             new Error(
               "Изображение не загрузилось"
             )
@@ -2594,6 +2650,10 @@ function loadImage(
   );
 
 }
+
+/* =========================================================
+   RADAR IMAGE CACHE
+========================================================= */
 
 function loadImageCached(
   url
@@ -2663,12 +2723,63 @@ function getCandidateTimes(
 }
 
 /* =========================================================
-   APPLY RADAR
+   REMOVE CURRENT RADAR
 ========================================================= */
+
+function removeCurrentRadarLayer() {
+
+  if (
+    currentRadarLayer
+  ) {
+
+    try {
+
+      if (
+        map.hasLayer(
+          currentRadarLayer
+        )
+      ) {
+
+        map.removeLayer(
+          currentRadarLayer
+        );
+
+      }
+
+    } catch (_) {}
+
+  }
+
+  currentRadarLayer =
+    null;
+
+  currentRadarUrl =
+    null;
+
+}
+
+/* =========================================================
+   APPLY RADAR IMAGE
+========================================================= */
+
+/*
+ * КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ:
+ *
+ * Старый imageOverlay больше НЕ получает setUrl()
+ * и setBounds().
+ *
+ * Каждый WMS-запрос создаёт отдельный overlay.
+ *
+ * Новый overlay добавляется только после успешной
+ * загрузки изображения.
+ *
+ * Только после этого старый overlay удаляется.
+ */
 
 function applyRadarImage(
   img,
-  bounds
+  bounds,
+  url
 ) {
 
   if (
@@ -2679,37 +2790,70 @@ function applyRadarImage(
 
   }
 
+  const newLayer =
+    L.imageOverlay(
+      img.src,
+      bounds,
+      {
+        opacity:
+          radarOpacity,
+
+        interactive:
+          false,
+
+        pane:
+          "radarPane",
+
+        className:
+          "gptrad-radar-image"
+      }
+    );
+
+  /*
+   * Добавляем новый кадр.
+   */
+
+  newLayer.addTo(
+    map
+  );
+
+  /*
+   * Старый кадр удаляем только после
+   * того, как новый overlay уже находится
+   * на карте.
+   */
+
+  const oldLayer =
+    currentRadarLayer;
+
+  currentRadarLayer =
+    newLayer;
+
+  currentRadarUrl =
+    url;
+
   if (
-    !currentRadarLayer
+    oldLayer &&
+    oldLayer !== newLayer
   ) {
 
-    currentRadarLayer =
-      L.imageOverlay(
-        img.src,
-        bounds,
-        {
-          opacity:
-            radarOpacity,
-          interactive:
-            false
-        }
-      ).addTo(map);
+    try {
 
-    return;
+      if (
+        map.hasLayer(
+          oldLayer
+        )
+      ) {
+
+        map.removeLayer(
+          oldLayer
+        );
+
+      }
+
+    } catch (_) {}
 
   }
-
-  currentRadarLayer.setUrl(
-    img.src
-  );
-
-  currentRadarLayer.setBounds(
-    bounds
-  );
-
-  currentRadarLayer.setOpacity(
-    radarOpacity
-  );
 
 }
 
@@ -2753,6 +2897,15 @@ async function selectTime(
 
     }
 
+    /*
+     * Для каждого кандидата заново получаем
+     * текущий BBOX.
+     *
+     * URL содержит этот BBOX, поэтому
+     * разные области карты не конфликтуют
+     * в кэше.
+     */
+
     const request =
       getRadarRequest(
         candidateTime
@@ -2790,8 +2943,12 @@ async function selectTime(
 
       try {
 
-        if (img.decode) {
+        if (
+          img.decode
+        ) {
+
           await img.decode();
+
         }
 
       } catch (_) {}
@@ -2805,10 +2962,24 @@ async function selectTime(
 
       }
 
-      applyRadarImage(
-        img,
-        request.bounds
-      );
+      /*
+       * ВАЖНО:
+       * даже если пользователь успел выключить
+       * радар во время загрузки, новый слой
+       * не добавляется.
+       */
+
+      if (
+        radarToggle.checked
+      ) {
+
+        applyRadarImage(
+          img,
+          request.bounds,
+          request.url
+        );
+
+      }
 
       currentTime =
         candidateTime;
@@ -3272,9 +3443,21 @@ function disableDangerLayer() {
     currentDangerLayer
   ) {
 
-    map.removeLayer(
-      currentDangerLayer
-    );
+    try {
+
+      if (
+        map.hasLayer(
+          currentDangerLayer
+        )
+      ) {
+
+        map.removeLayer(
+          currentDangerLayer
+        );
+
+      }
+
+    } catch (_) {}
 
     currentDangerLayer =
       null;
@@ -3283,17 +3466,16 @@ function disableDangerLayer() {
 
 }
 
-function disableRadarVisual() {
+/*
+ * Теперь это настоящее удаление слоя,
+ * а не setOpacity(0).
+ */
 
-  if (
-    currentRadarLayer
-  ) {
+function disableRadarLayer() {
 
-    currentRadarLayer.setOpacity(
-      0
-    );
+  ++radarRequestId;
 
-  }
+  removeCurrentRadarLayer();
 
 }
 
@@ -3309,12 +3491,6 @@ radarToggle.addEventListener(
       radarToggle.checked
     ) {
 
-      /*
-       * ВАЖНО:
-       * отражаемость и опасные явления
-       * не могут быть включены одновременно.
-       */
-
       if (
         dangerToggle.checked
       ) {
@@ -3327,14 +3503,6 @@ radarToggle.addEventListener(
       }
 
       if (
-        currentRadarLayer
-      ) {
-
-        currentRadarLayer.setOpacity(
-          radarOpacity
-        );
-
-      } else if (
         currentTime
       ) {
 
@@ -3348,7 +3516,13 @@ radarToggle.addEventListener(
 
     } else {
 
-      disableRadarVisual();
+      disableRadarLayer();
+
+      hidePixelInfo();
+
+      setStatus(
+        "Радар выключен"
+      );
 
     }
 
@@ -3387,13 +3561,17 @@ function getDangerRequest(
   const width =
     Math.max(
       256,
-      Math.round(size.x)
+      Math.round(
+        size.x
+      )
     );
 
   const height =
     Math.max(
       256,
-      Math.round(size.y)
+      Math.round(
+        size.y
+      )
     );
 
   const params =
@@ -3507,35 +3685,54 @@ function applyDangerImage(
 
   }
 
+  const newLayer =
+    L.imageOverlay(
+      img.src,
+      bounds,
+      {
+        opacity:
+          1,
+
+        interactive:
+          false,
+
+        pane:
+          "dangerPane"
+      }
+    );
+
+  newLayer.addTo(
+    map
+  );
+
+  const oldLayer =
+    currentDangerLayer;
+
+  currentDangerLayer =
+    newLayer;
+
   if (
-    !currentDangerLayer
+    oldLayer &&
+    oldLayer !== newLayer
   ) {
 
-    currentDangerLayer =
-      L.imageOverlay(
-        img.src,
-        bounds,
-        {
-          opacity:
-            1,
-          interactive:
-            false,
-          pane:
-            "dangerPane"
-        }
-      ).addTo(map);
+    try {
 
-    return;
+      if (
+        map.hasLayer(
+          oldLayer
+        )
+      ) {
+
+        map.removeLayer(
+          oldLayer
+        );
+
+      }
+
+    } catch (_) {}
 
   }
-
-  currentDangerLayer.setUrl(
-    img.src
-  );
-
-  currentDangerLayer.setBounds(
-    bounds
-  );
 
 }
 
@@ -3649,13 +3846,6 @@ dangerToggle.addEventListener(
       dangerToggle.checked
     ) {
 
-      /*
-       * Главная логика:
-       *
-       * Опасные явления включаются
-       * вместо отражаемости.
-       */
-
       if (
         radarToggle.checked
       ) {
@@ -3663,9 +3853,9 @@ dangerToggle.addEventListener(
         radarToggle.checked =
           false;
 
-      }
+        disableRadarLayer();
 
-      disableRadarVisual();
+      }
 
       if (
         !DANGER_LAYER
@@ -3739,7 +3929,7 @@ function getLightningTime(
 }
 
 /* =========================================================
-   LIGHTNING BOUNDS
+   LIGHTNING REQUEST
 ========================================================= */
 
 function getLightningRequest() {
@@ -3866,7 +4056,7 @@ function escapeSvgColor(
 }
 
 /* =========================================================
-   OUTLINE COLOR
+   OUTLINE
 ========================================================= */
 
 function getLightningOutline(
@@ -3922,7 +4112,7 @@ function getLightningOutline(
 }
 
 /* =========================================================
-   LIGHTNING BOLT ICON
+   LIGHTNING BOLT
 ========================================================= */
 
 function createLightningBoltIcon(
@@ -3993,7 +4183,7 @@ function createLightningBoltIcon(
 }
 
 /* =========================================================
-   LIGHTNING FLASH ICON
+   LIGHTNING FLASH
 ========================================================= */
 
 function createLightningFlashIcon(
@@ -4086,7 +4276,7 @@ function createLightningFlashIcon(
 }
 
 /* =========================================================
-   CREATE LIGHTNING MARKER
+   LIGHTNING MARKER
 ========================================================= */
 
 function createLightningMarker(
@@ -4203,7 +4393,7 @@ function createLightningMarker(
 }
 
 /* =========================================================
-   PIXEL IS LIGHTNING
+   PIXEL ACTIVE
 ========================================================= */
 
 function pixelLooksActive(
@@ -4330,12 +4520,6 @@ function extractLightningPoints(
 
   const grid =
     LIGHTNING_GRID;
-
-  /*
-   * ВАЖНО:
-   * здесь используем именно bounds
-   * текущего WMS-запроса.
-   */
 
   const projected =
     project3857(
@@ -4534,7 +4718,7 @@ function extractLightningPoints(
 }
 
 /* =========================================================
-   LIGHTNING WMS IMAGE
+   CROSS ORIGIN IMAGE
 ========================================================= */
 
 function loadCrossOriginImage(
@@ -4780,14 +4964,17 @@ function refreshRadarAfterMapChange() {
 
         }
 
-        /*
-         * Отражаемость обновляем только
-         * если она активна.
-         */
-
         if (
           radarToggle.checked
         ) {
+
+          /*
+           * force новый WMS-запрос.
+           *
+           * Новый URL содержит новый BBOX,
+           * поэтому старый кадр не используется
+           * с неправильными bounds.
+           */
 
           selectTime(
             currentTime,
@@ -4796,10 +4983,6 @@ function refreshRadarAfterMapChange() {
           );
 
         }
-
-        /*
-         * Опасные явления обновляем отдельно.
-         */
 
         if (
           dangerToggle.checked
@@ -4833,7 +5016,7 @@ map.on(
 );
 
 /* =========================================================
-   PIXEL INFO HELPERS
+   PIXEL INFO
 ========================================================= */
 
 function hidePixelInfo() {
@@ -4930,7 +5113,7 @@ function positionPixelInfo(
 }
 
 /* =========================================================
-   CLOSE PIXEL INFO
+   CLOSE PIXEL
 ========================================================= */
 
 pixelClose.addEventListener(
@@ -4951,14 +5134,6 @@ pixelClose.addEventListener(
 map.on(
   "click",
   async event => {
-
-    /*
-     * GetFeatureInfo относится только
-     * к отражаемости.
-     *
-     * При активных опасных явлениях
-     * dBZ-информация не показывается.
-     */
 
     if (
       !currentTime ||
@@ -5191,7 +5366,9 @@ function parseDbz(
         value === null ||
         value === undefined
       ) {
+
         return;
+
       }
 
       if (
@@ -5360,7 +5537,9 @@ function parseDbz(
       if (
         cells.length < 2
       ) {
+
         continue;
+
       }
 
       const label =
@@ -5578,7 +5757,7 @@ function convertRadarValue(
 }
 
 /* =========================================================
-   CLOSE INFO WHEN MAP MOVES
+   MOVESTART
 ========================================================= */
 
 map.on(
