@@ -1,12 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/baltrad_wsgi",
-      "destination": "/api/baltrad"
-    },
-    {
-      "source": "/vector_wsgi",
-      "destination": "/api/baltrad"
+      "source": "/api/radar/:path*",
+      "destination": "/api/baltrad?target=https://example.com/:path*"
     }
   ]
 }
