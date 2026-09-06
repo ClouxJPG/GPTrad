@@ -40,25 +40,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-
     // =======================================================
     // VECTOR — ОПАСНЫЕ ЯВЛЕНИЯ
     // =======================================================
-    //
-    // Пример:
-    //
-    // /vector_wsgi
-    //   ?time=2026-09-05T14:40:00Z
-    //   &title=bufr_phenomena,bufr_novosib_phenomena,bufr_vlad_phenomena
-    //
-    // Token для vector_wsgi НЕ требуется.
-    // =======================================================
 
     if (pathname === "/vector_wsgi") {
-
       const upstream = new URL(upstreamBase);
 
-      // Передаём ВСЕ параметры без изменения.
+      // Передаём все параметры без изменения
       for (const [key, value] of incoming.searchParams) {
         upstream.searchParams.append(key, value);
       }
@@ -107,24 +96,18 @@ module.exports = async function handler(req, res) {
         response.headers.get("content-type");
 
       if (contentType) {
-
         res.setHeader(
           "Content-Type",
           contentType
         );
-
       } else {
-
         res.setHeader(
           "Content-Type",
           "application/json; charset=utf-8"
         );
-
       }
 
-      // Не кэшируем ОЯ.
-      // Времена меняются, поэтому браузер должен
-      // получать актуальный ответ.
+      // ОЯ не кэшируем
       res.setHeader(
         "Cache-Control",
         "no-store"
@@ -133,18 +116,11 @@ module.exports = async function handler(req, res) {
       return res.end(body);
     }
 
-
     // =======================================================
     // WMS — РАДАР
     // =======================================================
-    //
-    // Здесь оставляем рабочую логику радара.
-    //
-    // Nowcast требует свежий JWT token.
-    // =======================================================
 
     if (pathname === "/baltrad_wsgi") {
-
       // -----------------------------------------------------
       // 1. Получаем свежий token
       // -----------------------------------------------------
@@ -164,7 +140,6 @@ module.exports = async function handler(req, res) {
       );
 
       if (!tokenResponse.ok) {
-
         const text =
           await tokenResponse.text();
 
@@ -190,7 +165,6 @@ module.exports = async function handler(req, res) {
         !tokenData ||
         !tokenData.token
       ) {
-
         console.error(
           "Invalid token response:",
           tokenData
@@ -206,7 +180,6 @@ module.exports = async function handler(req, res) {
       const token =
         tokenData.token;
 
-
       // -----------------------------------------------------
       // 2. Собираем WMS URL
       // -----------------------------------------------------
@@ -214,15 +187,12 @@ module.exports = async function handler(req, res) {
       const upstream =
         new URL(upstreamBase);
 
-      // Копируем параметры запроса GPTrad.
-      //
-      // Старый token не передаём —
-      // вместо него используем свежий.
+      // Копируем параметры запроса GPTrad
       for (
         const [key, value]
         of incoming.searchParams
       ) {
-
+        // Старый token не передаём
         if (
           key.toLowerCase() === "token"
         ) {
@@ -235,12 +205,11 @@ module.exports = async function handler(req, res) {
         );
       }
 
-      // Добавляем свежий token.
+      // Добавляем свежий token
       upstream.searchParams.set(
         "token",
         token
       );
-
 
       // -----------------------------------------------------
       // 3. Запрашиваем WMS у Nowcast
@@ -269,7 +238,6 @@ module.exports = async function handler(req, res) {
         await response.arrayBuffer()
       );
 
-
       // -----------------------------------------------------
       // 4. Возвращаем WMS браузеру
       // -----------------------------------------------------
@@ -282,14 +250,11 @@ module.exports = async function handler(req, res) {
         );
 
       if (contentType) {
-
         res.setHeader(
           "Content-Type",
           contentType
         );
-
       }
-
 
       const cacheControl =
         response.headers.get(
@@ -297,21 +262,16 @@ module.exports = async function handler(req, res) {
         );
 
       if (cacheControl) {
-
         res.setHeader(
           "Cache-Control",
           cacheControl
         );
-
       } else {
-
         res.setHeader(
           "Cache-Control",
           "public, max-age=30, s-maxage=30"
         );
-
       }
-
 
       const etag =
         response.headers.get(
@@ -319,32 +279,32 @@ module.exports = async function handler(req, res) {
         );
 
       if (etag) {
-
         res.setHeader(
           "ETag",
           etag
         );
-
       }
 
       return res.end(body);
     }
 
   } catch (error) {
-
     // =======================================================
-    // ERROR
+    // DIAGNOSTIC ERROR
     // =======================================================
 
     console.error(
       "GPTrad Nowcast proxy error:",
+      error?.stack ||
+      error?.message ||
       error
     );
 
     return res
       .status(502)
       .send(
-        "Bad Gateway: unable to reach Nowcast."
+        "NOWCAST PROXY ERROR: " +
+        (error?.message || String(error))
       );
   }
 };
