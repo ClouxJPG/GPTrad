@@ -4,256 +4,185 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GPTrad</title>
-
-<link rel="stylesheet"
- href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 *{box-sizing:border-box}
 html,body,#map{margin:0;width:100%;height:100%;overflow:hidden}
 body{font-family:Arial,sans-serif;background:#111}
-
 #map{position:fixed;inset:0}
-
 .panel{
- position:fixed;
- z-index:1000;
- top:14px;
- left:14px;
- right:14px;
- background:rgba(18,18,22,.92);
- color:#fff;
- border-radius:16px;
- padding:12px;
- box-shadow:0 5px 25px #0008;
- backdrop-filter:blur(10px);
+  position:fixed;
+  z-index:1000;
+  top:14px;
+  left:14px;
+  right:14px;
+  background:rgba(18,18,22,.92);
+  color:#fff;
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 5px 25px #0008;
+  backdrop-filter:blur(10px);
 }
-
-.title{
- font-size:20px;
- font-weight:700;
- margin-bottom:10px;
-}
-
-.row{
- display:flex;
- gap:7px;
- align-items:center;
-}
-
-button{
- border:0;
- background:#292a30;
- color:#fff;
- border-radius:10px;
- padding:10px 13px;
- font-size:14px;
-}
-
+.title{font-size:20px;font-weight:700;margin-bottom:10px}
+.row{display:flex;gap:7px;align-items:center}
+button{border:0;background:#292a30;color:#fff;border-radius:10px;padding:10px 13px;font-size:14px}
 button:active{transform:scale(.96)}
-
-select{
- flex:1;
- min-width:0;
- background:#292a30;
- color:#fff;
- border:0;
- border-radius:10px;
- padding:10px;
-}
-
-#status{
- margin-top:9px;
- font-size:12px;
- opacity:.7;
-}
-
+select{flex:1;min-width:0;background:#292a30;color:#fff;border:0;border-radius:10px;padding:10px}
+#status{margin-top:9px;font-size:12px;opacity:.7}
 .timeline{
- position:fixed;
- z-index:1001;
- left:12px;
- right:12px;
- bottom:18px;
- background:rgba(18,18,22,.94);
- padding:12px;
- border-radius:16px;
- box-shadow:0 5px 25px #0008;
+  position:fixed;
+  z-index:1001;
+  left:12px;
+  right:12px;
+  bottom:18px;
+  background:rgba(18,18,22,.94);
+  padding:12px;
+  border-radius:16px;
+  box-shadow:0 5px 25px #0008;
 }
-
-#time{
- width:100%;
- accent-color:#fff;
-}
-
-.times{
- display:flex;
- justify-content:space-between;
- align-items:center;
- color:#fff;
- font-size:12px;
- margin-top:5px;
-}
-
-#play{
- min-width:65px;
-}
+#time{width:100%;accent-color:#fff}
+.times{display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:12px;margin-top:5px}
+#play{min-width:65px}
 </style>
 </head>
-
 <body>
-
 <div id="map"></div>
 
 <div class="panel">
- <div class="title">GPTrad</div>
-
- <div class="row">
-  <select id="layer">
-   <option value="radar">Радар</option>
-  </select>
-
-  <button id="loc">⌖</button>
-  <button id="reload">↻</button>
- </div>
-
- <div id="status">Загрузка…</div>
+  <div class="title">GPTrad</div>
+  <div class="row">
+    <select id="layer">
+      <option value="radar">Радар (RainViewer)</option>
+      <option value="warnings">Опасные явления</option>
+    </select>
+    <button id="loc">⌖</button>
+    <button id="reload">↻</button>
+  </div>
+  <div id="status">Загрузка…</div>
 </div>
 
 <div class="timeline">
- <input id="time" type="range" min="0" max="0" value="0">
-
- <div class="times">
-  <button id="back">−15 мин</button>
-  <span id="label">—</span>
-  <button id="forward">+15 мин</button>
-  <button id="play">▶</button>
- </div>
+  <input id="time" type="range" min="0" max="0" value="0">
+  <div class="times">
+    <button id="back">−10 мин</button>
+    <span id="label">—</span>
+    <button id="forward">+10 мин</button>
+    <button id="play">▶</button>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-const map=L.map("map",{zoomControl:false}).setView([54.7,55.99],5);
+const RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json";
 
-L.tileLayer(
- "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
- {maxZoom:12,attribution:"© OpenStreetMap"}
-).addTo(map);
-
+const map = L.map("map", {zoomControl:false}).setView([54.7,55.99],5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:12,
+  attribution:"© OpenStreetMap · Радар: RainViewer.com"
+}).addTo(map);
 L.control.zoom({position:"bottomright"}).addTo(map);
 
-let frames=[];
-let radarLayer=null;
-let playing=false;
-let timer=null;
+let frames = [];
+let radarLayer = null;
+let playing = false;
+let timer = null;
 
-const slider=document.getElementById("time");
-const label=document.getElementById("label");
-const status=document.getElementById("status");
-
-function setStatus(t){
- status.textContent=t;
+// Слой "опасных явлений". У Росгидромета/МЧС нет открытого live-фида
+// (ни BUFR, ни JSON), который можно дёрнуть прямо из браузера без ключа
+// и договорённостей — только человекочитаемые бюллетени на meteoinfo.ru
+// и на сайтах региональных mchs.gov.ru. Когда появится нормальный источник
+// (свой бэкенд, который его парсит), просто вызови:
+//   renderWarnings([{lat:55.75, lon:37.6, title:"Гроза, град"}, ...])
+const warningsLayer = L.layerGroup();
+function renderWarnings(items){
+  warningsLayer.clearLayers();
+  items.forEach(w=>{
+    L.circleMarker([w.lat, w.lon], {radius:8, color:"#ff5252", fillColor:"#ff5252", fillOpacity:.85})
+      .bindPopup(`<b>${w.title}</b>`)
+      .addTo(warningsLayer);
+  });
 }
+
+const slider = document.getElementById("time");
+const label = document.getElementById("label");
+const status = document.getElementById("status");
+const layerSelect = document.getElementById("layer");
+
+function setStatus(t){ status.textContent = t; }
 
 function showFrame(i){
- if(!frames.length)return;
-
- i=Math.max(0,Math.min(i,frames.length-1));
- slider.value=i;
-
- const f=frames[i];
-
- label.textContent=new Date(f.time).toLocaleString("ru-RU",{
-  day:"2-digit",
-  month:"2-digit",
-  hour:"2-digit",
-  minute:"2-digit"
- });
-
- if(radarLayer)map.removeLayer(radarLayer);
-
- /*
-  * Здесь используется наш API-маршрут.
-  * Сам маршрут не обходит защиту Nowcast.
-  * Он предназначен для источника, который разрешает
-  * серверные запросы.
-  */
- radarLayer=L.tileLayer(
-  `/api/radar?time=${encodeURIComponent(f.time)}/{z}/{x}/{y}.png`,
-  {opacity:.85,tileSize:256}
- ).addTo(map);
+  if(!frames.length) return;
+  i = Math.max(0, Math.min(i, frames.length-1));
+  slider.value = i;
+  const f = frames[i];
+  label.textContent = new Date(f.time).toLocaleString("ru-RU",{
+    day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+  }) + (f.forecast ? " · прогноз" : "");
+  if(radarLayer) map.removeLayer(radarLayer);
+  radarLayer = L.tileLayer(f.url, {opacity:.75, tileSize:256, zIndex:5}).addTo(map);
 }
 
-function makeFrames(){
- const now=Date.now();
-
- frames=[];
-
- for(let i=0;i<12;i++){
-  frames.push({
-   time:new Date(now-(11-i)*15*60000).toISOString()
-  });
- }
-
- slider.max=frames.length-1;
- showFrame(frames.length-1);
+async function loadFrames(){
+  setStatus("Загрузка радара…");
+  try{
+    const res = await fetch(RAINVIEWER_API);
+    const data = await res.json();
+    const host = data.host;
+    const past = (data.radar && data.radar.past) || [];
+    const nowcast = (data.radar && data.radar.nowcast) || [];
+    // 2 — цветовая схема Universal Blue, "1_1" — сглаживание+снег.
+    // Другие варианты: https://www.rainviewer.com/api/color-schemes.html
+    frames = [...past, ...nowcast].map((f, idx)=>({
+      time: f.time*1000,
+      url: `${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
+      forecast: idx >= past.length
+    }));
+    slider.max = frames.length-1;
+    if(layerSelect.value==="radar") showFrame(past.length-1);
+    setStatus("Готово · обновляется раз в 10 мин");
+  }catch(e){
+    setStatus("Не удалось загрузить радар");
+  }
 }
 
-slider.addEventListener("input",()=>{
- showFrame(Number(slider.value));
+slider.addEventListener("input", ()=>{ showFrame(Number(slider.value)); });
+document.getElementById("back").onclick = ()=>{ showFrame(Number(slider.value)-1); };
+document.getElementById("forward").onclick = ()=>{ showFrame(Number(slider.value)+1); };
+
+document.getElementById("play").onclick = ()=>{
+  playing = !playing;
+  document.getElementById("play").textContent = playing ? "⏸" : "▶";
+  if(timer) clearInterval(timer);
+  if(playing){
+    timer = setInterval(()=>{
+      let n = Number(slider.value)+1;
+      if(n>=frames.length) n=0;
+      showFrame(n);
+    }, 600);
+  }
+};
+
+document.getElementById("reload").onclick = ()=>{ loadFrames(); };
+
+document.getElementById("loc").onclick = ()=>{
+  map.locate({setView:true, maxZoom:8});
+};
+map.on("locationfound", e=>{ L.circleMarker(e.latlng,{radius:7}).addTo(map); });
+map.on("locationerror", ()=>{ setStatus("Геолокация недоступна"); });
+
+layerSelect.addEventListener("change", ()=>{
+  if(layerSelect.value==="warnings"){
+    if(radarLayer) map.removeLayer(radarLayer);
+    warningsLayer.addTo(map);
+    setStatus("Слой готов, но без источника данных — см. renderWarnings() в коде");
+  }else{
+    map.removeLayer(warningsLayer);
+    showFrame(Number(slider.value));
+  }
 });
 
-document.getElementById("back").onclick=()=>{
- showFrame(Number(slider.value)-1);
-};
-
-document.getElementById("forward").onclick=()=>{
- showFrame(Number(slider.value)+1);
-};
-
-document.getElementById("play").onclick=()=>{
- playing=!playing;
- document.getElementById("play").textContent=playing?"⏸":"▶";
-
- if(timer)clearInterval(timer);
-
- if(playing){
-  timer=setInterval(()=>{
-   let n=Number(slider.value)+1;
-
-   if(n>=frames.length)n=0;
-
-   showFrame(n);
-  },700);
- }
-};
-
-document.getElementById("reload").onclick=()=>{
- setStatus("Обновление…");
- makeFrames();
- setStatus("Готово");
-};
-
-document.getElementById("loc").onclick=()=>{
- map.locate({
-  setView:true,
-  maxZoom:8
- });
-};
-
-map.on("locationfound",e=>{
- L.circleMarker(e.latlng,{
-  radius:7
- }).addTo(map);
-});
-
-map.on("locationerror",()=>{
- setStatus("Геолокация недоступна");
-});
-
-makeFrames();
-setStatus("Готово");
+loadFrames();
+setInterval(loadFrames, 10*60*1000);
 </script>
-
 </body>
 </html>
