@@ -4,52 +4,159 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<title>GPTrad — Nowcast</title>
+<title>GPTrad Nowcast</title>
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
+*{box-sizing:border-box}
+
 html,body,#map{
-  width:100%;
-  height:100%;
-  margin:0;
+    margin:0;
+    width:100%;
+    height:100%;
 }
 
 body{
-  background:#111;
-  overflow:hidden;
-  font-family:Arial,sans-serif;
+    background:#111;
+    overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
 }
 
 #map{
-  background:#222;
+    background:#1b1b1b;
 }
 
-#panel{
-  position:absolute;
-  z-index:1000;
-  top:10px;
-  left:10px;
-  right:10px;
-  padding:10px;
-  background:rgba(20,20,20,.9);
-  color:white;
-  border-radius:10px;
+/* верхняя панель */
+
+.top{
+    position:absolute;
+    z-index:1000;
+    top:12px;
+    left:12px;
+    right:12px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    pointer-events:none;
 }
 
-button,select{
-  margin:3px;
-  padding:7px;
-  border-radius:6px;
-  border:0;
+.box{
+    pointer-events:auto;
+    background:rgba(18,18,20,.94);
+    color:white;
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 5px 25px rgba(0,0,0,.35);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-radius:12px;
 }
 
-#status{
-  font-size:12px;
-  margin-top:5px;
+select{
+    appearance:none;
+    -webkit-appearance:none;
+    background:#222;
+    color:#fff;
+    border:0;
+    outline:0;
+    padding:10px 34px 10px 12px;
+    border-radius:10px;
+    font-size:14px;
+}
+
+.status{
+    padding:9px 12px;
+    font-size:12px;
+    white-space:nowrap;
+}
+
+/* нижняя панель */
+
+.timeline{
+    position:absolute;
+    z-index:1000;
+    left:10px;
+    right:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+    padding:12px;
+    color:white;
+}
+
+.time-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+    font-size:13px;
+}
+
+.time-value{
+    font-weight:600;
+}
+
+.slider{
+    width:100%;
+    height:28px;
+    margin:0;
+    accent-color:#fff;
+}
+
+.controls{
+    display:grid;
+    grid-template-columns:1fr 1fr 1.4fr 1fr 1fr;
+    gap:7px;
+    margin-top:8px;
+}
+
+button{
+    border:0;
+    border-radius:10px;
+    background:#29292c;
+    color:#fff;
+    padding:10px 5px;
+    font-size:13px;
+    font-weight:500;
+}
+
+button:active{
+    transform:scale(.97);
+    background:#3a3a3e;
+}
+
+.play{
+    background:#fff;
+    color:#111;
+}
+
+.leaflet-control-zoom{
+    margin-top:70px!important;
+}
+
+/* маленькие экраны */
+
+@media(max-width:500px){
+
+    .top{
+        top:8px;
+        left:8px;
+        right:8px;
+    }
+
+    .timeline{
+        left:7px;
+        right:7px;
+        bottom:calc(7px + env(safe-area-inset-bottom));
+    }
+
+    .controls{
+        gap:5px;
+    }
+
+    button{
+        padding:11px 2px;
+        font-size:12px;
+    }
 }
 </style>
 </head>
@@ -58,428 +165,395 @@ button,select{
 
 <div id="map"></div>
 
-<div id="panel">
+<div class="top">
 
-  <select id="layer">
-    <option value="bufr_phenomena">
-      BUFR phenomena
-    </option>
+    <div class="box">
+        <select id="layer">
+            <option value="bufr_phenomena">
+                BUFR phenomena
+            </option>
 
-    <option value="bufr_novosib_phenomena">
-      Novosibirsk phenomena
-    </option>
+            <option value="bufr_novosib_phenomena">
+                Novosibirsk
+            </option>
 
-    <option value="bufr_vlad_phenomena">
-      Vladivostok phenomena
-    </option>
+            <option value="bufr_vlad_phenomena">
+                Vladivostok
+            </option>
 
-    <option value="bufr_phenomena,bufr_novosib_phenomena,bufr_vlad_phenomena">
-      Все
-    </option>
-  </select>
+            <option value="bufr_phenomena,bufr_novosib_phenomena,bufr_vlad_phenomena">
+                Все радары
+            </option>
+        </select>
+    </div>
 
-  <select id="time"></select>
-
-  <button onclick="loadData()">Обновить</button>
-
-  <div id="status">Получение токена...</div>
+    <div class="box status" id="status">
+        Загрузка…
+    </div>
 
 </div>
+
+
+<div class="box timeline">
+
+    <div class="time-title">
+        <span>Nowcast</span>
+        <span class="time-value" id="timeText">—</span>
+    </div>
+
+    <input
+        id="slider"
+        class="slider"
+        type="range"
+        min="0"
+        max="0"
+        value="0"
+    >
+
+    <div class="controls">
+
+        <button onclick="step(-6)">
+            −1 ч
+        </button>
+
+        <button onclick="step(-1)">
+            ◀
+        </button>
+
+        <button
+            class="play"
+            id="play"
+            onclick="togglePlay()"
+        >
+            ▶ Пуск
+        </button>
+
+        <button onclick="step(1)">
+            ▶
+        </button>
+
+        <button onclick="step(6)">
+            +1 ч
+        </button>
+
+    </div>
+
+</div>
+
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-const NOWCAST = "https://www.nowcast.ru";
 
-let token = null;
-let wms = null;
-let vectorLayer = L.layerGroup();
+const NOWCAST =
+    "https://www.nowcast.ru";
 
-const map = L.map("map").setView([55,60],4);
+const WMS =
+    NOWCAST + "/baltrad_wsgi";
+
+let map;
+let radar;
+let times = [];
+let index = 0;
+let playing = false;
+let timer = null;
+
+
+/* =========================================
+   MAP
+========================================= */
+
+map = L.map("map",{
+    zoomControl:true,
+    minZoom:2,
+    maxZoom:12
+}).setView(
+    [55.0,60.0],
+    4
+);
 
 L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    maxZoom:19,
-    attribution:"© OpenStreetMap"
-  }
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom:19,
+        attribution:"© OpenStreetMap"
+    }
 ).addTo(map);
 
-vectorLayer.addTo(map);
 
+/* =========================================
+   STATUS
+========================================= */
 
-/* =========================
-   TOKEN
-========================= */
-
-async function getToken(){
-
-  statusText("Получение Nowcast token...");
-
-  const r = await fetch(
-    NOWCAST + "/get_token",
-    {
-      cache:"no-store",
-      credentials:"include"
-    }
-  );
-
-  if(!r.ok){
-    throw new Error(
-      "get_token HTTP " + r.status
-    );
-  }
-
-  const data = await r.json();
-
-  if(!data.token){
-    throw new Error(
-      "Nowcast не вернул token"
-    );
-  }
-
-  token = data.token;
-
-  statusText("Token получен");
-
-  return token;
+function status(text){
+    document.getElementById(
+        "status"
+    ).textContent = text;
 }
 
 
-/* =========================
-   WMS
-========================= */
+/* =========================================
+   ВРЕМЕНА
+========================================= */
 
-function updateWMS(){
+function buildTimes(){
 
-  const layer =
-    document.getElementById("layer").value;
-
-  const time =
-    document.getElementById("time").value;
-
-  if(wms){
-    map.removeLayer(wms);
-  }
-
-  wms = L.tileLayer.wms(
-    NOWCAST + "/baltrad_wsgi",
-    {
-      layers:layer,
-      format:"image/png",
-      transparent:true,
-      version:"1.1.1",
-      time:time,
-      token:token,
-      opacity:1
-    }
-  );
-
-  wms.addTo(map);
-
-  statusText(
-    "WMS: " + layer +
-    " | " + time
-  );
-}
-
-
-/* =========================
-   VECTOR DATA
-========================= */
-
-async function loadVector(){
-
-  const layer =
-    document.getElementById("layer").value;
-
-  const time =
-    document.getElementById("time").value;
-
-  const url =
-    NOWCAST +
-    "/vector_wsgi" +
-    "?time=" +
-    encodeURIComponent(time) +
-    "&title=" +
-    encodeURIComponent(layer);
-
-  const r = await fetch(
-    url,
-    {
-      cache:"no-store",
-      credentials:"include"
-    }
-  );
-
-  if(!r.ok){
-    throw new Error(
-      "vector_wsgi HTTP " +
-      r.status
-    );
-  }
-
-  const data = await r.json();
-
-  vectorLayer.clearLayers();
-
-  for(const p of data){
-
-    if(!Array.isArray(p) || p.length < 4)
-      continue;
-
-    const lat = Number(p[0]);
-    const lon = Number(p[1]);
-    const speed = Number(p[2]);
-    const heading = Number(p[3]);
-
-    if(
-      !Number.isFinite(lat) ||
-      !Number.isFinite(lon)
-    ) continue;
-
-    const len = Math.min(
-      Math.max(speed * 0.02,0.02),
-      0.5
-    );
-
-    const rad =
-      heading * Math.PI / 180;
-
-    const lat2 =
-      lat + Math.cos(rad) * len;
-
-    const lon2 =
-      lon + Math.sin(rad) *
-      len /
-      Math.max(Math.cos(lat*Math.PI/180),0.2);
-
-    L.polyline(
-      [
-        [lat,lon],
-        [lat2,lon2]
-      ],
-      {
-        weight:2,
-        opacity:.9
-      }
-    ).addTo(vectorLayer);
-  }
-
-  statusText(
-    "Получено объектов: " +
-    data.length
-  );
-}
-
-
-/* =========================
-   TIMES
-========================= */
-
-async function loadTimes(){
-
-  statusText(
-    "Получение времён из WMS..."
-  );
-
-  /*
-   * GetCapabilities.
-   */
-
-  const url =
-    NOWCAST +
-    "/baltrad_wsgi" +
-    "?SERVICE=WMS" +
-    "&VERSION=1.1.1" +
-    "&REQUEST=GetCapabilities" +
-    "&token=" +
-    encodeURIComponent(token);
-
-  const r = await fetch(
-    url,
-    {
-      cache:"no-store",
-      credentials:"include"
-    }
-  );
-
-  if(!r.ok){
-    throw new Error(
-      "GetCapabilities HTTP " +
-      r.status
-    );
-  }
-
-  const xml = await r.text();
-
-  /*
-   * Ищем TIME значения.
-   */
-
-  const matches =
-    [...xml.matchAll(
-      /<Dimension[^>]*name=["']time["'][^>]*>([\s\S]*?)<\/Dimension>/gi
-    )];
-
-  const select =
-    document.getElementById("time");
-
-  select.innerHTML="";
-
-  let values=[];
-
-  for(const m of matches){
-
-    const text =
-      m[1]
-        .replace(/<[^>]+>/g,"")
-        .trim();
-
-    if(!text) continue;
-
-    values.push(
-      ...text.split(",")
-    );
-  }
-
-  values =
-    [...new Set(
-      values.map(x=>x.trim())
-        .filter(Boolean)
-    )];
-
-  /*
-   * Если сервер не отдал TIME,
-   * используем последние часы.
-   */
-
-  if(!values.length){
+    /*
+     * Создаём последние 3 часа
+     * с шагом 10 минут.
+     *
+     * Это не требует CORS.
+     */
 
     const now =
-      Date.now();
+        new Date();
 
-    for(let i=0;i<12;i++){
+    now.setUTCMinutes(
+        Math.floor(
+            now.getUTCMinutes()/10
+        )*10,
+        0,
+        0
+    );
 
-      const d =
-        new Date(
-          now -
-          i*10*60*1000
+    times = [];
+
+    for(let i=18;i>=0;i--){
+
+        const d =
+            new Date(
+                now.getTime() -
+                i*10*60*1000
+            );
+
+        times.push(
+            d.toISOString()
+        );
+    }
+
+    index =
+        times.length-1;
+
+    const slider =
+        document.getElementById(
+            "slider"
         );
 
-      values.push(
-        d.toISOString()
-      );
-    }
-  }
+    slider.min = 0;
+    slider.max =
+        times.length-1;
 
-  values.reverse();
+    slider.value =
+        index;
 
-  for(const value of values){
+    slider.oninput =
+        function(){
 
-    const option =
-      document.createElement("option");
+            index =
+                Number(this.value);
 
-    option.value=value;
-    option.textContent=value;
+            showFrame();
+        };
 
-    select.appendChild(option);
-  }
-
-  statusText(
-    "Времён: " + values.length
-  );
+    showFrame();
 }
 
 
-/* =========================
-   MAIN
-========================= */
+/* =========================================
+   ФОРМАТ ВРЕМЕНИ
+========================================= */
 
-async function loadData(){
+function formatTime(value){
 
-  try{
+    const d =
+        new Date(value);
 
-    if(!token){
-      await getToken();
-    }
-
-    if(
-      !document.getElementById("time").value
-    ){
-      await loadTimes();
-    }
-
-    updateWMS();
-
-    await loadVector();
-
-  }catch(e){
-
-    console.error(e);
-
-    statusText(
-      "Ошибка: " +
-      e.message
+    return d.toLocaleString(
+        "ru-RU",
+        {
+            day:"2-digit",
+            month:"2-digit",
+            hour:"2-digit",
+            minute:"2-digit"
+        }
     );
-  }
 }
 
 
-/* =========================
-   EVENTS
-========================= */
+/* =========================================
+   WMS
+========================================= */
 
-document
-  .getElementById("layer")
-  .addEventListener(
-    "change",
-    loadData
-  );
+function showFrame(){
 
-document
-  .getElementById("time")
-  .addEventListener(
-    "change",
-    loadData
-  );
+    if(!times.length)
+        return;
 
+    const layer =
+        document.getElementById(
+            "layer"
+        ).value;
 
-function statusText(text){
+    const time =
+        times[index];
 
-  document.getElementById(
-    "status"
-  ).textContent=text;
+    document.getElementById(
+        "timeText"
+    ).textContent =
+        formatTime(time);
+
+    /*
+     * Старый слой удаляем.
+     */
+
+    if(radar){
+
+        map.removeLayer(
+            radar
+        );
+
+        radar = null;
+    }
+
+    /*
+     * WMS загружается как изображения.
+     * fetch() здесь НЕ используется.
+     */
+
+    radar =
+        L.tileLayer.wms(
+            WMS,
+            {
+                layers:layer,
+
+                format:"image/png",
+
+                transparent:true,
+
+                version:"1.1.1",
+
+                time:time,
+
+                opacity:1,
+
+                tileSize:256,
+
+                crossOrigin:false
+            }
+        );
+
+    radar.addTo(map);
+
+    status(
+        "Кадр " +
+        (index+1) +
+        " / " +
+        times.length
+    );
 }
 
 
-/* =========================
+/* =========================================
+   СМЕЩЕНИЕ
+========================================= */
+
+function step(amount){
+
+    if(!times.length)
+        return;
+
+    index += amount;
+
+    if(index < 0)
+        index = 0;
+
+    if(index >= times.length)
+        index =
+            times.length-1;
+
+    document.getElementById(
+        "slider"
+    ).value =
+        index;
+
+    showFrame();
+}
+
+
+/* =========================================
+   PLAY
+========================================= */
+
+function togglePlay(){
+
+    const button =
+        document.getElementById(
+            "play"
+        );
+
+    if(playing){
+
+        playing=false;
+
+        clearInterval(
+            timer
+        );
+
+        button.textContent =
+            "▶ Пуск";
+
+        return;
+    }
+
+    playing=true;
+
+    button.textContent =
+        "❚❚ Пауза";
+
+    timer =
+        setInterval(
+            function(){
+
+                if(index >= times.length-1){
+
+                    index=0;
+
+                }else{
+
+                    index++;
+                }
+
+                document.getElementById(
+                    "slider"
+                ).value =
+                    index;
+
+                showFrame();
+
+            },
+            1000
+        );
+}
+
+
+/* =========================================
+   СМЕНА СЛОЯ
+========================================= */
+
+document
+    .getElementById("layer")
+    .addEventListener(
+        "change",
+        showFrame
+    );
+
+
+/* =========================================
    START
-========================= */
+========================================= */
 
-(async()=>{
+buildTimes();
 
-  try{
-
-    await getToken();
-
-    await loadTimes();
-
-    updateWMS();
-
-    await loadVector();
-
-  }catch(e){
-
-    console.error(e);
-
-    statusText(
-      "Nowcast недоступен: " +
-      e.message
-    );
-  }
-
-})();
 </script>
 
 </body>
