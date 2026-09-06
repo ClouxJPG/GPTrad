@@ -5891,5 +5891,320 @@ loadCapabilities();
 
 </script>
 
+<script>
+/* ============================================================
+   GPTrad — Nowcast browser-side bridge
+   Не изменяет остальной интерфейс сайта.
+   ============================================================ */
+
+(function () {
+    "use strict";
+
+    const NOWCAST = "https://www.nowcast.ru";
+
+    let NOWCAST_TOKEN = null;
+    let TOKEN_TIME = 0;
+
+    async function getNowcastToken() {
+        // Токен живёт ограниченное время — обновляем при необходимости.
+        if (NOWCAST_TOKEN && Date.now() - TOKEN_TIME < 5 * 60 * 1000) {
+            return NOWCAST_TOKEN;
+        }
+
+        try {
+            const r = await fetch(NOWCAST + "/get_token", {
+                method: "GET",
+                credentials: "include",
+                cache: "no-store"
+            });
+
+            if (!r.ok) {
+                throw new Error("Nowcast token HTTP " + r.status);
+            }
+
+            const data = await r.json();
+
+            if (!data.token) {
+                throw new Error("Nowcast не вернул token");
+            }
+
+            NOWCAST_TOKEN = data.token;
+            TOKEN_TIME = Date.now();
+
+            console.log("[GPTrad] Nowcast token получен");
+
+            return NOWCAST_TOKEN;
+        } catch (e) {
+            console.error("[GPTrad] Не удалось получить Nowcast token:", e);
+            return null;
+        }
+    }
+
+
+    /*
+     * Перехватываем fetch().
+     *
+     * Старый:
+     *   /vector_wsgi?... 
+     *   /baltrad_wsgi?...
+     *
+     * Новый:
+     *   https://www.nowcast.ru/...
+     */
+    const originalFetch = window.fetch;
+
+    window.fetch = async function (input, init) {
+
+        let url;
+
+        try {
+            url = typeof input === "string"
+                ? input
+                : input && input.url
+                    ? input.url
+                    : "";
+        } catch (_) {
+            url = "";
+        }
+
+        const isVector =
+            url.includes("/vector_wsgi");
+
+        const isWMS =
+            url.includes("/baltrad_wsgi");
+
+        if (!isVector && !isWMS) {
+            return originalFetch.apply(this, arguments);
+        }
+
+        try {
+            const u = new URL(url, location.href);
+
+            // Переносим запрос непосредственно на Nowcast.
+            const target = new URL(
+                NOWCAST + u.pathname
+            );
+
+            u.searchParams.forEach((value, key) => {
+                if (key !== "token") {
+                    target.searchParams.set(key, value);
+                }
+            });
+
+            const token = await getNowcastToken();
+
+            if (token) {
+                target.searchParams.set("token", token);
+            }
+
+            console.log(
+                "[GPTrad] Nowcast:",
+                target.pathname,
+                target.search
+            );
+
+            return originalFetch(target.toString(), {
+                ...(init || {}),
+                credentials: "include",
+                cache: "no-store"
+            });
+
+        } catch (e) {
+            console.error("[GPTrad] Nowcast request error:", e);
+            throw e;
+        }
+    };
+
+
+    /*
+     * XMLHttpRequest используется старым кодом Nowcast.
+     * Перехватываем и его.
+     */
+    const OriginalXHR = window.XMLHttpRequest;
+
+    function GPTradXHR() {
+
+        const xhr = new OriginalXHR();
+
+        const originalOpen = xhr.open;
+        const originalSend = xhr.send;
+
+        let requestUrl = null;
+
+        xhr.open = function (method, url) {
+
+            requestUrl = url;
+
+            return originalOpen.apply(
+                this,
+                arguments
+            );
+        };
+
+        xhr.send = function (body) {
+
+            if (
+                typeof requestUrl === "string" &&
+                (
+                    requestUrl.includes("/vector_wsgi") ||
+                    requestUrl.includes("/baltrad_wsgi")
+                )
+            ) {
+
+                const originalXHRObject = this;
+
+                (async function () {
+
+                    try {
+
+                        const u = new URL(
+                            requestUrl,
+                            location.href
+                        );
+
+                        const target = new URL(
+                            NOWCAST + u.pathname
+                        );
+
+                        u.searchParams.forEach(
+                            (value, key) => {
+
+                                if (key !== "token") {
+                                    target.searchParams.set(
+                                        key,
+                                        value
+                                    );
+                                }
+
+                            }
+                        );
+
+                        const token =
+                            await getNowcastToken();
+
+                        if (token) {
+                            target.searchParams.set(
+                                "token",
+                                token
+                            );
+                        }
+
+                        console.log(
+                            "[GPTrad] XHR → Nowcast:",
+                            target.toString()
+                        );
+
+                        originalOpen.call(
+                            originalXHRObject,
+                            "GET",
+                            target.toString(),
+                            true
+                        );
+
+                        originalSend.call(
+                            originalXHRObject,
+                            body
+                        );
+
+                    } catch (e) {
+
+                        console.error(
+                            "[GPTrad] XHR Nowcast error:",
+                            e
+                        );
+
+                        originalSend.call(
+                            originalXHRObject,
+                            body
+                        );
+                    }
+
+                })();
+
+                return;
+            }
+
+            return originalSend.apply(
+                this,
+                arguments
+            );
+        };
+
+        return xhr;
+    }
+
+    GPTradXHR.prototype =
+        OriginalXHR.prototype;
+
+    window.XMLHttpRequest = GPTradXHR;
+
+
+    /*
+     * Диагностика.
+     */
+    window.GPTradNowcastTest = async function () {
+
+        console.log(
+            "[GPTrad] Проверяем Nowcast..."
+        );
+
+        const token =
+            await getNowcastToken();
+
+        if (!token) {
+            console.error(
+                "[GPTrad] TOKEN FAILED"
+            );
+            return;
+        }
+
+        console.log(
+            "[GPTrad] TOKEN OK"
+        );
+
+        try {
+
+            const r = await originalFetch(
+                NOWCAST +
+                "/vector_wsgi" +
+                "?time=2026-09-05T14:40:00Z" +
+                "&title=bufr_phenomena,bufr_novosib_phenomena,bufr_vlad_phenomena" +
+                "&token=" +
+                encodeURIComponent(token),
+                {
+                    credentials: "include",
+                    cache: "no-store"
+                }
+            );
+
+            const text = await r.text();
+
+            console.log(
+                "[GPTrad] VECTOR STATUS:",
+                r.status
+            );
+
+            console.log(
+                "[GPTrad] VECTOR RESPONSE:",
+                text.slice(0, 1000)
+            );
+
+        } catch (e) {
+
+            console.error(
+                "[GPTrad] VECTOR ERROR:",
+                e
+            );
+        }
+    };
+
+
+    console.log(
+        "%c[GPTrad] Nowcast bridge loaded",
+        "font-weight:bold"
+    );
+
+})();
+</script>      
 </body>
 </html>
