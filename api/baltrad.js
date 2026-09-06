@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -8,79 +7,75 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Method Not Allowed"
-    });
-  }
-
   try {
-    const incomingUrl = new URL(
-      req.url,
-      "https://gptrad-proxy.invalid"
-    );
+    const url = new URL(req.url, "https://gptrad-proxy.invalid");
 
-    const token = incomingUrl.searchParams.get("token");
+    const token = url.searchParams.get("token");
 
     if (!token) {
       return res.status(400).json({
-        error: "Missing Nowcast token",
-        message: "Add ?token=YOUR_BROWSER_TOKEN to the request."
+        ok: false,
+        error: "NO_TOKEN",
+        message: "Добавь ?token=БРАУЗЕРНЫЙ_ТОКЕН"
       });
     }
 
-    // Создаём запрос к реальному Nowcast WMS
-    const upstreamUrl = new URL(
+    const upstream = new URL(
       "https://www.nowcast.ru/baltrad_wsgi"
     );
 
-    // Копируем все параметры кроме token
-    for (const [key, value] of incomingUrl.searchParams.entries()) {
+    for (const [key, value] of url.searchParams.entries()) {
       if (key !== "token") {
-        upstreamUrl.searchParams.append(key, value);
+        upstream.searchParams.append(key, value);
       }
     }
 
-    // Передаём браузерный токен в Nowcast
-    upstreamUrl.searchParams.set("token", token);
+    upstream.searchParams.set("token", token);
 
-    const upstreamResponse = await fetch(upstreamUrl.toString(), {
+    const response = await fetch(upstream.toString(), {
       method: "GET",
       headers: {
         "Accept": "application/xml,text/xml,text/plain,*/*",
         "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
         "Referer": "https://www.nowcast.ru/demo/demo.html",
         "Origin": "https://www.nowcast.ru"
       },
       cache: "no-store"
     });
 
-    const body = await upstreamResponse.text();
+    const text = await response.text();
 
-    // Передаём тип содержимого Nowcast
-    const contentType =
-      upstreamResponse.headers.get("content-type");
+    return res.status(200).json({
+      ok: response.ok,
 
-    if (contentType) {
-      res.setHeader("Content-Type", contentType);
-    } else {
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    }
+      nowcast_status: response.status,
+      nowcast_status_text: response.statusText,
 
-    res.setHeader(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate"
-    );
+      content_type:
+        response.headers.get("content-type"),
 
-    return res.status(upstreamResponse.status).send(body);
+      content_length:
+        response.headers.get("content-length"),
+
+      upstream_url:
+        upstream.toString().replace(
+          /token=[^&]+/,
+          "token=HIDDEN"
+        ),
+
+      response_preview:
+        text.substring(0, 1000)
+    });
 
   } catch (error) {
-    console.error("NOWCAST PROXY ERROR:", error);
+    console.error(error);
 
-    return res.status(502).send(
-      "NOWCAST PROXY ERROR: " +
-      (error?.message || String(error))
-    );
+    return res.status(500).json({
+      ok: false,
+      error: "PROXY_EXCEPTION",
+      message: error?.message || String(error),
+      stack: error?.stack || null
+    });
   }
 }
