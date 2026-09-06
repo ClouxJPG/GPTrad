@@ -7,75 +7,93 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
+  if (req.method !== "GET") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
   try {
-    const url = new URL(req.url, "https://gptrad-proxy.invalid");
-
-    const token = url.searchParams.get("token");
-
-    if (!token) {
-      return res.status(400).json({
-        ok: false,
-        error: "NO_TOKEN",
-        message: "Добавь ?token=БРАУЗЕРНЫЙ_ТОКЕН"
-      });
-    }
-
-    const upstream = new URL(
-      "https://www.nowcast.ru/baltrad_wsgi"
+    const requestUrl = new URL(
+      req.url,
+      "https://gptrad-proxy.invalid"
     );
 
-    for (const [key, value] of url.searchParams.entries()) {
+    const path =
+      requestUrl.pathname.includes("vector_wsgi")
+        ? "/vector_wsgi"
+        : "/baltrad_wsgi";
+
+    const upstream = new URL(
+      "https://www.nowcast.ru" + path
+    );
+
+    const token = requestUrl.searchParams.get("token");
+
+    for (const [key, value] of requestUrl.searchParams.entries()) {
       if (key !== "token") {
         upstream.searchParams.append(key, value);
       }
     }
 
-    upstream.searchParams.set("token", token);
+    if (token) {
+      upstream.searchParams.set("token", token);
+    }
 
-    const response = await fetch(upstream.toString(), {
-      method: "GET",
-      headers: {
-        "Accept": "application/xml,text/xml,text/plain,*/*",
-        "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
-        "Referer": "https://www.nowcast.ru/demo/demo.html",
-        "Origin": "https://www.nowcast.ru"
-      },
-      cache: "no-store"
-    });
+    const response = await fetch(
+      upstream.toString(),
+      {
+        method: "GET",
+        headers: {
+          "Accept":
+            path === "/vector_wsgi"
+              ? "application/json,text/plain,*/*"
+              : "application/xml,text/xml,text/plain,*/*",
 
-    const text = await response.text();
+          "User-Agent":
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
+            "Version/18.0 Mobile/15E148 Safari/604.1",
 
-    return res.status(200).json({
-      ok: response.ok,
+          "Referer":
+            "https://www.nowcast.ru/demo/demo.html",
 
-      nowcast_status: response.status,
-      nowcast_status_text: response.statusText,
+          "Origin":
+            "https://www.nowcast.ru"
+        },
 
-      content_type:
-        response.headers.get("content-type"),
+        cache: "no-store"
+      }
+    );
 
-      content_length:
-        response.headers.get("content-length"),
+    const contentType =
+      response.headers.get("content-type") ||
+      "text/plain; charset=utf-8";
 
-      upstream_url:
-        upstream.toString().replace(
-          /token=[^&]+/,
-          "token=HIDDEN"
-        ),
+    const body = await response.text();
 
-      response_preview:
-        text.substring(0, 1000)
-    });
+    res.setHeader(
+      "Content-Type",
+      contentType
+    );
+
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate"
+    );
+
+    return res.status(response.status).send(body);
 
   } catch (error) {
-    console.error(error);
+    console.error(
+      "[GPTrad Nowcast proxy]",
+      error
+    );
 
-    return res.status(500).json({
+    return res.status(502).json({
       ok: false,
-      error: "PROXY_EXCEPTION",
-      message: error?.message || String(error),
-      stack: error?.stack || null
+      error: "NOWCAST_PROXY_ERROR",
+      message:
+        error?.message ||
+        String(error)
     });
   }
 }
