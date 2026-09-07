@@ -765,6 +765,8 @@ let playing=false;
 
 let playTimer=null;
 
+let rainFrameRequestId=0;
+
 
 /* =========================================================
    HELPERS
@@ -835,15 +837,37 @@ throw new Error(
 const data=await r.json();
 
 rainFrames=
-data.radar?.past||[];
+Array.isArray(data.radar?.past)
+?data.radar.past
+:[];
 
 if(!rainFrames.length)
 throw new Error(
 "Нет кадров"
 );
 
+
+/*
+Сортируем строго по времени.
+*/
+
+rainFrames.sort(
+(a,b)=>a.time-b.time
+);
+
+
+/*
+Текущий = последний доступный кадр.
+*/
+
 currentFrame=
 rainFrames.length-1;
+
+
+/*
+RainViewer с 2026 года
+имеет максимум zoom 7.
+*/
 
 timeSlider.min=0;
 
@@ -881,6 +905,46 @@ hideLoading();
 
 
 /* =========================================================
+   REMOVE ALL RAIN LAYERS
+========================================================= */
+
+function removeAllRainLayers(){
+
+map.eachLayer(
+layer=>{
+
+if(
+layer instanceof L.TileLayer &&
+layer!==osmLayer
+){
+
+const url=
+layer.getTileUrl
+?layer.getTileUrl({
+x:0,
+y:0,
+z:0
+})
+:"";
+
+if(
+typeof url==="string" &&
+url.includes("rainviewer")
+){
+
+map.removeLayer(layer);
+
+}
+
+}
+
+}
+);
+
+}
+
+
+/* =========================================================
    RAIN TILE
 ========================================================= */
 
@@ -900,7 +964,7 @@ opacity:1,
 
 minZoom:2,
 
-maxZoom:18,
+maxZoom:7,
 
 zIndex:10,
 
@@ -908,7 +972,9 @@ updateWhenIdle:true,
 
 updateWhenZooming:false,
 
-keepBuffer:3
+keepBuffer:2,
+
+noWrap:false
 
 }
 
@@ -923,39 +989,80 @@ keepBuffer:3
 
 function showRainFrame(index){
 
-if(!rainFrames[index])
+if(
+!rainFrames[index]
+)
 return;
 
-const newLayer=
-makeRainLayer(
-rainFrames[index]
+const frame=
+rainFrames[index];
+
+const requestId=
+++rainFrameRequestId;
+
+
+/*
+Сразу убираем старый кадр.
+*/
+
+if(
+radarLayer &&
+map.hasLayer(
+radarLayer
+)
+){
+
+map.removeLayer(
+radarLayer
 );
 
-const oldLayer=
-radarLayer;
+}
+
+radarLayer=null;
+
+
+/*
+Создаём только один
+новый слой.
+*/
+
+const newLayer=
+makeRainLayer(frame);
 
 radarLayer=
 newLayer;
 
 newLayer.addTo(map);
 
+
+/*
+Если пользователь уже выбрал
+другой кадр — ничего не делаем.
+*/
+
 newLayer.once(
 "load",
 ()=>{
 
 if(
-oldLayer &&
-map.hasLayer(oldLayer)
+requestId!==rainFrameRequestId
 ){
 
-map.removeLayer(
-oldLayer
-);
+if(
+map.hasLayer(newLayer)
+){
+
+map.removeLayer(newLayer);
+
+}
+
+return;
 
 }
 
 }
 );
+
 
 updateTimeLabel();
 
@@ -1015,35 +1122,38 @@ lat*Math.PI/360
 
 function makeOyaUrl(){
 
-const b=
+const bounds=
 map.getBounds();
 
 const sw=
-b.getSouthWest();
+bounds.getSouthWest();
 
 const ne=
-b.getNorthEast();
+bounds.getNorthEast();
 
 const size=
 map.getSize();
 
+
 const width=
+Math.max(
+256,
 Math.min(
 1600,
-Math.max(
-500,
 Math.round(size.x)
 )
 );
 
+
 const height=
+Math.max(
+256,
 Math.min(
 1200,
-Math.max(
-400,
 Math.round(size.y)
 )
 );
+
 
 const bbox=[
 
@@ -1089,7 +1199,9 @@ HEIGHT:String(height),
 
 FORMAT:"image/png",
 
-TRANSPARENT:"true"
+TRANSPARENT:"true",
+
+EXCEPTIONS:"application/vnd.ogc.se_inimage"
 
 });
 
@@ -1116,18 +1228,31 @@ setStatus(
 "Загрузка ОЯ…"
 );
 
+
 const url=
 makeOyaUrl();
 
 console.log(
-"OЯ:",
+"OЯ GetMap:",
 url
 );
+
 
 const img=
 new Image();
 
+
+/*
+Важно для внешнего WMS:
+не отправляем Referer.
+*/
+
+img.referrerPolicy=
+"no-referrer";
+
+
 let finished=false;
+
 
 const timeout=
 setTimeout(
@@ -1140,9 +1265,16 @@ finished=true;
 
 oyaLoading=false;
 
+if(
+requestId===
+oyaRequestId
+){
+
 setStatus(
 "ОЯ: сервер не ответил"
 );
+
+}
 
 },
 10000
@@ -1160,10 +1292,14 @@ clearTimeout(
 timeout
 );
 
+
 if(
 requestId!==oyaRequestId
-)
+){
+
 return;
+
+}
 
 
 const bounds=
@@ -1188,6 +1324,11 @@ zIndex:50
 
 overlay.addTo(map);
 
+
+/*
+Старый слой удаляем только
+после успешной загрузки.
+*/
 
 if(
 oyaImage &&
@@ -1228,9 +1369,17 @@ timeout
 
 oyaLoading=false;
 
+
+if(
+requestId===
+oyaRequestId
+){
+
 setStatus(
 "Ошибка ОЯ"
 );
+
+}
 
 };
 
@@ -1245,6 +1394,10 @@ img.src=url;
 ========================================================= */
 
 function showOya(){
+
+/*
+Убираем RainViewer.
+*/
 
 if(
 radarLayer &&
@@ -1262,17 +1415,11 @@ radarLayer
 radarLayer=null;
 
 
-if(!oyaImage){
+/*
+Первый запрос OЯ.
+*/
 
 loadOya();
-
-}else{
-
-setStatus(
-"Опасные явления"
-);
-
-}
 
 }
 
@@ -1288,9 +1435,11 @@ activeLayer!=="oya"
 )
 return;
 
+
 clearTimeout(
 oyaRefreshTimer
 );
+
 
 oyaRefreshTimer=
 setTimeout(
@@ -1299,7 +1448,7 @@ setTimeout(
 loadOya();
 
 },
-500
+600
 );
 
 }
@@ -1354,9 +1503,11 @@ document
 .querySelectorAll(".layer-item")
 .forEach(
 x=>{
+
 x.classList.remove(
 "active"
 );
+
 }
 );
 
@@ -1370,7 +1521,8 @@ if(
 type==="oya"
 ){
 
-activeLayer="oya";
+activeLayer=
+"oya";
 
 selectedLayerName.textContent=
 "Опасные явления";
@@ -1384,7 +1536,8 @@ if(
 type==="radar"
 ){
 
-activeLayer="radar";
+activeLayer=
+"radar";
 
 selectedLayerName.textContent=
 "Радар (RainViewer)";
@@ -1415,6 +1568,17 @@ selectedLayer.classList.remove(
 
 function showRadar(){
 
+/*
+Отменяем старые OЯ-запросы.
+*/
+
+oyaRequestId++;
+
+
+/*
+Удаляем OЯ.
+*/
+
 if(
 oyaImage &&
 map.hasLayer(
@@ -1430,6 +1594,10 @@ oyaImage
 
 oyaImage=null;
 
+
+/*
+Показываем RainViewer.
+*/
 
 if(
 rainFrames.length
@@ -1524,14 +1692,17 @@ if(
 )
 return;
 
+
 currentFrame=
 Math.max(
 0,
 currentFrame-1
 );
 
+
 timeSlider.value=
 currentFrame;
+
 
 showRainFrame(
 currentFrame
@@ -1561,14 +1732,17 @@ if(
 )
 return;
 
+
 currentFrame=
 Math.min(
 rainFrames.length-1,
 currentFrame+1
 );
 
+
 timeSlider.value=
 currentFrame;
+
 
 showRainFrame(
 currentFrame
@@ -1598,16 +1772,23 @@ if(
 )
 return;
 
-playing=!playing;
+
+playing=
+!playing;
+
 
 document
 .getElementById("playBtn")
 .textContent=
-playing?"Ⅱ":"▶";
+playing
+?"Ⅱ"
+:"▶";
+
 
 clearInterval(
 playTimer
 );
+
 
 if(
 playing
@@ -1619,6 +1800,7 @@ setInterval(
 
 currentFrame++;
 
+
 if(
 currentFrame>=
 rainFrames.length
@@ -1628,8 +1810,10 @@ currentFrame=0;
 
 }
 
+
 timeSlider.value=
 currentFrame;
+
 
 showRainFrame(
 currentFrame
@@ -1667,9 +1851,11 @@ return;
 
 }
 
+
 setStatus(
 "Определение местоположения…"
 );
+
 
 navigator.geolocation.getCurrentPosition(
 
@@ -1693,6 +1879,7 @@ duration:.8
 
 );
 
+
 setStatus(
 "Ваше местоположение"
 );
@@ -1708,8 +1895,11 @@ setStatus(
 },
 
 {
+
 enableHighAccuracy:true,
+
 timeout:10000
+
 }
 
 );
@@ -1774,10 +1964,12 @@ button.addEventListener(
 const theme=
 button.dataset.theme;
 
+
 document.body.classList.remove(
 "light",
 "green"
 );
+
 
 if(
 theme!=="dark"
@@ -1788,6 +1980,7 @@ theme
 );
 
 }
+
 
 localStorage.setItem(
 "gptrad-theme",
@@ -1810,6 +2003,7 @@ localStorage.getItem(
 "gptrad-theme"
 );
 
+
 if(
 savedTheme
 ){
@@ -1818,6 +2012,7 @@ document.body.classList.remove(
 "light",
 "green"
 );
+
 
 if(
 savedTheme!=="dark"
@@ -1855,6 +2050,13 @@ selectedLayer.classList.remove(
 /* =========================================================
    START
 ========================================================= */
+
+const osmLayer=
+map.eachLayer
+?map._layers[
+Object.keys(map._layers)[0]
+]
+:null;
 
 loadRainViewer();
 
