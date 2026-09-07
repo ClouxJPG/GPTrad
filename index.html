@@ -690,7 +690,7 @@ maxZoom:19
    OSM
 ========================================================= */
 
-L.tileLayer(
+const osmLayer=L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 {
 
@@ -737,6 +737,7 @@ document.getElementById("timeSlider");
 const timeLabel=
 document.getElementById("timeLabel");
 
+
 const settings=
 document.getElementById("settings");
 
@@ -757,15 +758,42 @@ let oyaRequestId=0;
 
 let oyaRefreshTimer=null;
 
+
+/*
+RAINVIEWER
+*/
+
 let rainFrames=[];
 
 let currentFrame=0;
+
+
+/*
+OЯ
+
+oxaTimes содержит Unix timestamps.
+*/
+
+let oyaTimes=[];
+
+let oyaFrameIndex=0;
+
+let oyaCapabilitiesLoaded=false;
+
+let oyaCapabilitiesLoading=false;
+
+
+/*
+PLAYBACK
+*/
 
 let playing=false;
 
 let playTimer=null;
 
 let rainFrameRequestId=0;
+
+let oyaFrameRequestId=0;
 
 
 /* =========================================================
@@ -812,43 +840,121 @@ minute:"2-digit"
 }
 
 
+/*
+Преобразование ISO времени
+в Unix timestamp.
+*/
+
+function isoToUnix(value){
+
+const t=
+Date.parse(value);
+
+if(
+Number.isNaN(t)
+)
+return null;
+
+return Math.floor(
+t/1000
+);
+
+}
+
+
+/*
+Определяем временные значения
+из текста Extent / Dimension.
+*/
+
+function parseOyaTimes(text){
+
+if(
+!text
+)
+return[];
+
+const result=[];
+
+const parts=
+text
+.split(",")
+.map(x=>x.trim())
+.filter(Boolean);
+
+for(
+const value of parts
+){
+
+const unix=
+isoToUnix(value);
+
+if(
+unix!==null
+){
+
+result.push(unix);
+
+}
+
+}
+
+return[
+...new Set(result)
+].sort(
+(a,b)=>a-b
+);
+
+}
+
+
 /* =========================================================
    RAINVIEWER
 ========================================================= */
 
 async function loadRainViewer(){
 
-showLoading("Загрузка радара…");
+showLoading(
+"Загрузка радара…"
+);
 
 try{
 
-const r=await fetch(
+const r=
+await fetch(
 "https://api.rainviewer.com/public/weather-maps.json",
 {
 cache:"no-store"
 }
 );
 
-if(!r.ok)
+if(
+!r.ok
+)
 throw new Error(
 "RainViewer "+r.status
 );
 
-const data=await r.json();
+const data=
+await r.json();
 
 rainFrames=
-Array.isArray(data.radar?.past)
+Array.isArray(
+data.radar?.past
+)
 ?data.radar.past
 :[];
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 throw new Error(
 "Нет кадров"
 );
 
 
 /*
-Сортируем строго по времени.
+Строго сортируем по времени.
 */
 
 rainFrames.sort(
@@ -857,7 +963,7 @@ rainFrames.sort(
 
 
 /*
-Текущий = последний доступный кадр.
+Последний доступный кадр.
 */
 
 currentFrame=
@@ -865,19 +971,22 @@ rainFrames.length-1;
 
 
 /*
-RainViewer с 2026 года
-имеет максимум zoom 7.
+Таймлайн.
 */
 
 timeSlider.min=0;
 
 timeSlider.max=
-rainFrames.length-1;
+Math.max(
+0,
+rainFrames.length-1
+);
 
 timeSlider.value=
 currentFrame;
 
 updateTimeLabel();
+
 
 showRainFrame(
 currentFrame
@@ -889,7 +998,10 @@ setStatus(
 
 }catch(e){
 
-console.error(e);
+console.error(
+"RainViewer:",
+e
+);
 
 setStatus(
 "Ошибка RainViewer"
@@ -905,7 +1017,7 @@ hideLoading();
 
 
 /* =========================================================
-   REMOVE ALL RAIN LAYERS
+   REMOVE RAIN LAYERS
 ========================================================= */
 
 function removeAllRainLayers(){
@@ -929,10 +1041,14 @@ z:0
 
 if(
 typeof url==="string" &&
-url.includes("rainviewer")
+url.includes(
+"rainviewer"
+)
 ){
 
-map.removeLayer(layer);
+map.removeLayer(
+layer
+);
 
 }
 
@@ -994,6 +1110,18 @@ if(
 )
 return;
 
+
+/*
+Игнорируем запросы,
+если уже не выбран RainViewer.
+*/
+
+if(
+activeLayer!=="radar"
+)
+return;
+
+
 const frame=
 rainFrames[index];
 
@@ -1002,42 +1130,28 @@ const requestId=
 
 
 /*
-Сразу убираем старый кадр.
-*/
+НОВОЕ:
+старый слой НЕ удаляем сразу.
 
-if(
-radarLayer &&
-map.hasLayer(
-radarLayer
-)
-){
-
-map.removeLayer(
-radarLayer
-);
-
-}
-
-radarLayer=null;
-
-
-/*
-Создаём только один
-новый слой.
+Сначала добавляем новый.
 */
 
 const newLayer=
-makeRainLayer(frame);
-
-radarLayer=
-newLayer;
+makeRainLayer(
+frame
+);
 
 newLayer.addTo(map);
 
 
 /*
-Если пользователь уже выбрал
-другой кадр — ничего не делаем.
+Если новый слой успешно
+начал загружаться — удаляем
+старый.
+
+Если пользователь уже
+переключил кадр — удаляем
+только этот устаревший слой.
 */
 
 newLayer.once(
@@ -1045,20 +1159,101 @@ newLayer.once(
 ()=>{
 
 if(
-requestId!==rainFrameRequestId
+requestId!==rainFrameRequestId ||
+activeLayer!=="radar"
 ){
 
 if(
-map.hasLayer(newLayer)
+map.hasLayer(
+newLayer
+)
 ){
 
-map.removeLayer(newLayer);
+map.removeLayer(
+newLayer
+);
 
 }
 
 return;
 
 }
+
+
+const oldLayer=
+radarLayer;
+
+radarLayer=
+newLayer;
+
+
+/*
+Старый кадр удаляем только
+после загрузки нового.
+*/
+
+if(
+oldLayer &&
+map.hasLayer(
+oldLayer
+)
+){
+
+map.removeLayer(
+oldLayer
+);
+
+}
+
+}
+);
+
+
+/*
+Если тайлы не загрузились,
+не оставляем бесконечный
+мусорный слой.
+*/
+
+const cleanupTimer=
+setTimeout(
+()=>{
+
+if(
+requestId!==rainFrameRequestId
+)
+return;
+
+if(
+radarLayer!==newLayer
+){
+
+if(
+map.hasLayer(
+newLayer
+)
+){
+
+map.removeLayer(
+newLayer
+);
+
+}
+
+}
+
+},
+15000
+);
+
+
+newLayer.once(
+"load",
+()=>{
+
+clearTimeout(
+cleanupTimer
+);
 
 }
 );
@@ -1070,11 +1265,11 @@ updateTimeLabel();
 
 
 /* =========================================================
-   OЯ WMS
+   OЯ
 ========================================================= */
 
-const OYA_WMS=
-"https://www.nowcast.ru/baltrad_wsgi";
+const OYA_PROXY=
+"/api/oya";
 
 const OYA_LAYER=
 "bufr_phenomena,"+
@@ -1117,10 +1312,459 @@ lat*Math.PI/360
 
 
 /* =========================================================
+   OЯ CAPABILITIES
+========================================================= */
+
+async function loadOyaCapabilities(){
+
+if(
+oyaCapabilitiesLoaded
+&&
+oyaTimes.length
+){
+
+return true;
+
+}
+
+
+if(
+oyaCapabilitiesLoading
+){
+
+return false;
+
+}
+
+
+oyaCapabilitiesLoading=true;
+
+setStatus(
+"Получение времени ОЯ…"
+);
+
+
+try{
+
+const response=
+await fetch(
+OYA_PROXY+
+"?action=capabilities",
+{
+cache:"no-store"
+}
+);
+
+
+if(
+!response.ok
+){
+
+throw new Error(
+"Capabilities "+response.status
+);
+
+}
+
+
+const xmlText=
+await response.text();
+
+
+const parser=
+new DOMParser();
+
+const xml=
+parser.parseFromString(
+xmlText,
+"text/xml"
+);
+
+
+const parserError=
+xml.querySelector(
+"parsererror"
+);
+
+if(
+parserError
+){
+
+throw new Error(
+"Ошибка XML"
+);
+
+}
+
+
+let times=[];
+
+
+/*
+Ищем слой bufr_phenomena.
+*/
+
+const layers=
+Array.from(
+xml.getElementsByTagName(
+"Layer"
+)
+);
+
+
+for(
+const layer of layers
+){
+
+const nameNode=
+Array.from(
+layer.children
+)
+.find(
+node=>node.localName==="Name"
+);
+
+
+if(
+!nameNode
+)
+continue;
+
+
+const name=
+nameNode.textContent.trim();
+
+
+if(
+name!=="bufr_phenomena" &&
+!name.startsWith(
+"bufr_phenomena"
+)
+){
+
+continue;
+
+}
+
+
+/*
+Extent name="time"
+*/
+
+const extentNodes=
+Array.from(
+layer.children
+)
+.filter(
+node=>
+node.localName==="Extent" ||
+node.localName==="Dimension"
+);
+
+
+for(
+const node of extentNodes
+){
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+const text=
+node.textContent.trim();
+
+const parsed=
+parseOyaTimes(text);
+
+if(
+parsed.length
+){
+
+times.push(
+...parsed
+);
+
+}
+
+}
+
+
+/*
+Иногда TIME лежит
+в Dimension/Extent глубже.
+*/
+
+if(
+!times.length
+){
+
+const descendants=
+Array.from(
+layer.getElementsByTagName("*")
+);
+
+for(
+const node of descendants
+){
+
+if(
+node.localName!=="Extent" &&
+node.localName!=="Dimension"
+)
+continue;
+
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+
+const parsed=
+parseOyaTimes(
+node.textContent.trim()
+);
+
+if(
+parsed.length
+){
+
+times.push(
+...parsed
+);
+
+}
+
+}
+
+}
+
+}
+
+
+times=[
+...new Set(times)
+].sort(
+(a,b)=>a-b
+);
+
+
+/*
+Иногда GetCapabilities
+может вернуть интервалы вида:
+
+start/end/period
+
+Попробуем разобрать их отдельно.
+*/
+
+if(
+!times.length
+){
+
+for(
+const node of
+Array.from(
+xml.getElementsByTagName("*")
+)
+){
+
+if(
+node.localName!=="Extent" &&
+node.localName!=="Dimension"
+)
+continue;
+
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+
+const value=
+node.textContent.trim();
+
+
+if(
+value.includes("/")
+)
+{
+
+const parts=
+value.split("/");
+
+if(
+parts.length>=2
+){
+
+const start=
+isoToUnix(
+parts[0]
+);
+
+const end=
+isoToUnix(
+parts[1]
+);
+
+if(
+start!==null &&
+end!==null
+){
+
+/*
+Если период задан,
+создаём точки примерно
+каждые 10 минут.
+*/
+
+let step=
+600;
+
+if(
+parts[2]
+){
+
+const match=
+parts[2].match(
+/PT(\d+)M/i
+);
+
+if(
+match
+){
+
+step=
+Math.max(
+60,
+Number(match[1])*60
+);
+
+}
+
+}
+
+
+for(
+let t=start;
+t<=end;
+t+=step
+){
+
+times.push(t);
+
+}
+
+}
+
+}
+
+}
+
+}
+
+}
+
+
+times=[
+...new Set(times)
+].sort(
+(a,b)=>a-b
+);
+
+
+if(
+!times.length
+){
+
+throw new Error(
+"В GetCapabilities нет времени"
+);
+
+}
+
+
+oyaTimes=times;
+
+oyaCapabilitiesLoaded=true;
+
+
+/*
+Начинаем с последнего
+доступного времени.
+*/
+
+oyaFrameIndex=
+oyaTimes.length-1;
+
+
+/*
+Общий таймлайн.
+*/
+
+timeSlider.min=0;
+
+timeSlider.max=
+oyaTimes.length-1;
+
+timeSlider.value=
+oyaFrameIndex;
+
+updateTimeLabel();
+
+setStatus(
+"Опасные явления"
+);
+
+return true;
+
+}catch(error){
+
+console.error(
+"OЯ capabilities:",
+error
+);
+
+setStatus(
+"Ошибка времени ОЯ"
+);
+
+return false;
+
+}finally{
+
+oyaCapabilitiesLoading=false;
+
+}
+
+}
+
+
+/* =========================================================
    OЯ URL
 ========================================================= */
 
-function makeOyaUrl(){
+function makeOyaUrl(timeValue){
 
 const bounds=
 map.getBounds();
@@ -1179,6 +1823,8 @@ ne.lat
 const params=
 new URLSearchParams({
 
+action:"image",
+
 SERVICE:"WMS",
 
 VERSION:"1.1.1",
@@ -1201,12 +1847,17 @@ FORMAT:"image/png",
 
 TRANSPARENT:"true",
 
-EXCEPTIONS:"application/vnd.ogc.se_inimage"
+EXCEPTIONS:
+"application/vnd.ogc.se_inimage",
+
+TIME:new Date(
+timeValue*1000
+).toISOString()
 
 });
 
 
-return OYA_WMS+
+return OYA_PROXY+
 "?"+
 params.toString();
 
@@ -1214,13 +1865,51 @@ params.toString();
 
 
 /* =========================================================
-   OЯ LOAD
+   OЯ FRAME
 ========================================================= */
 
-function loadOya(){
+async function loadOyaFrame(index){
+
+if(
+activeLayer!=="oya"
+)
+return;
+
+
+if(
+!oyaTimes.length
+){
+
+const ready=
+await loadOyaCapabilities();
+
+if(
+!ready ||
+!oyaTimes.length
+)
+return;
+
+}
+
+
+if(
+index<0 ||
+index>=oyaTimes.length
+)
+return;
+
+
+oyaFrameIndex=
+index;
+
+timeSlider.value=
+index;
+
+updateTimeLabel();
+
 
 const requestId=
-++oyaRequestId;
+++oyaFrameRequestId;
 
 oyaLoading=true;
 
@@ -1229,26 +1918,23 @@ setStatus(
 );
 
 
+const timeValue=
+oyaTimes[index];
+
 const url=
-makeOyaUrl();
+makeOyaUrl(
+timeValue
+);
+
 
 console.log(
-"OЯ GetMap:",
+"OЯ WMS:",
 url
 );
 
 
 const img=
 new Image();
-
-
-/*
-Важно для внешнего WMS:
-не отправляем Referer.
-*/
-
-img.referrerPolicy=
-"no-referrer";
 
 
 let finished=false;
@@ -1258,16 +1944,19 @@ const timeout=
 setTimeout(
 ()=>{
 
-if(finished)
+if(
+finished
+)
 return;
 
 finished=true;
 
 oyaLoading=false;
 
+
 if(
 requestId===
-oyaRequestId
+oyaFrameRequestId
 ){
 
 setStatus(
@@ -1277,13 +1966,15 @@ setStatus(
 }
 
 },
-10000
+15000
 );
 
 
 img.onload=()=>{
 
-if(finished)
+if(
+finished
+)
 return;
 
 finished=true;
@@ -1294,13 +1985,19 @@ timeout
 
 
 if(
-requestId!==oyaRequestId
+requestId!==oyaFrameRequestId ||
+activeLayer!=="oya"
 ){
 
 return;
 
 }
 
+
+/*
+Используем те же границы,
+для которых был сделан запрос.
+*/
 
 const bounds=
 map.getBounds();
@@ -1326,8 +2023,9 @@ overlay.addTo(map);
 
 
 /*
-Старый слой удаляем только
-после успешной загрузки.
+Старый кадр удаляем
+ТОЛЬКО после успешной
+загрузки нового.
 */
 
 if(
@@ -1358,7 +2056,9 @@ setStatus(
 
 img.onerror=()=>{
 
-if(finished)
+if(
+finished
+)
 return;
 
 finished=true;
@@ -1393,7 +2093,15 @@ img.src=url;
    SHOW OЯ
 ========================================================= */
 
-function showOya(){
+async function showOya(){
+
+/*
+Останавливаем
+переключение RainViewer.
+*/
+
+rainFrameRequestId++;
+
 
 /*
 Убираем RainViewer.
@@ -1416,10 +2124,45 @@ radarLayer=null;
 
 
 /*
-Первый запрос OЯ.
+Загружаем времена.
 */
 
-loadOya();
+const ready=
+await loadOyaCapabilities();
+
+if(
+!ready
+)
+return;
+
+
+/*
+Показываем последний
+доступный кадр.
+*/
+
+if(
+oyaTimes.length
+){
+
+oyaFrameIndex=
+oyaTimes.length-1;
+
+timeSlider.min=0;
+
+timeSlider.max=
+oyaTimes.length-1;
+
+timeSlider.value=
+oyaFrameIndex;
+
+updateTimeLabel();
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 }
 
@@ -1445,7 +2188,21 @@ oyaRefreshTimer=
 setTimeout(
 ()=>{
 
-loadOya();
+if(
+activeLayer!=="oya"
+)
+return;
+
+
+if(
+oyaTimes.length
+){
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 },
 600
@@ -1487,7 +2244,9 @@ open
 ========================================================= */
 
 document
-.querySelectorAll(".layer-item")
+.querySelectorAll(
+".layer-item"
+)
 .forEach(
 button=>{
 
@@ -1500,7 +2259,9 @@ button.dataset.layer;
 
 
 document
-.querySelectorAll(".layer-item")
+.querySelectorAll(
+".layer-item"
+)
 .forEach(
 x=>{
 
@@ -1569,10 +2330,12 @@ selectedLayer.classList.remove(
 function showRadar(){
 
 /*
-Отменяем старые OЯ-запросы.
+Отменяем старые ОЯ.
 */
 
 oyaRequestId++;
+
+oyaFrameRequestId++;
 
 
 /*
@@ -1596,7 +2359,7 @@ oyaImage=null;
 
 
 /*
-Показываем RainViewer.
+RainViewer.
 */
 
 if(
@@ -1621,13 +2384,16 @@ loadRainViewer();
 
 
 /* =========================================================
-   TIME
+   TIME LABEL
 ========================================================= */
 
 function updateTimeLabel(){
 
 if(
-activeLayer==="radar" &&
+activeLayer==="radar"
+){
+
+if(
 rainFrames[currentFrame]
 ){
 
@@ -1639,7 +2405,34 @@ rainFrames[currentFrame].time
 }else{
 
 timeLabel.textContent=
-"Сейчас";
+"—";
+
+}
+
+return;
+
+}
+
+
+if(
+activeLayer==="oya"
+){
+
+if(
+oyaTimes[oyaFrameIndex]
+){
+
+timeLabel.textContent=
+formatTime(
+oyaTimes[oyaFrameIndex]
+);
+
+}else{
+
+timeLabel.textContent=
+"—";
+
+}
 
 }
 
@@ -1654,19 +2447,70 @@ timeSlider.addEventListener(
 "input",
 ()=>{
 
-if(
-activeLayer!=="radar"
-)
-return;
-
-currentFrame=
+const index=
 Number(
 timeSlider.value
 );
 
+
+if(
+activeLayer==="radar"
+){
+
+if(
+!rainFrames.length
+)
+return;
+
+
+currentFrame=
+Math.max(
+0,
+Math.min(
+rainFrames.length-1,
+index
+)
+);
+
+
+updateTimeLabel();
+
 showRainFrame(
 currentFrame
 );
+
+return;
+
+}
+
+
+if(
+activeLayer==="oya"
+){
+
+if(
+!oyaTimes.length
+)
+return;
+
+
+oyaFrameIndex=
+Math.max(
+0,
+Math.min(
+oyaTimes.length-1,
+index
+)
+);
+
+
+updateTimeLabel();
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 }
 );
@@ -1677,15 +2521,16 @@ currentFrame
 ========================================================= */
 
 document
-.getElementById("backBtn")
+.getElementById(
+"backBtn"
+)
 .addEventListener(
 "click",
 ()=>{
 
 if(
-activeLayer!=="radar"
-)
-return;
+activeLayer==="radar"
+){
 
 if(
 !rainFrames.length
@@ -1703,10 +2548,44 @@ currentFrame-1
 timeSlider.value=
 currentFrame;
 
+updateTimeLabel();
 
 showRainFrame(
 currentFrame
 );
+
+return;
+
+}
+
+
+if(
+activeLayer==="oya"
+){
+
+if(
+!oyaTimes.length
+)
+return;
+
+
+oyaFrameIndex=
+Math.max(
+0,
+oyaFrameIndex-1
+);
+
+
+timeSlider.value=
+oyaFrameIndex;
+
+updateTimeLabel();
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 }
 );
@@ -1717,15 +2596,16 @@ currentFrame
 ========================================================= */
 
 document
-.getElementById("forwardBtn")
+.getElementById(
+"forwardBtn"
+)
 .addEventListener(
 "click",
 ()=>{
 
 if(
-activeLayer!=="radar"
-)
-return;
+activeLayer==="radar"
+){
 
 if(
 !rainFrames.length
@@ -1743,10 +2623,44 @@ currentFrame+1
 timeSlider.value=
 currentFrame;
 
+updateTimeLabel();
 
 showRainFrame(
 currentFrame
 );
+
+return;
+
+}
+
+
+if(
+activeLayer==="oya"
+){
+
+if(
+!oyaTimes.length
+)
+return;
+
+
+oyaFrameIndex=
+Math.min(
+oyaTimes.length-1,
+oyaFrameIndex+1
+);
+
+
+timeSlider.value=
+oyaFrameIndex;
+
+updateTimeLabel();
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 }
 );
@@ -1757,18 +2671,34 @@ currentFrame
 ========================================================= */
 
 document
-.getElementById("playBtn")
+.getElementById(
+"playBtn"
+)
 .addEventListener(
 "click",
 ()=>{
 
-if(
-activeLayer!=="radar"
-)
-return;
+let total=0;
 
 if(
-!rainFrames.length
+activeLayer==="radar"
+){
+
+total=
+rainFrames.length;
+
+}else if(
+activeLayer==="oya"
+){
+
+total=
+oyaTimes.length;
+
+}
+
+
+if(
+!total
 )
 return;
 
@@ -1778,7 +2708,9 @@ playing=
 
 
 document
-.getElementById("playBtn")
+.getElementById(
+"playBtn"
+)
 .textContent=
 playing
 ?"Ⅱ"
@@ -1798,8 +2730,11 @@ playTimer=
 setInterval(
 ()=>{
 
-currentFrame++;
+if(
+activeLayer==="radar"
+){
 
+currentFrame++;
 
 if(
 currentFrame>=
@@ -1810,14 +2745,41 @@ currentFrame=0;
 
 }
 
-
 timeSlider.value=
 currentFrame;
-
 
 showRainFrame(
 currentFrame
 );
+
+return;
+
+}
+
+
+if(
+activeLayer==="oya"
+){
+
+oyaFrameIndex++;
+
+if(
+oyaFrameIndex>=
+oyaTimes.length
+){
+
+oyaFrameIndex=0;
+
+}
+
+timeSlider.value=
+oyaFrameIndex;
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
 
 },
 600
@@ -1834,7 +2796,9 @@ currentFrame
 ========================================================= */
 
 document
-.getElementById("locateBtn")
+.getElementById(
+"locateBtn"
+)
 .addEventListener(
 "click",
 ()=>{
@@ -1913,7 +2877,9 @@ timeout:10000
 ========================================================= */
 
 document
-.getElementById("reloadBtn")
+.getElementById(
+"reloadBtn"
+)
 .addEventListener(
 "click",
 ()=>{
@@ -1922,7 +2888,17 @@ if(
 activeLayer==="oya"
 ){
 
-loadOya();
+/*
+Обновляем именно
+GetCapabilities, чтобы
+получить новые времена.
+*/
+
+oyaCapabilitiesLoaded=false;
+
+oyaTimes=[];
+
+showOya();
 
 }else{
 
@@ -1939,7 +2915,9 @@ loadRainViewer();
 ========================================================= */
 
 document
-.getElementById("settingsBtn")
+.getElementById(
+"settingsBtn"
+)
 .addEventListener(
 "click",
 ()=>{
@@ -1953,7 +2931,9 @@ settings.classList.toggle(
 
 
 document
-.querySelectorAll(".theme-btn")
+.querySelectorAll(
+".theme-btn"
+)
 .forEach(
 button=>{
 
@@ -2043,20 +3023,12 @@ selectedLayer.classList.remove(
 "open"
 );
 
-}
-);
+});
 
 
 /* =========================================================
    START
 ========================================================= */
-
-const osmLayer=
-map.eachLayer
-?map._layers[
-Object.keys(map._layers)[0]
-]
-:null;
 
 loadRainViewer();
 
