@@ -2,16 +2,33 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+
 <title>GPTrad</title>
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
-html,body,#map{
+:root{
+  --ui-bg:rgba(255,255,255,.95);
+  --ui-bg-solid:#ffffff;
+  --ui-text:#111111;
+  --ui-border:#d5d5d5;
+  --ui-button:#eeeeee;
+  --ui-button-active:#dddddd;
+  --ui-shadow:rgba(0,0,0,.20);
+  --accent:#1976d2;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body,
+#map{
   width:100%;
   height:100%;
   margin:0;
@@ -21,11 +38,16 @@ html,body,#map{
 body{
   overflow:hidden;
   font-family:Arial,sans-serif;
+  background:#dfe8ef;
 }
 
 #map{
   background:#dfe8ef;
 }
+
+/* =====================================================
+   TOP
+===================================================== */
 
 .top{
   position:absolute;
@@ -33,67 +55,111 @@ body{
   top:10px;
   left:50%;
   transform:translateX(-50%);
-  background:rgba(255,255,255,.95);
+
+  background:var(--ui-bg);
+
   border-radius:12px;
   padding:8px 10px;
+
   display:flex;
   align-items:center;
   gap:8px;
-  box-shadow:0 2px 10px rgba(0,0,0,.2);
+
+  box-shadow:0 2px 10px var(--ui-shadow);
 }
 
 .logo{
+  color:var(--ui-text);
   font-weight:700;
   font-size:16px;
   margin-right:4px;
 }
 
 select{
-  border:1px solid #ccc;
+  border:1px solid var(--ui-border);
   border-radius:8px;
   padding:6px 8px;
-  background:white;
+
+  background:var(--ui-bg-solid);
+  color:var(--ui-text);
+
+  outline:none;
 }
 
 button{
   border:0;
-  background:#eee;
+  background:var(--ui-button);
+  color:var(--ui-text);
+
   border-radius:8px;
+
   width:34px;
   height:34px;
+
   font-size:18px;
+
+  cursor:pointer;
+
+  -webkit-tap-highlight-color:transparent;
 }
 
 button:active{
-  background:#ddd;
+  background:var(--ui-button-active);
 }
+
+/* =====================================================
+   STATUS
+===================================================== */
 
 #status{
   position:absolute;
   z-index:1000;
+
   top:65px;
   left:50%;
+
   transform:translateX(-50%);
-  background:rgba(255,255,255,.9);
+
+  background:var(--ui-bg);
+  color:var(--ui-text);
+
   padding:5px 10px;
+
   border-radius:8px;
+
   font-size:12px;
-  box-shadow:0 2px 8px rgba(0,0,0,.15);
+
+  box-shadow:0 2px 8px var(--ui-shadow);
+
+  white-space:nowrap;
 }
+
+/* =====================================================
+   TIMELINE
+===================================================== */
 
 .timeline{
   position:absolute;
   z-index:1000;
+
   bottom:12px;
   left:50%;
+
   transform:translateX(-50%);
+
   width:min(92%,700px);
-  background:rgba(255,255,255,.95);
+
+  background:var(--ui-bg);
+
   border-radius:12px;
+
   padding:8px 10px;
-  box-shadow:0 2px 10px rgba(0,0,0,.2);
+
+  box-shadow:0 2px 10px var(--ui-shadow);
+
   display:flex;
   align-items:center;
+
   gap:8px;
 }
 
@@ -105,6 +171,128 @@ button:active{
   flex:1;
   min-width:0;
 }
+
+/* =====================================================
+   SETTINGS BUTTON
+===================================================== */
+
+#settingsButton{
+  font-size:18px;
+}
+
+/* =====================================================
+   SETTINGS PANEL
+===================================================== */
+
+#settingsPanel{
+  position:absolute;
+
+  z-index:2000;
+
+  top:58px;
+  right:10px;
+
+  width:230px;
+
+  background:var(--ui-bg-solid);
+  color:var(--ui-text);
+
+  border:1px solid var(--ui-border);
+
+  border-radius:14px;
+
+  padding:12px;
+
+  box-shadow:0 5px 25px rgba(0,0,0,.25);
+
+  display:none;
+}
+
+#settingsPanel.open{
+  display:block;
+}
+
+.settingsTitle{
+  font-size:15px;
+  font-weight:700;
+
+  margin-bottom:10px;
+}
+
+.settingsLabel{
+  font-size:12px;
+  opacity:.7;
+
+  margin-bottom:7px;
+}
+
+.themeList{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.themeButton{
+  width:100%;
+  height:38px;
+
+  display:flex;
+  align-items:center;
+
+  justify-content:flex-start;
+
+  padding:0 10px;
+
+  font-size:14px;
+
+  background:var(--ui-button);
+}
+
+.themeButton.selected{
+  outline:2px solid var(--accent);
+}
+
+/* =====================================================
+   DARK THEME
+===================================================== */
+
+body.theme-dark{
+  --ui-bg:rgba(30,30,30,.94);
+  --ui-bg-solid:#202020;
+  --ui-text:#f2f2f2;
+  --ui-border:#444;
+  --ui-button:#333;
+  --ui-button-active:#444;
+  --ui-shadow:rgba(0,0,0,.45);
+  --accent:#5fa8ff;
+}
+
+/* =====================================================
+   GREEN THEME
+===================================================== */
+
+body.theme-green{
+  --ui-bg:rgba(235,248,238,.96);
+  --ui-bg-solid:#effaf1;
+  --ui-text:#173b24;
+  --ui-border:#9ac5a5;
+  --ui-button:#d9efdf;
+  --ui-button-active:#c5e4cc;
+  --ui-shadow:rgba(25,70,35,.22);
+  --accent:#248a45;
+}
+
+/* =====================================================
+   LEAFLET
+===================================================== */
+
+.leaflet-container{
+  background:#dfe8ef;
+}
+
+.leaflet-control-zoom a{
+  -webkit-tap-highlight-color:transparent;
+}
 </style>
 </head>
 
@@ -113,194 +301,535 @@ button:active{
 <div id="map"></div>
 
 <div class="top">
-  <div class="logo">GPTrad</div>
+
+  <div class="logo">
+    GPTrad
+  </div>
 
   <select id="layer">
-    <option value="radar">Радар (RainViewer)</option>
-    <option value="warnings">Опасные явления</option>
+    <option value="radar">
+      Радар (RainViewer)
+    </option>
+
+    <option value="warnings">
+      Опасные явления
+    </option>
   </select>
 
-  <button id="locate">⌖</button>
-  <button id="reload">↻</button>
+  <button id="locate">
+    ⌖
+  </button>
+
+  <button id="reload">
+    ↻
+  </button>
+
+  <button id="settingsButton">
+    ⚙
+  </button>
+
 </div>
 
-<div id="status">Загрузка…</div>
+<div id="status">
+  Загрузка…
+</div>
+
+
+<!-- =====================================================
+     SETTINGS
+===================================================== -->
+
+<div id="settingsPanel">
+
+  <div class="settingsTitle">
+    Настройки
+  </div>
+
+  <div class="settingsLabel">
+    Цветовая схема
+  </div>
+
+  <div class="themeList">
+
+    <button class="themeButton"
+            data-theme="light">
+      Светлая
+    </button>
+
+    <button class="themeButton"
+            data-theme="dark">
+      Тёмная
+    </button>
+
+    <button class="themeButton"
+            data-theme="green">
+      Зелёная
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     TIMELINE
+===================================================== -->
 
 <div class="timeline">
-  <button id="back">◀</button>
-  <button id="play">▶</button>
-  <button id="forward">▶</button>
-  <input id="time" type="range" min="0" max="0" value="0">
+
+  <button id="back">
+    ◀
+  </button>
+
+  <button id="play">
+    ▶
+  </button>
+
+  <button id="forward">
+    ▶
+  </button>
+
+  <input id="time"
+         type="range"
+         min="0"
+         max="0"
+         value="0">
+
 </div>
+
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-/* =========================================================
-   MAP
-========================================================= */
 
-const map = L.map("map", {
-  zoomControl:true,
-  attributionControl:true,
+/* =====================================================
+   SETTINGS
+===================================================== */
 
-  // КРИТИЧНО:
-  // Leaflet больше не делает плавный fade кадров.
-  fadeAnimation:false,
-  zoomAnimation:false,
-  markerZoomAnimation:false
-});
+const settingsButton =
+  document.getElementById("settingsButton");
 
-L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    maxZoom:19,
-    attribution:"© OpenStreetMap"
+const settingsPanel =
+  document.getElementById("settingsPanel");
+
+const themeButtons =
+  document.querySelectorAll(".themeButton");
+
+
+settingsButton.addEventListener(
+  "click",
+  function(){
+
+    settingsPanel.classList.toggle("open");
+
   }
-).addTo(map);
-
-map.setView([54.7,55.99],6);
+);
 
 
-/* =========================================================
+/* Закрываем настройки при клике вне панели */
+
+document.addEventListener(
+  "click",
+  function(event){
+
+    if(
+      !settingsPanel.contains(event.target) &&
+      event.target !== settingsButton
+    ){
+
+      settingsPanel.classList.remove("open");
+
+    }
+
+  }
+);
+
+
+/* =====================================================
+   THEME
+===================================================== */
+
+function applyTheme(theme){
+
+  document.body.classList.remove(
+    "theme-dark",
+    "theme-green"
+  );
+
+  if(theme === "dark"){
+
+    document.body.classList.add(
+      "theme-dark"
+    );
+
+  }
+
+  if(theme === "green"){
+
+    document.body.classList.add(
+      "theme-green"
+    );
+
+  }
+
+  localStorage.setItem(
+    "gptrad-theme",
+    theme
+  );
+
+  themeButtons.forEach(
+    button => {
+
+      button.classList.toggle(
+        "selected",
+        button.dataset.theme === theme
+      );
+
+    }
+  );
+
+}
+
+
+/* Загружаем сохранённую тему */
+
+const savedTheme =
+  localStorage.getItem("gptrad-theme") ||
+  "light";
+
+applyTheme(savedTheme);
+
+
+themeButtons.forEach(
+  button => {
+
+    button.addEventListener(
+      "click",
+      function(){
+
+        applyTheme(
+          button.dataset.theme
+        );
+
+      }
+    );
+
+  }
+);
+
+
+/* =====================================================
+   MAP
+===================================================== */
+
+/*
+  Здесь основные исправления дёрганности.
+
+  zoomSnap: 0
+  ----------------
+  Leaflet больше не будет насильно
+  округлять pinch zoom до целого уровня.
+
+  zoomDelta: 0.5
+  ----------------
+  Кнопки меняют масштаб мягче.
+
+  zoomAnimation:false
+  ----------------
+  Убираем скачивающую анимацию.
+
+  fadeAnimation:false
+  ----------------
+  Убираем fade тайлов.
+
+  wheelDebounceTime:20
+  ----------------
+  Карта быстрее реагирует на колесо.
+
+  wheelPxPerZoomLevel:80
+  ----------------
+  Более контролируемый масштаб.
+
+  maxZoom:19
+  ----------------
+  Не даём OSM уйти в бессмысленный
+  сверхзум.
+*/
+
+const map =
+  L.map("map", {
+
+    zoomControl:true,
+    attributionControl:true,
+
+    zoomSnap:0,
+    zoomDelta:0.5,
+
+    zoomAnimation:false,
+    fadeAnimation:false,
+    markerZoomAnimation:false,
+
+    zoomAnimationThreshold:0,
+
+    touchZoom:true,
+    scrollWheelZoom:true,
+
+    wheelDebounceTime:20,
+    wheelPxPerZoomLevel:80,
+
+    doubleClickZoom:true,
+
+    dragging:true,
+
+    inertia:true,
+    inertiaDeceleration:3000,
+    easeLinearity:0.2,
+
+    minZoom:2,
+    maxZoom:19
+
+  });
+
+
+/* =====================================================
+   OSM
+===================================================== */
+
+const osm =
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+
+      minZoom:2,
+      maxZoom:19,
+
+      tileSize:256,
+
+      updateWhenIdle:true,
+      updateWhenZooming:false,
+
+      keepBuffer:3,
+
+      attribution:
+        "© OpenStreetMap"
+
+    }
+  );
+
+osm.addTo(map);
+
+
+/* =====================================================
+   INITIAL VIEW
+===================================================== */
+
+map.setView(
+  [54.7,55.99],
+  6,
+  {
+    animate:false
+  }
+);
+
+
+/* =====================================================
    ELEMENTS
-========================================================= */
+===================================================== */
 
-const layerSelect = document.getElementById("layer");
-const statusEl    = document.getElementById("status");
-const timeSlider  = document.getElementById("time");
-const playBtn     = document.getElementById("play");
-const backBtn     = document.getElementById("back");
-const forwardBtn  = document.getElementById("forward");
-const reloadBtn   = document.getElementById("reload");
-const locateBtn   = document.getElementById("locate");
+const layerSelect =
+  document.getElementById("layer");
+
+const statusEl =
+  document.getElementById("status");
+
+const timeSlider =
+  document.getElementById("time");
+
+const playBtn =
+  document.getElementById("play");
+
+const backBtn =
+  document.getElementById("back");
+
+const forwardBtn =
+  document.getElementById("forward");
+
+const reloadBtn =
+  document.getElementById("reload");
+
+const locateBtn =
+  document.getElementById("locate");
 
 
-/* =========================================================
+/* =====================================================
+   STATUS
+===================================================== */
+
+function setStatus(text){
+
+  statusEl.textContent =
+    text;
+
+}
+
+
+/* =====================================================
    RAINVIEWER
-========================================================= */
+===================================================== */
 
 const RV_API =
   "https://api.rainviewer.com/public/weather-maps.json";
 
 let radarFrames = [];
+
 let radarIndex = 0;
 
 let radarLayer = null;
+
 let radarPendingLayer = null;
+
 let radarSwitchId = 0;
 
 
-/* =========================================================
-   OЯ WMS
-========================================================= */
-
-/*
-   Реальный WMS из radar-wms / nowcast demo.
-
-   В оригинальном demo используются:
-   /baltrad_wsgi
-   и слой:
-
-   bufr_phenomena,
-   bufr_novosib_phenomena,
-   bufr_vlad_phenomena
-*/
-
-const OYA_WMS =
-  "https://www.nowcast.ru/baltrad_wsgi";
-
-const OYA_LAYERS =
-  "bufr_phenomena,bufr_novosib_phenomena,bufr_vlad_phenomena";
-
-const OYA_CAPABILITIES =
-  OYA_WMS +
-  "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities";
-
-let oyaTimes = [];
-let oyaLayer = null;
-let oyaPendingLayer = null;
-let oyaSwitchId = 0;
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-function setStatus(text){
-  statusEl.textContent = text;
-}
-
-
-/* =========================================================
-   RAINVIEWER API
-========================================================= */
+/* =====================================================
+   RAINVIEWER LOAD
+===================================================== */
 
 async function loadRainViewer(){
 
   try{
 
-    setStatus("Загрузка радара…");
-
-    const response = await fetch(
-      RV_API + "?_=" + Date.now(),
-      {
-        cache:"no-store"
-      }
+    setStatus(
+      "Загрузка радара…"
     );
 
-    if(!response.ok){
-      throw new Error(
-        "RainViewer HTTP " + response.status
+    const response =
+      await fetch(
+        RV_API +
+        "?_=" +
+        Date.now(),
+        {
+          cache:"no-store"
+        }
       );
+
+    if(!response.ok){
+
+      throw new Error(
+        "RainViewer HTTP " +
+        response.status
+      );
+
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     const frames = [];
 
-    if(data.radar && Array.isArray(data.radar.past)){
-      frames.push(...data.radar.past);
-    }
 
-    if(data.radar && Array.isArray(data.radar.nowcast)){
-      frames.push(...data.radar.nowcast);
-    }
-
-    radarFrames = frames
-      .filter(x =>
-        x &&
-        typeof x.time === "number" &&
-        x.path
+    if(
+      data.radar &&
+      Array.isArray(
+        data.radar.past
       )
-      .sort((a,b) => a.time - b.time);
+    ){
 
-    if(!radarFrames.length){
-      throw new Error("Нет radar frames");
+      frames.push(
+        ...data.radar.past
+      );
+
     }
 
-    radarIndex = radarFrames.length - 1;
 
-    timeSlider.min = 0;
-    timeSlider.max = radarFrames.length - 1;
-    timeSlider.value = radarIndex;
+    /*
+      Если nowcast существует —
+      добавляем его.
 
-    await showRadarFrame(radarIndex);
+      Если API его не отдаёт,
+      просто продолжаем с past.
+    */
+
+    if(
+      data.radar &&
+      Array.isArray(
+        data.radar.nowcast
+      )
+    ){
+
+      frames.push(
+        ...data.radar.nowcast
+      );
+
+    }
+
+
+    radarFrames =
+      frames
+        .filter(
+          frame =>
+            frame &&
+            typeof frame.time ===
+              "number" &&
+            frame.path
+        )
+        .sort(
+          (a,b) =>
+            a.time - b.time
+        );
+
+
+    if(
+      !radarFrames.length
+    ){
+
+      throw new Error(
+        "Нет кадров радара"
+      );
+
+    }
+
+
+    radarIndex =
+      radarFrames.length - 1;
+
+
+    timeSlider.min =
+      0;
+
+    timeSlider.max =
+      radarFrames.length - 1;
+
+    timeSlider.value =
+      radarIndex;
+
+
+    await showRadarFrame(
+      radarIndex
+    );
 
     updateStatus();
 
-  }catch(err){
 
-    console.error("RainViewer:",err);
+  }catch(error){
 
-    setStatus("Ошибка загрузки радара");
+    console.error(
+      "RainViewer:",
+      error
+    );
+
+    setStatus(
+      "Ошибка загрузки радара"
+    );
+
   }
+
 }
 
 
-/* =========================================================
-   RAINVIEWER TILE LAYER
-========================================================= */
+/* =====================================================
+   RAINVIEWER LAYER
+===================================================== */
 
 function createRadarLayer(frame){
 
@@ -309,374 +838,237 @@ function createRadarLayer(frame){
     frame.path +
     "/256/{z}/{x}/{y}/2/1_1.png";
 
-  return L.tileLayer(url,{
-    tileSize:256,
-    opacity:1,
-    maxZoom:18,
-    zIndex:10,
 
-    // Дополнительно отключаем задержку появления.
-    updateWhenIdle:false,
-    updateWhenZooming:false,
-    keepBuffer:2
-  });
+  return L.tileLayer(
+    url,
+    {
+
+      tileSize:256,
+
+      opacity:1,
+
+      minZoom:2,
+      maxZoom:18,
+
+      zIndex:10,
+
+      /*
+        Очень важно:
+        не заставляем Leaflet постоянно
+        перестраивать слой во время zoom.
+      */
+
+      updateWhenIdle:true,
+      updateWhenZooming:false,
+
+      keepBuffer:3
+
+    }
+  );
+
 }
 
 
-/* =========================================================
-   WAIT FOR TILE LAYER
-========================================================= */
+/* =====================================================
+   WAIT FOR LAYER
+===================================================== */
 
 function waitForLayer(layer){
 
-  return new Promise(resolve => {
+  return new Promise(
+    resolve => {
 
-    let done = false;
+      let finished = false;
 
-    const finish = () => {
 
-      if(done) return;
+      function finish(){
 
-      done = true;
+        if(finished)
+          return;
 
-      layer.off("load",finish);
+        finished = true;
 
-      resolve();
-    };
+        layer.off(
+          "load",
+          finish
+        );
 
-    layer.once("load",finish);
+        resolve();
 
-    /*
-      Если часть тайлов уже есть в кеше,
-      load может прийти очень быстро.
-    */
+      }
 
-    setTimeout(finish,7000);
-  });
+
+      layer.once(
+        "load",
+        finish
+      );
+
+
+      /*
+        Защита от зависшего тайла.
+      */
+
+      setTimeout(
+        finish,
+        8000
+      );
+
+    }
+  );
+
 }
 
 
-/* =========================================================
-   SHOW RAINVIEWER FRAME
-========================================================= */
+/* =====================================================
+   SHOW RADAR FRAME
+===================================================== */
 
 async function showRadarFrame(index){
 
-  if(!radarFrames[index]) return;
+  if(!radarFrames[index])
+    return;
 
-  const frame = radarFrames[index];
 
-  const requestId = ++radarSwitchId;
+  const frame =
+    radarFrames[index];
+
+
+  const requestId =
+    ++radarSwitchId;
+
 
   /*
-    Если пользователь быстро двигает ползунок,
-    старый pending layer больше не нужен.
+    Удаляем старый pending,
+    если пользователь быстро
+    двигает ползунок.
   */
 
   if(radarPendingLayer){
 
     try{
-      map.removeLayer(radarPendingLayer);
+
+      map.removeLayer(
+        radarPendingLayer
+      );
+
     }catch(e){}
 
-    radarPendingLayer = null;
+    radarPendingLayer =
+      null;
+
   }
 
-  const nextLayer = createRadarLayer(frame);
 
-  radarPendingLayer = nextLayer;
+  const next =
+    createRadarLayer(
+      frame
+    );
 
-  /*
-    ВАЖНО:
-    новый слой сразу opacity=1.
 
-    Старый слой остаётся под ним до тех пор,
-    пока новый не загрузится.
+  radarPendingLayer =
+    next;
 
-    Никакого fade 0 -> 1.
-  */
-
-  nextLayer.addTo(map);
-
-  await waitForLayer(nextLayer);
 
   /*
-    Пока новый кадр грузился, пользователь мог
-    выбрать другой кадр.
+    НОВЫЙ СЛОЙ СРАЗУ НЕПРОЗРАЧНЫЙ.
+
+    Старый остаётся снизу.
   */
 
-  if(requestId !== radarSwitchId){
+  next.addTo(map);
+
+
+  await waitForLayer(
+    next
+  );
+
+
+  /*
+    Пользователь уже мог выбрать
+    другой кадр.
+  */
+
+  if(
+    requestId !==
+    radarSwitchId
+  ){
 
     try{
-      map.removeLayer(nextLayer);
-    }catch(e){}
 
-    if(radarPendingLayer === nextLayer){
-      radarPendingLayer = null;
-    }
+      map.removeLayer(
+        next
+      );
+
+    }catch(e){}
 
     return;
+
   }
 
-  /*
-    Новый кадр готов.
-    Только теперь убираем старый.
-  */
 
-  const oldLayer = radarLayer;
+  const old =
+    radarLayer;
 
-  radarLayer = nextLayer;
-  radarPendingLayer = null;
 
-  if(oldLayer && oldLayer !== nextLayer){
+  radarLayer =
+    next;
+
+
+  radarPendingLayer =
+    null;
+
+
+  if(
+    old &&
+    old !== next
+  ){
 
     try{
-      map.removeLayer(oldLayer);
+
+      map.removeLayer(
+        old
+      );
+
     }catch(e){}
+
   }
+
 }
 
 
-/* =========================================================
-   OЯ GETCAPABILITIES
-========================================================= */
+/* =====================================================
+   OЯ WMS
+===================================================== */
 
-function getDirectChild(element,name){
+const OYA_WMS =
+  "https://www.nowcast.ru/baltrad_wsgi";
 
-  for(const child of element.children){
 
-    if(
-      child.localName === name ||
-      child.nodeName === name
-    ){
-      return child;
-    }
-  }
+const OYA_LAYERS =
+  "bufr_phenomena," +
+  "bufr_novosib_phenomena," +
+  "bufr_vlad_phenomena";
 
-  return null;
-}
 
+const OYA_CAPABILITIES =
+  OYA_WMS +
+  "?SERVICE=WMS" +
+  "&VERSION=1.1.1" +
+  "&REQUEST=GetCapabilities";
 
-async function loadOyaTimes(){
 
-  try{
+let oyaTimes = [];
 
-    const response = await fetch(
-      OYA_CAPABILITIES + "&_=" + Date.now(),
-      {
-        cache:"no-store"
-      }
-    );
+let oyaLayer = null;
 
-    if(!response.ok){
-      throw new Error(
-        "WMS HTTP " + response.status
-      );
-    }
+let oyaPendingLayer = null;
 
-    const text = await response.text();
+let oyaSwitchId = 0;
 
-    const xml =
-      new DOMParser().parseFromString(
-        text,
-        "text/xml"
-      );
 
-    /*
-      Ищем именно bufr_phenomena.
-      Не vector_wsgi.
-    */
-
-    const allLayers =
-      Array.from(
-        xml.getElementsByTagNameNS("*","Layer")
-      );
-
-    let targetLayer = null;
-
-    for(const layer of allLayers){
-
-      const nameEl =
-        getDirectChild(layer,"Name");
-
-      if(
-        nameEl &&
-        nameEl.textContent.trim() === "bufr_phenomena"
-      ){
-        targetLayer = layer;
-        break;
-      }
-    }
-
-    if(!targetLayer){
-
-      throw new Error(
-        "bufr_phenomena не найден в GetCapabilities"
-      );
-    }
-
-    /*
-      У WMS demo времени находятся
-      в непосредственном child <Extent>.
-    */
-
-    let extent = null;
-
-    for(const child of targetLayer.children){
-
-      if(child.localName === "Extent"){
-
-        const name =
-          (child.getAttribute("name") || "")
-            .toLowerCase();
-
-        if(!name || name === "time"){
-
-          extent = child;
-          break;
-        }
-      }
-    }
-
-    if(!extent){
-
-      throw new Error(
-        "Extent времени ОЯ не найден"
-      );
-    }
-
-    const raw =
-      extent.textContent.trim();
-
-    const times =
-      raw
-        .split(",")
-        .map(x => x.trim())
-        .filter(x => {
-          const t = Date.parse(x);
-          return Number.isFinite(t);
-        })
-        .map(x => ({
-          iso:x,
-          ms:Date.parse(x)
-        }))
-        .sort((a,b) => a.ms - b.ms);
-
-    /*
-      Убираем дубли.
-    */
-
-    const unique = [];
-
-    const seen = new Set();
-
-    for(const item of times){
-
-      if(!seen.has(item.ms)){
-
-        seen.add(item.ms);
-        unique.push(item);
-      }
-    }
-
-    oyaTimes = unique;
-
-    console.log(
-      "OЯ timestamps:",
-      oyaTimes.length,
-      oyaTimes
-    );
-
-    if(!oyaTimes.length){
-
-      throw new Error(
-        "Времена ОЯ отсутствуют"
-      );
-    }
-
-    setStatus(
-      "ОЯ: " + oyaTimes.length + " кадров"
-    );
-
-    /*
-      Если сейчас выбран ОЯ —
-      сразу показать ближайший кадр.
-    */
-
-    if(layerSelect.value === "warnings"){
-
-      await showOyaForRadarTime(
-        radarFrames[radarIndex]?.time
-      );
-    }
-
-  }catch(err){
-
-    console.error(
-      "OЯ GetCapabilities:",
-      err
-    );
-
-    /*
-      Не ломаем радар.
-    */
-
-    oyaTimes = [];
-
-    if(layerSelect.value === "warnings"){
-
-      setStatus(
-        "ОЯ: не удалось получить времена WMS"
-      );
-
-      /*
-        Всё равно пробуем показать
-        последний WMS-кадр без TIME.
-      */
-
-      await showOyaLatest();
-    }
-  }
-}
-
-
-/* =========================================================
-   FIND NEAREST OЯ TIME
-========================================================= */
-
-function nearestOyaTime(unixSeconds){
-
-  if(!oyaTimes.length) return null;
-
-  const target =
-    Number(unixSeconds) * 1000;
-
-  let best = oyaTimes[0];
-
-  let bestDistance =
-    Math.abs(best.ms - target);
-
-  for(let i=1;i<oyaTimes.length;i++){
-
-    const distance =
-      Math.abs(
-        oyaTimes[i].ms - target
-      );
-
-    if(distance < bestDistance){
-
-      best = oyaTimes[i];
-      bestDistance = distance;
-    }
-  }
-
-  return best;
-}
-
-
-/* =========================================================
-   CREATE OЯ WMS
-========================================================= */
+/* =====================================================
+   OЯ LAYER
+===================================================== */
 
 function createOyaLayer(time){
 
@@ -695,115 +1087,502 @@ function createOyaLayer(time){
     opacity:1,
 
     zIndex:30
+
   };
 
-  /*
-    TIME добавляем только если
-    реально получили timestamp.
-  */
 
   if(time){
-    params.time = time;
+
+    params.time =
+      time;
+
   }
+
 
   return L.tileLayer.wms(
     OYA_WMS,
     params
   );
+
 }
 
 
-/* =========================================================
-   SHOW OЯ
-========================================================= */
+/* =====================================================
+   OЯ FALLBACK
+===================================================== */
 
-async function showOyaForRadarTime(
-  radarUnixSeconds
-){
+async function showOyaLatest(){
 
-  /*
-    Если времена ещё не пришли —
-    сначала пытаемся их получить.
-  */
-
-  if(!oyaTimes.length){
-
-    await loadOyaTimes();
-
-    if(!oyaTimes.length){
-
-      await showOyaLatest();
-
-      return;
-    }
-  }
-
-  const nearest =
-    nearestOyaTime(radarUnixSeconds);
-
-  if(!nearest){
-
-    await showOyaLatest();
-
-    return;
-  }
-
-  await showOyaTime(nearest.iso);
-}
-
-
-/* =========================================================
-   SHOW EXACT OЯ TIME
-========================================================= */
-
-async function showOyaTime(time){
-
-  const requestId =
+  const id =
     ++oyaSwitchId;
+
 
   if(oyaPendingLayer){
 
     try{
-      map.removeLayer(oyaPendingLayer);
+
+      map.removeLayer(
+        oyaPendingLayer
+      );
+
     }catch(e){}
 
-    oyaPendingLayer = null;
   }
 
+
   const next =
-    createOyaLayer(time);
+    createOyaLayer();
 
-  oyaPendingLayer = next;
 
-  /*
-    Старый ОЯ остаётся до полной загрузки нового.
-    fadeAnimation выключен.
-  */
+  oyaPendingLayer =
+    next;
+
 
   next.addTo(map);
 
-  await waitForLayer(next);
 
-  if(requestId !== oyaSwitchId){
+  await waitForLayer(
+    next
+  );
+
+
+  if(
+    id !==
+    oyaSwitchId
+  ){
 
     try{
-      map.removeLayer(next);
+
+      map.removeLayer(
+        next
+      );
+
     }catch(e){}
 
     return;
+
   }
 
-  const old = oyaLayer;
 
-  oyaLayer = next;
-  oyaPendingLayer = null;
+  const old =
+    oyaLayer;
 
-  if(old && old !== next){
+
+  oyaLayer =
+    next;
+
+  oyaPendingLayer =
+    null;
+
+
+  if(old){
 
     try{
-      map.removeLayer(old);
+
+      map.removeLayer(
+        old
+      );
+
     }catch(e){}
+
   }
+
+
+  setStatus(
+    "ОЯ"
+  );
+
+}
+
+
+/* =====================================================
+   GETCAPABILITIES
+===================================================== */
+
+async function loadOyaTimes(){
+
+  try{
+
+    const response =
+      await fetch(
+        OYA_CAPABILITIES +
+        "&_=" +
+        Date.now(),
+        {
+          cache:"no-store"
+        }
+      );
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "WMS HTTP " +
+        response.status
+      );
+
+    }
+
+
+    const text =
+      await response.text();
+
+
+    const xml =
+      new DOMParser()
+        .parseFromString(
+          text,
+          "text/xml"
+        );
+
+
+    const layers =
+      Array.from(
+        xml.getElementsByTagNameNS(
+          "*",
+          "Layer"
+        )
+      );
+
+
+    let target =
+      null;
+
+
+    for(
+      const layer
+      of layers
+    ){
+
+      const children =
+        Array.from(
+          layer.children
+        );
+
+
+      const name =
+        children.find(
+          child =>
+            child.localName ===
+            "Name"
+        );
+
+
+      if(
+        name &&
+        name.textContent.trim() ===
+        "bufr_phenomena"
+      ){
+
+        target =
+          layer;
+
+        break;
+
+      }
+
+    }
+
+
+    if(!target){
+
+      throw new Error(
+        "bufr_phenomena отсутствует"
+      );
+
+    }
+
+
+    const extent =
+      Array.from(
+        target.children
+      ).find(
+        child =>
+          child.localName ===
+          "Extent"
+      );
+
+
+    if(!extent){
+
+      throw new Error(
+        "Extent времени отсутствует"
+      );
+
+    }
+
+
+    const raw =
+      extent.textContent.trim();
+
+
+    oyaTimes =
+      raw
+        .split(",")
+        .map(
+          x => x.trim()
+        )
+        .filter(
+          x =>
+            Number.isFinite(
+              Date.parse(x)
+            )
+        )
+        .map(
+          x => ({
+            iso:x,
+            ms:Date.parse(x)
+          })
+        )
+        .sort(
+          (a,b) =>
+            a.ms - b.ms
+        );
+
+
+    /*
+      Убираем дубли.
+    */
+
+    const seen =
+      new Set();
+
+
+    oyaTimes =
+      oyaTimes.filter(
+        item => {
+
+          if(
+            seen.has(
+              item.ms
+            )
+          ){
+
+            return false;
+
+          }
+
+          seen.add(
+            item.ms
+          );
+
+          return true;
+
+        }
+      );
+
+
+    console.log(
+      "OЯ frames:",
+      oyaTimes
+    );
+
+
+    if(
+      !oyaTimes.length
+    ){
+
+      throw new Error(
+        "Времена ОЯ отсутствуют"
+      );
+
+    }
+
+
+    if(
+      layerSelect.value ===
+      "warnings"
+    ){
+
+      await showOyaForRadarTime(
+        radarFrames[
+          radarIndex
+        ]?.time
+      );
+
+    }
+
+
+  }catch(error){
+
+    console.error(
+      "OЯ:",
+      error
+    );
+
+
+    /*
+      Даже если GetCapabilities
+      заблокирован CORS,
+      пытаемся показать
+      текущий WMS слой.
+    */
+
+    oyaTimes = [];
+
+
+    if(
+      layerSelect.value ===
+      "warnings"
+    ){
+
+      await showOyaLatest();
+
+    }
+
+  }
+
+}
+
+
+/* =====================================================
+   NEAREST OЯ TIME
+===================================================== */
+
+function nearestOyaTime(
+  unixSeconds
+){
+
+  if(
+    !oyaTimes.length
+  )
+    return null;
+
+
+  const target =
+    Number(unixSeconds) *
+    1000;
+
+
+  let best =
+    oyaTimes[0];
+
+
+  let distance =
+    Math.abs(
+      best.ms -
+      target
+    );
+
+
+  for(
+    let i=1;
+    i<oyaTimes.length;
+    i++
+  ){
+
+    const current =
+      Math.abs(
+        oyaTimes[i].ms -
+        target
+      );
+
+
+    if(
+      current <
+      distance
+    ){
+
+      distance =
+        current;
+
+      best =
+        oyaTimes[i];
+
+    }
+
+  }
+
+
+  return best;
+
+}
+
+
+/* =====================================================
+   SHOW OЯ TIME
+===================================================== */
+
+async function showOyaTime(
+  time
+){
+
+  const id =
+    ++oyaSwitchId;
+
+
+  if(oyaPendingLayer){
+
+    try{
+
+      map.removeLayer(
+        oyaPendingLayer
+      );
+
+    }catch(e){}
+
+  }
+
+
+  const next =
+    createOyaLayer(
+      time
+    );
+
+
+  oyaPendingLayer =
+    next;
+
+
+  next.addTo(map);
+
+
+  await waitForLayer(
+    next
+  );
+
+
+  if(
+    id !==
+    oyaSwitchId
+  ){
+
+    try{
+
+      map.removeLayer(
+        next
+      );
+
+    }catch(e){}
+
+    return;
+
+  }
+
+
+  const old =
+    oyaLayer;
+
+
+  oyaLayer =
+    next;
+
+  oyaPendingLayer =
+    null;
+
+
+  if(old){
+
+    try{
+
+      map.removeLayer(
+        old
+      );
+
+    }catch(e){}
+
+  }
+
 
   setStatus(
     "ОЯ: " +
@@ -817,81 +1596,85 @@ async function showOyaTime(time){
       }
     )
   );
+
 }
 
 
-/* =========================================================
-   FALLBACK — LATEST OЯ
-========================================================= */
+/* =====================================================
+   SHOW OЯ FOR RADAR TIME
+===================================================== */
 
-async function showOyaLatest(){
+async function showOyaForRadarTime(
+  unixSeconds
+){
 
-  const requestId =
-    ++oyaSwitchId;
+  if(
+    !oyaTimes.length
+  ){
 
-  if(oyaPendingLayer){
+    await loadOyaTimes();
 
-    try{
-      map.removeLayer(oyaPendingLayer);
-    }catch(e){}
+    if(
+      !oyaTimes.length
+    ){
 
-    oyaPendingLayer = null;
+      await showOyaLatest();
+
+      return;
+
+    }
+
   }
 
-  /*
-    Без TIME WMS отдаёт доступный
-    актуальный слой, если сервер его предоставляет.
-  */
 
-  const next =
-    createOyaLayer(null);
+  const nearest =
+    nearestOyaTime(
+      unixSeconds
+    );
 
-  oyaPendingLayer = next;
 
-  next.addTo(map);
+  if(!nearest){
 
-  await waitForLayer(next);
-
-  if(requestId !== oyaSwitchId){
-
-    try{
-      map.removeLayer(next);
-    }catch(e){}
+    await showOyaLatest();
 
     return;
+
   }
 
-  const old = oyaLayer;
 
-  oyaLayer = next;
-  oyaPendingLayer = null;
+  await showOyaTime(
+    nearest.iso
+  );
 
-  if(old && old !== next){
-
-    try{
-      map.removeLayer(old);
-    }catch(e){}
-  }
-
-  setStatus("ОЯ");
 }
 
 
-/* =========================================================
-   UPDATE STATUS
-========================================================= */
+/* =====================================================
+   STATUS
+===================================================== */
 
 function updateStatus(){
 
-  if(!radarFrames[radarIndex]) return;
+  const frame =
+    radarFrames[
+      radarIndex
+    ];
 
-  const time =
-    radarFrames[radarIndex].time * 1000;
+
+  if(!frame)
+    return;
+
 
   const date =
-    new Date(time);
+    new Date(
+      frame.time * 1000
+    );
 
-  if(layerSelect.value === "radar"){
+
+  if(
+    layerSelect.value ===
+    "radar"
+  ){
 
     setStatus(
       "Радар: " +
@@ -908,8 +1691,9 @@ function updateStatus(){
 
     const nearest =
       nearestOyaTime(
-        radarFrames[radarIndex].time
+        frame.time
       );
+
 
     if(nearest){
 
@@ -928,48 +1712,70 @@ function updateStatus(){
 
     }else{
 
-      setStatus("ОЯ");
+      setStatus(
+        "ОЯ"
+      );
+
     }
+
   }
+
 }
 
 
-/* =========================================================
-   TIMELINE
-========================================================= */
+/* =====================================================
+   SLIDER
+===================================================== */
 
 timeSlider.addEventListener(
   "input",
-  async () => {
+  async function(){
 
     radarIndex =
-      Number(timeSlider.value);
+      Number(
+        timeSlider.value
+      );
+
 
     updateStatus();
 
-    if(layerSelect.value === "radar"){
 
-      await showRadarFrame(radarIndex);
+    if(
+      layerSelect.value ===
+      "radar"
+    ){
+
+      await showRadarFrame(
+        radarIndex
+      );
 
     }else{
 
       await showOyaForRadarTime(
-        radarFrames[radarIndex]?.time
+        radarFrames[
+          radarIndex
+        ]?.time
       );
+
     }
+
   }
 );
 
 
-/* =========================================================
+/* =====================================================
    BACK
-========================================================= */
+===================================================== */
 
 backBtn.addEventListener(
   "click",
-  async () => {
+  async function(){
 
-    if(!radarFrames.length) return;
+    if(
+      !radarFrames.length
+    )
+      return;
+
 
     radarIndex =
       Math.max(
@@ -977,12 +1783,18 @@ backBtn.addEventListener(
         radarIndex - 1
       );
 
+
     timeSlider.value =
       radarIndex;
 
+
     updateStatus();
 
-    if(layerSelect.value === "radar"){
+
+    if(
+      layerSelect.value ===
+      "radar"
+    ){
 
       await showRadarFrame(
         radarIndex
@@ -991,22 +1803,30 @@ backBtn.addEventListener(
     }else{
 
       await showOyaForRadarTime(
-        radarFrames[radarIndex]?.time
+        radarFrames[
+          radarIndex
+        ]?.time
       );
+
     }
+
   }
 );
 
 
-/* =========================================================
+/* =====================================================
    FORWARD
-========================================================= */
+===================================================== */
 
 forwardBtn.addEventListener(
   "click",
-  async () => {
+  async function(){
 
-    if(!radarFrames.length) return;
+    if(
+      !radarFrames.length
+    )
+      return;
+
 
     radarIndex =
       Math.min(
@@ -1014,12 +1834,18 @@ forwardBtn.addEventListener(
         radarIndex + 1
       );
 
+
     timeSlider.value =
       radarIndex;
 
+
     updateStatus();
 
-    if(layerSelect.value === "radar"){
+
+    if(
+      layerSelect.value ===
+      "radar"
+    ){
 
       await showRadarFrame(
         radarIndex
@@ -1028,62 +1854,95 @@ forwardBtn.addEventListener(
     }else{
 
       await showOyaForRadarTime(
-        radarFrames[radarIndex]?.time
+        radarFrames[
+          radarIndex
+        ]?.time
       );
+
     }
+
   }
 );
 
 
-/* =========================================================
+/* =====================================================
    PLAY
-========================================================= */
+===================================================== */
 
-let playing = false;
-let playTimer = null;
+let playing =
+  false;
+
+let playTimer =
+  null;
+
 
 playBtn.addEventListener(
   "click",
-  () => {
+  function(){
 
-    if(!radarFrames.length) return;
+    if(
+      !radarFrames.length
+    )
+      return;
 
-    playing = !playing;
+
+    playing =
+      !playing;
+
 
     playBtn.textContent =
-      playing ? "❚❚" : "▶";
+      playing
+      ? "❚❚"
+      : "▶";
+
 
     if(!playing){
 
-      clearInterval(playTimer);
+      clearInterval(
+        playTimer
+      );
 
-      playTimer = null;
+      playTimer =
+        null;
 
       return;
+
     }
+
 
     playTimer =
       setInterval(
-        async () => {
+        async function(){
 
-          if(!playing) return;
+          if(!playing)
+            return;
+
 
           radarIndex++;
+
 
           if(
             radarIndex >=
             radarFrames.length
           ){
 
-            radarIndex = 0;
+            radarIndex =
+              0;
+
           }
+
 
           timeSlider.value =
             radarIndex;
 
+
           updateStatus();
 
-          if(layerSelect.value === "radar"){
+
+          if(
+            layerSelect.value ===
+            "radar"
+          ){
 
             await showRadarFrame(
               radarIndex
@@ -1092,139 +1951,179 @@ playBtn.addEventListener(
           }else{
 
             await showOyaForRadarTime(
-              radarFrames[radarIndex]?.time
+              radarFrames[
+                radarIndex
+              ]?.time
             );
+
           }
 
         },
         700
       );
+
   }
 );
 
 
-/* =========================================================
+/* =====================================================
    LAYER SWITCH
-========================================================= */
+===================================================== */
 
 layerSelect.addEventListener(
   "change",
-  async () => {
+  async function(){
 
-    /*
-      RADAR
-    */
-
-    if(layerSelect.value === "radar"){
+    if(
+      layerSelect.value ===
+      "radar"
+    ){
 
       ++oyaSwitchId;
+
 
       if(oyaPendingLayer){
 
         try{
+
           map.removeLayer(
             oyaPendingLayer
           );
+
         }catch(e){}
 
-        oyaPendingLayer = null;
       }
+
 
       if(oyaLayer){
 
         try{
+
           map.removeLayer(
             oyaLayer
           );
+
         }catch(e){}
+
       }
+
 
       if(radarLayer){
 
-        radarLayer.addTo(map);
+        radarLayer.addTo(
+          map
+        );
 
-      }else if(radarFrames.length){
+      }else{
 
         await showRadarFrame(
           radarIndex
         );
+
       }
+
 
       updateStatus();
 
       return;
+
     }
 
 
     /*
-      ОЯ
+      Переход на ОЯ.
     */
 
     ++radarSwitchId;
 
+
     if(radarPendingLayer){
 
       try{
+
         map.removeLayer(
           radarPendingLayer
         );
+
       }catch(e){}
 
-      radarPendingLayer = null;
     }
+
 
     if(radarLayer){
 
       try{
+
         map.removeLayer(
           radarLayer
         );
+
       }catch(e){}
+
     }
 
-    /*
-      Если времён ОЯ ещё нет —
-      пытаемся получить их.
-    */
 
-    if(!oyaTimes.length){
+    if(
+      oyaTimes.length
+    ){
 
-      await loadOyaTimes();
+      await showOyaForRadarTime(
+        radarFrames[
+          radarIndex
+        ]?.time
+      );
 
     }else{
 
-      await showOyaForRadarTime(
-        radarFrames[radarIndex]?.time
-      );
+      /*
+        Сначала пытаемся получить
+        реальные времена.
+      */
+
+      await loadOyaTimes();
+
+
+      /*
+        Если CORS мешает —
+        showOyaLatest() уже вызывается
+        внутри обработчика ошибки.
+      */
+
     }
 
-    updateStatus();
   }
 );
 
 
-/* =========================================================
-   LOCATE
-========================================================= */
+/* =====================================================
+   GEOLOCATION
+===================================================== */
 
 locateBtn.addEventListener(
   "click",
-  () => {
+  function(){
 
-    if(!navigator.geolocation){
+    if(
+      !navigator.geolocation
+    ){
 
       setStatus(
         "Геолокация недоступна"
       );
 
       return;
+
     }
 
-    setStatus("Определяем местоположение…");
+
+    setStatus(
+      "Определяем местоположение…"
+    );
+
 
     navigator.geolocation.getCurrentPosition(
 
-      position => {
+      function(position){
 
         const lat =
           position.coords.latitude;
@@ -1232,119 +2131,153 @@ locateBtn.addEventListener(
         const lon =
           position.coords.longitude;
 
+
+        /*
+          Только кнопка геолокации
+          меняет view.
+
+          Обычный zoom пользователя
+          НИКОГДА не вызывает setView.
+        */
+
         map.setView(
           [lat,lon],
-          8
+          8,
+          {
+            animate:false
+          }
         );
+
 
         setStatus(
           "Местоположение определено"
         );
+
       },
 
-      () => {
+
+      function(){
 
         setStatus(
           "Не удалось определить местоположение"
         );
+
       },
+
 
       {
         enableHighAccuracy:true,
         timeout:10000,
         maximumAge:60000
       }
+
     );
+
   }
 );
 
 
-/* =========================================================
+/* =====================================================
    RELOAD
-========================================================= */
+===================================================== */
 
 reloadBtn.addEventListener(
   "click",
-  async () => {
+  async function(){
 
     ++radarSwitchId;
     ++oyaSwitchId;
 
-    radarFrames = [];
-    oyaTimes = [];
 
     if(radarPendingLayer){
 
       try{
+
         map.removeLayer(
           radarPendingLayer
         );
+
       }catch(e){}
 
-      radarPendingLayer = null;
     }
+
 
     if(oyaPendingLayer){
 
       try{
+
         map.removeLayer(
           oyaPendingLayer
         );
+
       }catch(e){}
 
-      oyaPendingLayer = null;
     }
+
 
     if(radarLayer){
 
       try{
+
         map.removeLayer(
           radarLayer
         );
+
       }catch(e){}
 
-      radarLayer = null;
+      radarLayer =
+        null;
+
     }
+
 
     if(oyaLayer){
 
       try{
+
         map.removeLayer(
           oyaLayer
         );
+
       }catch(e){}
 
-      oyaLayer = null;
+      oyaLayer =
+        null;
+
     }
+
+
+    radarFrames = [];
+    oyaTimes = [];
+
 
     await loadRainViewer();
 
-    /*
-      ОЯ загружаем отдельно,
-      чтобы ошибка WMS не ломала радар.
-    */
 
     loadOyaTimes();
+
   }
 );
 
 
-/* =========================================================
-   INITIAL
-========================================================= */
+/* =====================================================
+   INITIAL LOAD
+===================================================== */
 
 (async function(){
 
   await loadRainViewer();
 
   /*
-    Загружаем настоящие времена ОЯ
-    параллельно после запуска радара.
+    ОЯ грузим отдельно,
+    чтобы проблема WMS не блокировала
+    обычный радар.
   */
 
   loadOyaTimes();
 
 })();
+
 </script>
 
 </body>
