@@ -390,31 +390,6 @@ color:white;
 font-size:13px;
 }
 
-/* OYA LOADING INDICATOR */
-
-#oyaProgress{
-position:absolute;
-
-left:50%;
-top:calc(50% + 35px);
-
-transform:translateX(-50%);
-
-z-index:1999;
-
-display:none;
-
-padding:5px 9px;
-
-border-radius:7px;
-
-background:rgba(20,20,20,.8);
-
-color:white;
-
-font-size:11px;
-}
-
 /* LIGHT */
 
 body.light .top-panel,
@@ -656,10 +631,6 @@ value="0">
 Загрузка…
 </div>
 
-<div id="oyaProgress">
-Получение карты…
-</div>
-
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -760,9 +731,6 @@ document.getElementById("status");
 const loading=
 document.getElementById("loading");
 
-const oyaProgress=
-document.getElementById("oyaProgress");
-
 const timeSlider=
 document.getElementById("timeSlider");
 
@@ -787,6 +755,8 @@ let oyaLoading=false;
 
 let oyaRequestId=0;
 
+let oyaRefreshTimer=null;
+
 let rainFrames=[];
 
 let currentFrame=0;
@@ -801,27 +771,41 @@ let playTimer=null;
 ========================================================= */
 
 function setStatus(text){
+
 status.textContent=text;
+
 }
+
 
 function showLoading(text){
+
 loading.textContent=text;
+
 loading.style.display="block";
+
 }
 
+
 function hideLoading(){
+
 loading.style.display="none";
+
 }
+
 
 function formatTime(ts){
 
-if(!ts)return"—";
+if(!ts)
+return"—";
 
 return new Date(ts*1000)
-.toLocaleTimeString("ru-RU",{
+.toLocaleTimeString(
+"ru-RU",
+{
 hour:"2-digit",
 minute:"2-digit"
-});
+}
+);
 
 }
 
@@ -838,38 +822,54 @@ try{
 
 const r=await fetch(
 "https://api.rainviewer.com/public/weather-maps.json",
-{cache:"no-store"}
+{
+cache:"no-store"
+}
 );
 
 if(!r.ok)
-throw new Error("RainViewer "+r.status);
+throw new Error(
+"RainViewer "+r.status
+);
 
 const data=await r.json();
 
-rainFrames=data.radar?.past||[];
+rainFrames=
+data.radar?.past||[];
 
 if(!rainFrames.length)
-throw new Error("Нет кадров");
+throw new Error(
+"Нет кадров"
+);
 
-currentFrame=rainFrames.length-1;
+currentFrame=
+rainFrames.length-1;
 
 timeSlider.min=0;
 
-timeSlider.max=rainFrames.length-1;
+timeSlider.max=
+rainFrames.length-1;
 
-timeSlider.value=currentFrame;
+timeSlider.value=
+currentFrame;
 
 updateTimeLabel();
 
-showRainFrame(currentFrame);
+showRainFrame(
+currentFrame
+);
 
-setStatus("Радар RainViewer");
+setStatus(
+"Радар RainViewer"
+);
 
 }catch(e){
 
 console.error(e);
 
-setStatus("Ошибка RainViewer");
+setStatus(
+"Ошибка RainViewer"
+);
 
 }finally{
 
@@ -931,40 +931,31 @@ makeRainLayer(
 rainFrames[index]
 );
 
-const oldLayer=radarLayer;
+const oldLayer=
+radarLayer;
 
-radarLayer=newLayer;
+radarLayer=
+newLayer;
 
 newLayer.addTo(map);
 
-newLayer.once("load",()=>{
+newLayer.once(
+"load",
+()=>{
 
 if(
 oldLayer &&
 map.hasLayer(oldLayer)
 ){
 
-map.removeLayer(oldLayer);
+map.removeLayer(
+oldLayer
+);
 
 }
 
-});
-
-setTimeout(()=>{
-
-if(
-oldLayer &&
-map.hasLayer(newLayer)
-){
-
-/*
-Не удаляем старый слой,
-если новый не успел загрузиться.
-*/
-
 }
-
-},7000);
+);
 
 updateTimeLabel();
 
@@ -972,7 +963,7 @@ updateTimeLabel();
 
 
 /* =========================================================
-   OЯ
+   OЯ WMS
 ========================================================= */
 
 const OYA_WMS=
@@ -988,94 +979,95 @@ const OYA_LAYER=
    WEB MERCATOR
 ========================================================= */
 
-function projectX(lng){
+function lonToMercator(lon){
 
-return lng*20037508.34/180;
+return lon*
+20037508.34/
+180;
 
 }
 
 
-function projectY(lat){
+function latToMercator(lat){
 
-const y=
-Math.log(
-Math.tan(
-(Math.PI/4)+
-(lat*Math.PI/360)
+lat=Math.max(
+-85.05112878,
+Math.min(
+85.05112878,
+lat
 )
 );
 
-return y*6378137;
+return 6378137*
+Math.log(
+Math.tan(
+Math.PI/4+
+lat*Math.PI/360
+)
+);
 
 }
 
 
 /* =========================================================
-   CREATE FAST OЯ URL
+   OЯ URL
 ========================================================= */
 
 function makeOyaUrl(){
 
-const bounds=
+const b=
 map.getBounds();
 
-let west=bounds.getWest();
+const sw=
+b.getSouthWest();
 
-let east=bounds.getEast();
+const ne=
+b.getNorthEast();
 
-let south=bounds.getSouth();
+const size=
+map.getSize();
 
-let north=bounds.getNorth();
-
-
-/*
-Если карта пересекла 180°,
-нормализуем.
-*/
-
-if(east<west){
-east+=360;
-}
-
-
-/*
-Ограничение Mercator.
-*/
-
-south=Math.max(-85,south);
-
-north=Math.min(85,north);
-
-
-/*
-Размер картинки примерно равен
-размеру карты.
-
-Но не больше 1600 px.
-*/
-
-const size=map.getSize();
-
-const width=Math.min(
+const width=
+Math.min(
 1600,
-Math.max(600,Math.round(size.x*1.15))
+Math.max(
+500,
+Math.round(size.x)
+)
 );
 
-const height=Math.min(
+const height=
+Math.min(
 1200,
-Math.max(400,Math.round(size.y*1.15))
+Math.max(
+400,
+Math.round(size.y)
+)
 );
-
 
 const bbox=[
-projectX(west),
-projectY(south),
-projectX(east),
-projectY(north)
+
+lonToMercator(
+sw.lng
+),
+
+latToMercator(
+sw.lat
+),
+
+lonToMercator(
+ne.lng
+),
+
+latToMercator(
+ne.lat
+)
+
 ].join(",");
 
 
-const params=new URLSearchParams({
+const params=
+new URLSearchParams({
 
 SERVICE:"WMS",
 
@@ -1102,59 +1094,44 @@ TRANSPARENT:"true"
 });
 
 
-return OYA_WMS+"?"+params.toString();
+return OYA_WMS+
+"?"+
+params.toString();
 
 }
 
 
 /* =========================================================
-   FAST OЯ LOAD
+   OЯ LOAD
 ========================================================= */
 
 function loadOya(){
 
-/*
-Отменяем предыдущую загрузку логически.
-*/
-
 const requestId=
 ++oyaRequestId;
 
-
 oyaLoading=true;
 
-oyaProgress.style.display="block";
-
-setStatus("Загрузка ОЯ…");
-
+setStatus(
+"Загрузка ОЯ…"
+);
 
 const url=
 makeOyaUrl();
 
-
 console.log(
-"OЯ GetMap:",
+"OЯ:",
 url
 );
-
 
 const img=
 new Image();
 
-
-/*
-Не требует CORS для обычного
-отображения изображения.
-*/
-
-img.decoding="async";
-
-
 let finished=false;
 
-
 const timeout=
-setTimeout(()=>{
+setTimeout(
+()=>{
 
 if(finished)
 return;
@@ -1163,13 +1140,13 @@ finished=true;
 
 oyaLoading=false;
 
-oyaProgress.style.display="none";
-
 setStatus(
 "ОЯ: сервер не ответил"
 );
 
-},8000);
+},
+10000
+);
 
 
 img.onload=()=>{
@@ -1179,10 +1156,13 @@ return;
 
 finished=true;
 
-clearTimeout(timeout);
+clearTimeout(
+timeout
+);
 
-
-if(requestId!==oyaRequestId)
+if(
+requestId!==oyaRequestId
+)
 return;
 
 
@@ -1200,9 +1180,7 @@ opacity:.75,
 
 interactive:false,
 
-zIndex:50,
-
-crossOrigin:false
+zIndex:50
 
 }
 );
@@ -1211,14 +1189,11 @@ crossOrigin:false
 overlay.addTo(map);
 
 
-/*
-Старую картинку убираем
-только после загрузки новой.
-*/
-
 if(
 oyaImage &&
-map.hasLayer(oyaImage)
+map.hasLayer(
+oyaImage
+)
 ){
 
 map.removeLayer(
@@ -1228,11 +1203,10 @@ oyaImage
 }
 
 
-oyaImage=overlay;
+oyaImage=
+overlay;
 
 oyaLoading=false;
-
-oyaProgress.style.display="none";
 
 setStatus(
 "Опасные явления"
@@ -1248,22 +1222,18 @@ return;
 
 finished=true;
 
-clearTimeout(timeout);
+clearTimeout(
+timeout
+);
 
 oyaLoading=false;
 
-oyaProgress.style.display="none";
-
 setStatus(
-"Ошибка загрузки ОЯ"
+"Ошибка ОЯ"
 );
 
 };
 
-
-/*
-Начинаем загрузку.
-*/
 
 img.src=url;
 
@@ -1276,13 +1246,11 @@ img.src=url;
 
 function showOya(){
 
-/*
-Убираем RainViewer.
-*/
-
 if(
 radarLayer &&
-map.hasLayer(radarLayer)
+map.hasLayer(
+radarLayer
+)
 ){
 
 map.removeLayer(
@@ -1293,11 +1261,6 @@ radarLayer
 
 radarLayer=null;
 
-
-/*
-Если OЯ ещё не загружен —
-загружаем.
-*/
 
 if(!oyaImage){
 
@@ -1315,11 +1278,8 @@ setStatus(
 
 
 /* =========================================================
-   REFRESH OЯ AFTER MAP MOVE
+   OЯ REFRESH
 ========================================================= */
-
-let oyaRefreshTimer=null;
-
 
 function scheduleOyaRefresh(){
 
@@ -1328,16 +1288,9 @@ activeLayer!=="oya"
 )
 return;
 
-
-/*
-Не делаем новый запрос
-на каждый пиксель движения.
-*/
-
 clearTimeout(
 oyaRefreshTimer
 );
-
 
 oyaRefreshTimer=
 setTimeout(
@@ -1346,7 +1299,7 @@ setTimeout(
 loadOya();
 
 },
-350
+500
 );
 
 }
@@ -1354,11 +1307,6 @@ loadOya();
 
 map.on(
 "moveend",
-scheduleOyaRefresh
-);
-
-map.on(
-"zoomend",
 scheduleOyaRefresh
 );
 
@@ -1391,7 +1339,8 @@ open
 
 document
 .querySelectorAll(".layer-item")
-.forEach(button=>{
+.forEach(
+button=>{
 
 button.addEventListener(
 "click",
@@ -1403,15 +1352,23 @@ button.dataset.layer;
 
 document
 .querySelectorAll(".layer-item")
-.forEach(x=>{
-x.classList.remove("active");
-});
+.forEach(
+x=>{
+x.classList.remove(
+"active"
+);
+}
+);
 
 
-button.classList.add("active");
+button.classList.add(
+"active"
+);
 
 
-if(type==="oya"){
+if(
+type==="oya"
+){
 
 activeLayer="oya";
 
@@ -1423,7 +1380,9 @@ showOya();
 }
 
 
-if(type==="radar"){
+if(
+type==="radar"
+){
 
 activeLayer="radar";
 
@@ -1446,7 +1405,8 @@ selectedLayer.classList.remove(
 }
 );
 
-});
+}
+);
 
 
 /* =========================================================
@@ -1455,13 +1415,11 @@ selectedLayer.classList.remove(
 
 function showRadar(){
 
-/*
-Удаляем OЯ.
-*/
-
 if(
 oyaImage &&
-map.hasLayer(oyaImage)
+map.hasLayer(
+oyaImage
+)
 ){
 
 map.removeLayer(
@@ -1470,15 +1428,12 @@ oyaImage
 
 }
 
-
 oyaImage=null;
 
 
-/*
-RainViewer.
-*/
-
-if(rainFrames.length){
+if(
+rainFrames.length
+){
 
 showRainFrame(
 currentFrame
@@ -1531,11 +1486,15 @@ timeSlider.addEventListener(
 "input",
 ()=>{
 
-if(activeLayer!=="radar")
+if(
+activeLayer!=="radar"
+)
 return;
 
 currentFrame=
-Number(timeSlider.value);
+Number(
+timeSlider.value
+);
 
 showRainFrame(
 currentFrame
@@ -1555,10 +1514,14 @@ document
 "click",
 ()=>{
 
-if(activeLayer!=="radar")
+if(
+activeLayer!=="radar"
+)
 return;
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 currentFrame=
@@ -1588,10 +1551,14 @@ document
 "click",
 ()=>{
 
-if(activeLayer!=="radar")
+if(
+activeLayer!=="radar"
+)
 return;
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 currentFrame=
@@ -1621,10 +1588,14 @@ document
 "click",
 ()=>{
 
-if(activeLayer!=="radar")
+if(
+activeLayer!=="radar"
+)
 return;
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 playing=!playing;
@@ -1634,9 +1605,13 @@ document
 .textContent=
 playing?"Ⅱ":"▶";
 
-clearInterval(playTimer);
+clearInterval(
+playTimer
+);
 
-if(playing){
+if(
+playing
+){
 
 playTimer=
 setInterval(
@@ -1680,7 +1655,9 @@ document
 "click",
 ()=>{
 
-if(!navigator.geolocation){
+if(
+!navigator.geolocation
+){
 
 setStatus(
 "Геолокация недоступна"
@@ -1723,9 +1700,11 @@ setStatus(
 },
 
 ()=>{
+
 setStatus(
 "Не удалось определить местоположение"
 );
+
 },
 
 {
@@ -1749,7 +1728,9 @@ document
 "click",
 ()=>{
 
-if(activeLayer==="oya"){
+if(
+activeLayer==="oya"
+){
 
 loadOya();
 
@@ -1783,7 +1764,8 @@ settings.classList.toggle(
 
 document
 .querySelectorAll(".theme-btn")
-.forEach(button=>{
+.forEach(
+button=>{
 
 button.addEventListener(
 "click",
@@ -1797,7 +1779,9 @@ document.body.classList.remove(
 "green"
 );
 
-if(theme!=="dark"){
+if(
+theme!=="dark"
+){
 
 document.body.classList.add(
 theme
@@ -1813,7 +1797,8 @@ theme
 }
 );
 
-});
+}
+);
 
 
 /* =========================================================
@@ -1825,14 +1810,18 @@ localStorage.getItem(
 "gptrad-theme"
 );
 
-if(savedTheme){
+if(
+savedTheme
+){
 
 document.body.classList.remove(
 "light",
 "green"
 );
 
-if(savedTheme!=="dark"){
+if(
+savedTheme!=="dark"
+){
 
 document.body.classList.add(
 savedTheme
