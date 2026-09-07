@@ -9,32 +9,44 @@ export default async function handler(req, res) {
       return res.status(204).end();
     }
 
+    const incoming = new URL(req.url, "https://gptrad.vercel.app");
+
     const query = new URLSearchParams();
 
-    for (const [key, value] of Object.entries(req.query || {})) {
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          query.append(key, String(item));
-        }
-      } else if (value !== undefined && value !== null) {
-        query.set(key, String(value));
-      }
+    for (const [key, value] of incoming.searchParams.entries()) {
+      query.append(key, value);
+    }
+
+    // Если параметров нет — автоматически запрашиваем WMS GetCapabilities
+    if (query.toString() === "") {
+      query.set("SERVICE", "WMS");
+      query.set("VERSION", "1.1.1");
+      query.set("REQUEST", "GetCapabilities");
     }
 
     const targetUrl = `${TARGET}?${query.toString()}`;
 
-    console.log("OYA request:", targetUrl);
+    console.log("OYA target:", targetUrl);
 
     const upstream = await fetch(targetUrl, {
       method: "GET",
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) " +
-          "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
-          "Version/17.0 Mobile/15E148 Safari/604.1",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+          "AppleWebKit/537.36 (KHTML, like Gecko) " +
+          "Chrome/140.0.0.0 Safari/537.36",
 
         "Accept":
-          "text/xml, application/xml, image/png, image/jpeg, */*"
+          "text/xml, application/xml, application/xhtml+xml, */*",
+
+        "Accept-Language":
+          "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+
+        "Referer":
+          "https://www.nowcast.ru/",
+
+        "Origin":
+          "https://www.nowcast.ru"
       }
     });
 
@@ -56,11 +68,11 @@ export default async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
 
-    /*
-      ВАЖНО:
-      Если Nowcast вернул ошибку, не передаём её статус наружу.
-      Вместо этого показываем диагностическую информацию.
-    */
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate"
+    );
+
     if (!upstream.ok) {
       res.setHeader("Content-Type", "application/json");
 
@@ -70,16 +82,9 @@ export default async function handler(req, res) {
         upstreamStatus: upstream.status,
         upstreamStatusText: upstream.statusText,
         upstreamContentType: contentType,
-        target: targetUrl,
-        message:
-          "Vercel proxy работает, но upstream Nowcast вернул ошибку."
+        target: targetUrl
       });
     }
-
-    res.setHeader(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate, proxy-revalidate"
-    );
 
     res.setHeader("Content-Type", contentType);
 
@@ -88,12 +93,13 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("OYA proxy error:", error);
 
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "application/json");
+
     return res.status(200).json({
       ok: false,
       proxy: true,
-      upstreamStatus: null,
-      error: error?.message || "Unknown error",
-      message: "Ошибка внутри Vercel proxy"
+      error: error?.message || "Unknown error"
     });
   }
 }
