@@ -198,20 +198,16 @@ button:active{
    ============================================================ */
 
 /*
- * Здесь должен быть сервер, где работает vector_wms.wsgi.
+ * Реальный WMS источника ОЯ из radar-wms.
  *
- * Например:
+ * Используется именно слой:
  *
- * const VECTOR_BASE = "https://example.ru";
- *
- * Тогда запрос будет:
- *
- * https://example.ru/vector_wsgi?time=...
- *
- * Если /vector_wsgi находится непосредственно на твоём
- * рабочем домене — укажи его здесь.
+ * bufr_phenomena
+ * bufr_novosib_phenomena
+ * bufr_vlad_phenomena
  */
-const VECTOR_BASE = "";
+const OYA_WMS =
+  "https://www.nowcast.ru/baltrad_wsgi";
 
 
 /* ============================================================
@@ -257,9 +253,7 @@ let currentIndex = 0;
 
 let radarLayer = null;
 
-let radarLoadingLayer = null;
-
-let warningsLayer = L.layerGroup();
+let oyaLayer = null;
 
 let playing = false;
 
@@ -267,22 +261,15 @@ let playTimer = null;
 
 
 /*
- * Кэш слоёв.
- *
- * index -> {
- *   layer,
- *   loaded
- * }
+ * Кэш только готовых кадров.
  */
 const radarCache = new Map();
 
 
 /*
- * Кэш ОЯ.
- *
- * timestamp -> Leaflet layer
+ * Кэш WMS ОЯ.
  */
-const warningCache = new Map();
+const oyaCache = new Map();
 
 
 /* ============================================================
@@ -298,7 +285,7 @@ function setStatus(text){
    ФОРМАТ ВРЕМЕНИ
    ============================================================ */
 
-function formatTime(timestamp, forecast){
+function formatTime(timestamp){
 
   const d = new Date(timestamp * 1000);
 
@@ -307,7 +294,8 @@ function formatTime(timestamp, forecast){
     month:"2-digit",
     hour:"2-digit",
     minute:"2-digit"
-  }) + (forecast ? " · прогноз" : "");
+  });
+
 }
 
 
@@ -329,502 +317,9 @@ async function loadFrames(){
     );
 
     if(!response.ok){
-      throw new Error("RainViewer HTTP " + response.status);
-    }
-
-    const data = await response.json();
-
-    const result = [];
-
-    const past = data.radar?.past || [];
-    const nowcast = data.radar?.nowcast || [];
-
-    for(const f of past){
-
-      result.push({
-        time:f.time,
-        forecast:false,
-        path:f.path,
-        url:
-          data.host +
-          f.path +
-          "/256/{z}/{x}/{y}/2/1_1.png"
-      });
-
-    }
-
-    for(const f of nowcast){
-
-      result.push({
-        time:f.time,
-        forecast:true,
-        path:f.path,
-        url:
-          data.host +
-          f.path +
-          "/256/{z}/{x}/{y}/2/1_1.png"
-      });
-
-    }
-
-    if(!result.length){
-      throw new Error("Кадры не найдены");
-    }
-
-    /*
-     * Удаляем старые дубликаты времени.
-     */
-    const unique = [];
-
-    const seen = new Set();
-
-    for(const f of result){
-
-      if(seen.has(f.time)) continue;
-
-      seen.add(f.time);
-
-      unique.push(f);
-    }
-
-    frames = unique;
-
-    slider.max = Math.max(0,frames.length - 1);
-
-    /*
-     * Если раньше уже был выбран кадр,
-     * стараемся сохранить его.
-     */
-    currentIndex = Math.min(
-      currentIndex,
-      frames.length - 1
-    );
-
-    slider.value = currentIndex;
-
-    /*
-     * Первый запуск.
-     */
-    if(!radarLayer){
-
-      await showFrame(currentIndex,true);
-
-    }else{
-
-      await showFrame(currentIndex,true);
-
-    }
-
-    /*
-     * Предзагрузка соседних кадров.
-     */
-    preloadAround(currentIndex);
-
-    setStatus("Радар готов");
-
-  }catch(error){
-
-    console.error(error);
-
-    setStatus("Ошибка загрузки радара");
-
-  }
-
-}
-
-
-/* ============================================================
-   СОЗДАНИЕ СЛОЯ РАДАРА
-   ============================================================ */
-
-function createRadarLayer(index){
-
-  const frame = frames[index];
-
-  if(!frame) return null;
-
-  return L.tileLayer(
-    frame.url,
-    {
-      opacity:.75,
-      tileSize:256,
-      zIndex:5,
-      updateWhenZooming:false,
-      updateWhenIdle:true,
-      keepBuffer:2
-    }
-  );
-}
-
-
-/* ============================================================
-   ОЖИДАНИЕ ЗАГРУЗКИ СЛОЯ
-   ============================================================ */
-
-function waitForLayer(layer){
-
-  return new Promise(resolve => {
-
-    let finished = false;
-
-    function done(){
-
-      if(finished) return;
-
-      finished = true;
-
-      resolve();
-
-    }
-
-    layer.once("load",done);
-
-    /*
-     * Если браузер уже взял все тайлы из cache,
-     * load может пройти очень быстро.
-     *
-     * Страховка от вечного ожидания.
-     */
-    setTimeout(done,8000);
-
-  });
-
-}
-
-
-/* ============================================================
-   БЕСШОВНАЯ СМЕНА КАДРА
-   ============================================================ */
-
-async function showFrame(index,force=false){
-
-  if(!frames.length) return;
-
-  index = Math.max(
-    0,
-    Math.min(index,frames.length - 1)
-  );
-
-  currentIndex = index;
-
-  slider.value = index;
-
-  const frame = frames[index];
-
-  timeLabel.textContent =
-    formatTime(
-      frame.time,
-      frame.forecast
-    );
-
-
-  /*
-   * Если этот кадр уже является текущим,
-   * ничего делать не нужно.
-   */
-  if(
-    !force &&
-    radarLayer &&
-    radarLayer._gptradIndex === index
-  ){
-
-    preloadAround(index);
-
-    return;
-  }
-
-
-  /*
-   * 1. Сначала проверяем кэш.
-   */
-  let entry = radarCache.get(index);
-
-
-  /*
-   * 2. Если слоя ещё нет — создаём.
-   */
-  if(!entry){
-
-    const newLayer = createRadarLayer(index);
-
-    if(!newLayer) return;
-
-    entry = {
-      layer:newLayer,
-      loaded:false
-    };
-
-    radarCache.set(index,entry);
-
-    /*
-     * НОВЫЙ слой добавляется ПОВЕРХ старого.
-     *
-     * Старый пока НЕ удаляем.
-     */
-    newLayer._gptradIndex = index;
-
-    newLayer.addTo(map);
-
-    /*
-     * Ждём готовности.
-     */
-    await waitForLayer(newLayer);
-
-    entry.loaded = true;
-
-  }else{
-
-    /*
-     * Кэшированный слой уже есть.
-     */
-    if(!entry.layer._map){
-
-      entry.layer.addTo(map);
-
-    }
-
-  }
-
-
-  /*
-   * 3. Теперь новый слой готов.
-   *
-   * Только здесь удаляем старый.
-   */
-  const oldLayer = radarLayer;
-
-  radarLayer = entry.layer;
-
-  radarLayer.setOpacity(.75);
-
-  if(
-    oldLayer &&
-    oldLayer !== radarLayer
-  ){
-
-    map.removeLayer(oldLayer);
-
-    /*
-     * Старый слой оставляем в кэше,
-     * чтобы можно было вернуться мгновенно.
-     */
-  }
-
-
-  /*
-   * 4. Ограничиваем кэш.
-   */
-  trimRadarCache(index);
-
-
-  /*
-   * 5. Загружаем соседние кадры.
-   */
-  preloadAround(index);
-
-}
-
-
-/* ============================================================
-   ПРЕДЗАГРУЗКА КАДРОВ
-   ============================================================ */
-
-function preloadFrame(index){
-
-  if(
-    index < 0 ||
-    index >= frames.length
-  ) return;
-
-  if(radarCache.has(index)) return;
-
-  const layer = createRadarLayer(index);
-
-  if(!layer) return;
-
-  layer._gptradIndex = index;
-
-  /*
-   * Сначала делаем слой прозрачным.
-   *
-   * Он будет загружаться в фоне.
-   */
-  layer.setOpacity(0);
-
-  layer.addTo(map);
-
-  const entry = {
-    layer:layer,
-    loaded:false
-  };
-
-  radarCache.set(index,entry);
-
-  layer.once("load",() => {
-
-    entry.loaded = true;
-
-    /*
-     * Если этот кадр не текущий,
-     * оставляем его прозрачным.
-     */
-    if(radarLayer !== layer){
-
-      layer.setOpacity(0);
-
-    }
-
-  });
-
-}
-
-
-/*
- * Предзагружаем предыдущий и следующий кадр.
- */
-function preloadAround(index){
-
-  preloadFrame(index - 1);
-  preloadFrame(index + 1);
-}
-
-
-/* ============================================================
-   ОГРАНИЧЕНИЕ КЭША
-   ============================================================ */
-
-function trimRadarCache(center){
-
-  for(const [index,entry] of radarCache){
-
-    if(
-      Math.abs(index - center) > 2 &&
-      entry.layer !== radarLayer
-    ){
-
-      if(entry.layer._map){
-
-        map.removeLayer(entry.layer);
-
-      }
-
-      radarCache.delete(index);
-
-    }
-
-  }
-
-}
-
-
-/* ============================================================
-   ОЯ
-   ============================================================ */
-
-
-/*
- * Расчёт конечной точки вектора.
- *
- * Используется тот же географический принцип,
- * что и в demo/dmrl.html репозитория.
- */
-function destination(
-  lng,
-  lat,
-  dist,
-  heading
-){
-
-  const R = 6371;
-
-  lat *= Math.PI / 180;
-  lng *= Math.PI / 180;
-  heading *= Math.PI / 180;
-
-  const lat2 =
-    Math.asin(
-      Math.sin(lat) *
-      Math.cos(dist / R) +
-
-      Math.cos(lat) *
-      Math.sin(dist / R) *
-      Math.cos(heading)
-    );
-
-  const lng2 =
-    lng +
-    Math.atan2(
-      Math.sin(heading) *
-      Math.sin(dist / R) *
-      Math.cos(lat),
-
-      Math.cos(dist / R) -
-      Math.sin(lat) *
-      Math.sin(lat2)
-    );
-
-  return [
-    180 / Math.PI * lng2,
-    180 / Math.PI * lat2
-  ];
-
-}
-
-
-/* ============================================================
-   ЗАПРОС ОЯ
-   ============================================================ */
-
-async function loadWarnings(timestamp){
-
-  /*
-   * Уже загружено.
-   */
-  if(warningCache.has(timestamp)){
-
-    return warningCache.get(timestamp);
-
-  }
-
-
-  /*
-   * Если endpoint не задан,
-   * просто возвращаем пустой слой.
-   */
-  if(!VECTOR_BASE){
-
-    console.warn(
-      "VECTOR_BASE не задан"
-    );
-
-    return L.layerGroup();
-
-  }
-
-
-  const url =
-    VECTOR_BASE.replace(/\/$/,"") +
-    "/vector_wsgi?time=" +
-    encodeURIComponent(
-      new Date(timestamp * 1000)
-        .toISOString()
-        .replace(".000","")
-    );
-
-
-  try{
-
-    const response = await fetch(
-      url,
-      {
-        cache:"no-store"
-      }
-    );
-
-    if(!response.ok){
 
       throw new Error(
-        "vector_wsgi HTTP " +
+        "RainViewer HTTP " +
         response.status
       );
 
@@ -832,135 +327,536 @@ async function loadWarnings(timestamp){
 
     const data = await response.json();
 
-    const layer = L.layerGroup();
+    const result = [];
 
+    const past =
+      data.radar?.past || [];
 
     /*
-     * Формат репозитория:
-     *
-     * [
-     *   latitude,
-     *   longitude,
-     *   distance,
-     *   bearing
-     * ]
+     * Публичный API может не отдавать nowcast.
      */
-    for(const item of data){
-
-      if(!Array.isArray(item)) continue;
-
-      const lat = Number(item[0]);
-      const lon = Number(item[1]);
-      const dist = Number(item[2]);
-      const bearing = Number(item[3]);
-
-      if(
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lon) ||
-        !Number.isFinite(dist) ||
-        !Number.isFinite(bearing)
-      ){
-
-        continue;
-
-      }
+    const nowcast =
+      data.radar?.nowcast || [];
 
 
-      /*
-       * Не рисуем нулевые/служебные значения.
-       */
-      if(dist <= 0) continue;
+    for(const f of past){
 
-      /*
-       * bearing=511 в исходном WSGI означает
-       * отсутствие направления.
-       */
-      if(bearing === 511) continue;
-
-
-      /*
-       * В оригинальном demo расстояние
-       * преобразуется через *3.6.
-       */
-      const distance = dist * 3.6;
-
-      const end = destination(
-        lon,
-        lat,
-        distance,
-        bearing
-      );
-
-
-      /*
-       * Сам центр.
-       */
-      L.circleMarker(
-        [lat,lon],
-        {
-          radius:4,
-          color:"#ff3030",
-          weight:2,
-          fillColor:"#ff3030",
-          fillOpacity:.9
-        }
-      ).addTo(layer);
-
-
-      /*
-       * Направление/перемещение.
-       */
-      L.polyline(
-        [
-          [lat,lon],
-          [end[1],end[0]]
-        ],
-        {
-          color:"#ff3030",
-          weight:3,
-          opacity:.9
-        }
-      ).addTo(layer);
-
-
-      /*
-       * Наконечник.
-       */
-      L.circleMarker(
-        [end[1],end[0]],
-        {
-          radius:3,
-          color:"#ff3030",
-          fillColor:"#ff3030",
-          fillOpacity:.9,
-          weight:1
-        }
-      ).addTo(layer);
+      result.push({
+        time:f.time,
+        path:f.path,
+        forecast:false,
+        url:
+          data.host +
+          f.path +
+          "/256/{z}/{x}/{y}/2/1_1.png"
+      });
 
     }
 
 
-    warningCache.set(
-      timestamp,
-      layer
+    for(const f of nowcast){
+
+      result.push({
+        time:f.time,
+        path:f.path,
+        forecast:true,
+        url:
+          data.host +
+          f.path +
+          "/256/{z}/{x}/{y}/2/1_1.png"
+      });
+
+    }
+
+
+    if(!result.length){
+
+      throw new Error(
+        "Кадры не найдены"
+      );
+
+    }
+
+
+    /*
+     * Уникальные timestamps.
+     */
+    const seen = new Set();
+
+    frames = result.filter(frame => {
+
+      if(seen.has(frame.time)){
+        return false;
+      }
+
+      seen.add(frame.time);
+
+      return true;
+
+    });
+
+
+    slider.max =
+      Math.max(
+        0,
+        frames.length - 1
+      );
+
+
+    currentIndex =
+      Math.min(
+        currentIndex,
+        frames.length - 1
+      );
+
+
+    slider.value =
+      currentIndex;
+
+
+    /*
+     * Показываем текущий кадр.
+     */
+    await showFrame(
+      currentIndex,
+      true
     );
 
-    return layer;
+
+    /*
+     * В режиме ОЯ сразу обновляем WMS.
+     */
+    if(layerSelect.value === "warnings"){
+
+      await showOya(
+        currentIndex
+      );
+
+    }
+
+
+    setStatus(
+      layerSelect.value === "warnings"
+        ? "Опасные явления"
+        : "Радар готов"
+    );
 
 
   }catch(error){
 
-    console.error(
-      "Ошибка vector_wsgi:",
-      error
+    console.error(error);
+
+    setStatus(
+      "Ошибка загрузки радара"
     );
 
+  }
+
+}
+
+
+/* ============================================================
+   СОЗДАНИЕ RADAR TILE LAYER
+   ============================================================ */
+
+function createRadarLayer(index){
+
+  const frame =
+    frames[index];
+
+  if(!frame){
+    return null;
+  }
+
+  const layer =
+    L.tileLayer(
+      frame.url,
+      {
+        opacity:1,
+        tileSize:256,
+        zIndex:5,
+
+        /*
+         * Не даём Leaflet лишний раз
+         * перерисовывать слой во время zoom.
+         */
+        updateWhenZooming:false,
+        updateWhenIdle:true,
+
+        keepBuffer:2
+      }
+    );
+
+  layer._gptradIndex =
+    index;
+
+  return layer;
+
+}
+
+
+/* ============================================================
+   ОЖИДАНИЕ ПЕРВОГО КАДРА
+   ============================================================ */
+
+function waitForLayer(layer){
+
+  return new Promise(resolve => {
+
+    let done = false;
+
+    const finish = () => {
+
+      if(done){
+        return;
+      }
+
+      done = true;
+
+      resolve();
+
+    };
+
+
+    layer.once(
+      "load",
+      finish
+    );
+
+
     /*
-     * Не ломаем интерфейс.
+     * Если всё уже находится
+     * в browser cache.
      */
-    return L.layerGroup();
+    setTimeout(
+      finish,
+      6000
+    );
+
+  });
+
+}
+
+
+/* ============================================================
+   БЕСШОВНАЯ СМЕНА RADAR КАДРА
+   ============================================================ */
+
+async function showFrame(
+  index,
+  force=false
+){
+
+  if(!frames.length){
+    return;
+  }
+
+
+  index =
+    Math.max(
+      0,
+      Math.min(
+        index,
+        frames.length - 1
+      )
+    );
+
+
+  currentIndex =
+    index;
+
+  slider.value =
+    index;
+
+
+  const frame =
+    frames[index];
+
+
+  timeLabel.textContent =
+    formatTime(
+      frame.time
+    );
+
+
+  if(
+    !force &&
+    radarLayer &&
+    radarLayer._gptradIndex === index
+  ){
+
+    return;
 
   }
+
+
+  let next =
+    radarCache.get(index);
+
+
+  /*
+   * Кадра нет в кэше.
+   */
+  if(!next){
+
+    const layer =
+      createRadarLayer(index);
+
+    if(!layer){
+      return;
+    }
+
+
+    /*
+     * ВАЖНО:
+     *
+     * Слой создаём НЕ на карте.
+     *
+     * Leaflet начинает загружать его
+     * только после addTo().
+     */
+    next = {
+      layer:layer,
+      loaded:false
+    };
+
+
+    radarCache.set(
+      index,
+      next
+    );
+
+
+    /*
+     * Старый слой всё ещё находится
+     * на карте.
+     *
+     * Новый добавляем поверх него.
+     */
+    layer.addTo(map);
+
+
+    await waitForLayer(
+      layer
+    );
+
+
+    next.loaded = true;
+
+  }else{
+
+    /*
+     * Кэшированный слой.
+     */
+    if(!next.layer._map){
+
+      next.layer.addTo(map);
+
+    }
+
+  }
+
+
+  /*
+   * ========================================================
+   * КЛЮЧЕВОЙ МОМЕНТ
+   * ========================================================
+   *
+   * Новый слой уже загружен.
+   *
+   * Его opacity ВСЕГДА = 1.
+   *
+   * Никаких fade-in.
+   */
+  next.layer.setOpacity(1);
+
+
+  const old =
+    radarLayer;
+
+
+  radarLayer =
+    next.layer;
+
+
+  /*
+   * Только теперь удаляем старый.
+   */
+  if(
+    old &&
+    old !== radarLayer
+  ){
+
+    map.removeLayer(
+      old
+    );
+
+  }
+
+
+  /*
+   * Удаляем слишком старые
+   * кэшированные кадры.
+   */
+  for(
+    const [i,entry]
+    of radarCache
+  ){
+
+    if(
+      Math.abs(i-index) > 2 &&
+      entry.layer !== radarLayer
+    ){
+
+      if(entry.layer._map){
+
+        map.removeLayer(
+          entry.layer
+        );
+
+      }
+
+      radarCache.delete(i);
+
+    }
+
+  }
+
+
+  /*
+   * Тихая предзагрузка соседей.
+   */
+  preload(index - 1);
+  preload(index + 1);
+
+}
+
+
+/* ============================================================
+   ПРЕДЗАГРУЗКА
+   ============================================================ */
+
+function preload(index){
+
+  if(
+    index < 0 ||
+    index >= frames.length
+  ){
+
+    return;
+
+  }
+
+
+  if(
+    radarCache.has(index)
+  ){
+
+    return;
+
+  }
+
+
+  const layer =
+    createRadarLayer(index);
+
+  if(!layer){
+    return;
+  }
+
+
+  /*
+   * Прозрачным его НЕ показываем
+   * как часть интерфейса.
+   *
+   * Он просто загружается.
+   */
+  layer.setOpacity(0);
+
+  layer.addTo(map);
+
+
+  const entry = {
+    layer:layer,
+    loaded:false
+  };
+
+
+  radarCache.set(
+    index,
+    entry
+  );
+
+
+  layer.once(
+    "load",
+    () => {
+
+      entry.loaded = true;
+
+      /*
+       * Он остаётся невидимым
+       * до фактического переключения.
+       */
+      if(
+        radarLayer !== layer
+      ){
+
+        layer.setOpacity(0);
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   ОПАСНЫЕ ЯВЛЕНИЯ — WMS
+   ============================================================ */
+
+function createOyaLayer(timestamp){
+
+  /*
+   * WMS принимает ISO-время.
+   */
+  const iso =
+    new Date(
+      timestamp * 1000
+    ).toISOString();
+
+
+  /*
+   * Реальный слой ОЯ из репозитория:
+   *
+   * bufr_phenomena
+   * bufr_novosib_phenomena
+   * bufr_vlad_phenomena
+   */
+  return L.tileLayer.wms(
+    OYA_WMS,
+    {
+      layers:
+        "bufr_phenomena," +
+        "bufr_novosib_phenomena," +
+        "bufr_vlad_phenomena",
+
+      format:"image/png",
+
+      transparent:true,
+
+      version:"1.1.1",
+
+      time:iso,
+
+      opacity:1,
+
+      zIndex:20,
+
+      tiled:true
+    }
+  );
 
 }
 
@@ -969,41 +865,91 @@ async function loadWarnings(timestamp){
    ПОКАЗ ОЯ
    ============================================================ */
 
-async function showWarnings(index){
+async function showOya(index){
 
-  if(!frames[index]) return;
+  if(!frames[index]){
+    return;
+  }
+
 
   const timestamp =
     frames[index].time;
 
 
-  setStatus("Загрузка опасных явлений…");
-
-
-  const layer =
-    await loadWarnings(timestamp);
+  setStatus(
+    "Загрузка опасных явлений…"
+  );
 
 
   /*
-   * Старый слой ОЯ не держим.
+   * Если этот timestamp уже создавался,
+   * используем готовый слой.
    */
-  if(warningsLayer){
+  let layer =
+    oyaCache.get(timestamp);
 
-    map.removeLayer(
-      warningsLayer
+
+  if(!layer){
+
+    layer =
+      createOyaLayer(
+        timestamp
+      );
+
+    oyaCache.set(
+      timestamp,
+      layer
     );
 
   }
 
 
-  warningsLayer = layer;
+  /*
+   * Новый WMS слой добавляется
+   * поверх старого.
+   */
+  layer.addTo(map);
 
 
-  warningsLayer.addTo(map);
+  /*
+   * Убираем предыдущий.
+   */
+  if(
+    oyaLayer &&
+    oyaLayer !== layer
+  ){
+
+    map.removeLayer(
+      oyaLayer
+    );
+
+  }
 
 
-  setStatus("Опасные явления");
+  oyaLayer =
+    layer;
 
+
+  /*
+   * Радар скрываем полностью,
+   * но НЕ удаляем.
+   */
+  if(radarLayer){
+
+    radarLayer.setOpacity(0);
+
+  }
+
+
+  /*
+   * У WMS нет fade.
+   */
+  layer.setOpacity(1);
+
+
+  setStatus(
+    "Опасные явления"
+  );
 
 }
 
@@ -1016,26 +962,28 @@ layerSelect.addEventListener(
   "change",
   async () => {
 
-    if(layerSelect.value === "radar"){
+    if(
+      layerSelect.value === "radar"
+    ){
 
       /*
-       * ОЯ убрать.
+       * Убираем ОЯ.
        */
-      if(warningsLayer){
+      if(oyaLayer){
 
         map.removeLayer(
-          warningsLayer
+          oyaLayer
         );
 
       }
 
 
       /*
-       * Показать текущий радар.
+       * Показываем радар.
        */
       if(radarLayer){
 
-        radarLayer.setOpacity(.75);
+        radarLayer.setOpacity(1);
 
         if(!radarLayer._map){
 
@@ -1053,15 +1001,16 @@ layerSelect.addEventListener(
       }
 
 
-      setStatus("Радар готов");
+      setStatus(
+        "Радар готов"
+      );
 
 
     }else{
 
       /*
-       * Радар не удаляем.
-       *
-       * Просто скрываем его.
+       * Радар остаётся в DOM,
+       * но полностью скрыт.
        */
       if(radarLayer){
 
@@ -1070,7 +1019,7 @@ layerSelect.addEventListener(
       }
 
 
-      await showWarnings(
+      await showOya(
         currentIndex
       );
 
@@ -1091,37 +1040,34 @@ slider.addEventListener(
     const index =
       Number(slider.value);
 
-    currentIndex = index;
+
+    currentIndex =
+      index;
 
 
-    /*
-     * Время меняем сразу.
-     */
     if(frames[index]){
 
       timeLabel.textContent =
         formatTime(
-          frames[index].time,
-          frames[index].forecast
+          frames[index].time
         );
 
     }
 
 
-    /*
-     * При режиме радара — бесшовный swap.
-     */
-    if(layerSelect.value === "radar"){
+    if(
+      layerSelect.value === "radar"
+    ){
 
-      await showFrame(index);
+      await showFrame(
+        index
+      );
 
     }else{
 
-      /*
-       * Для ОЯ тоже сразу грузим соответствующий
-       * временной слой.
-       */
-      await showWarnings(index);
+      await showOya(
+        index
+      );
 
     }
 
@@ -1135,7 +1081,7 @@ slider.addEventListener(
 
 back.addEventListener(
   "click",
-  async () => {
+  () => {
 
     const next =
       Math.max(
@@ -1143,7 +1089,8 @@ back.addEventListener(
         currentIndex - 1
       );
 
-    slider.value = next;
+    slider.value =
+      next;
 
     slider.dispatchEvent(
       new Event("input")
@@ -1159,7 +1106,7 @@ back.addEventListener(
 
 forward.addEventListener(
   "click",
-  async () => {
+  () => {
 
     const next =
       Math.min(
@@ -1167,7 +1114,8 @@ forward.addEventListener(
         currentIndex + 1
       );
 
-    slider.value = next;
+    slider.value =
+      next;
 
     slider.dispatchEvent(
       new Event("input")
@@ -1183,7 +1131,9 @@ forward.addEventListener(
 
 function stopPlayback(){
 
-  playing = false;
+  playing =
+    false;
+
 
   if(playTimer){
 
@@ -1191,22 +1141,31 @@ function stopPlayback(){
       playTimer
     );
 
-    playTimer = null;
+    playTimer =
+      null;
 
   }
 
-  play.textContent = "▶";
+
+  play.textContent =
+    "▶";
 
 }
 
 
 function startPlayback(){
 
-  if(playing) return;
+  if(playing){
+    return;
+  }
 
-  playing = true;
 
-  play.textContent = "Ⅱ";
+  playing =
+    true;
+
+
+  play.textContent =
+    "Ⅱ";
 
 
   playTimer =
@@ -1217,32 +1176,38 @@ function startPlayback(){
           currentIndex + 1;
 
 
-        if(next >= frames.length){
+        if(
+          next >= frames.length
+        ){
 
           next = 0;
 
         }
 
 
-        slider.value = next;
+        slider.value =
+          next;
 
-        await (
-          async () => {
 
-            currentIndex = next;
+        currentIndex =
+          next;
 
-            if(layerSelect.value === "radar"){
 
-              await showFrame(next);
+        if(
+          layerSelect.value === "radar"
+        ){
 
-            }else{
+          await showFrame(
+            next
+          );
 
-              await showWarnings(next);
+        }else{
 
-            }
+          await showOya(
+            next
+          );
 
-          }
-        )();
+        }
 
       },
       600
@@ -1277,11 +1242,14 @@ locate.addEventListener(
   "click",
   () => {
 
-    if(!navigator.geolocation){
+    if(
+      !navigator.geolocation
+    ){
 
       return;
 
     }
+
 
     navigator.geolocation.getCurrentPosition(
       position => {
@@ -1291,6 +1259,7 @@ locate.addEventListener(
 
         const lon =
           position.coords.longitude;
+
 
         map.setView(
           [lat,lon],
@@ -1325,36 +1294,29 @@ reload.addEventListener(
   "click",
   async () => {
 
-    /*
-     * Сохраняем текущий кадр.
-     */
     const oldIndex =
       currentIndex;
 
 
-    /*
-     * Не трогаем интерфейс.
-     */
     await loadFrames();
 
 
-    /*
-     * Возвращаемся к прежнему индексу,
-     * если он ещё существует.
-     */
     currentIndex =
       Math.min(
         oldIndex,
         frames.length - 1
       );
 
+
     slider.value =
       currentIndex;
 
 
-    if(layerSelect.value === "warnings"){
+    if(
+      layerSelect.value === "warnings"
+    ){
 
-      await showWarnings(
+      await showOya(
         currentIndex
       );
 
@@ -1365,7 +1327,7 @@ reload.addEventListener(
 
 
 /* ============================================================
-   ПЕРИОДИЧЕСКОЕ ОБНОВЛЕНИЕ
+   АВТООБНОВЛЕНИЕ
    ============================================================ */
 
 setInterval(
