@@ -3,22 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
 <title>GPTrad</title>
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
 *{
   box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
-html,
-body{
+html,body{
   margin:0;
   padding:0;
   width:100%;
@@ -28,208 +26,359 @@ body{
 }
 
 body{
-  background:#fff;
+  background:#111;
 }
 
 #map{
   position:absolute;
   inset:0;
-  width:100%;
-  height:100%;
   z-index:1;
 }
 
-/* ---------- TOP PANEL ---------- */
+/* =========================
+   TOP PANEL
+========================= */
 
 .top-panel{
   position:absolute;
   top:12px;
   left:12px;
-  right:12px;
   z-index:1000;
 
   display:flex;
   align-items:center;
   gap:8px;
 
-  padding:10px 12px;
+  padding:8px 10px;
 
-  background:rgba(255,255,255,.94);
+  background:rgba(20,20,20,.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+
   border-radius:14px;
-
-  box-shadow:0 3px 18px rgba(0,0,0,.18);
-
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 4px 18px rgba(0,0,0,.25);
 }
 
 .logo{
-  font-size:19px;
-  font-weight:800;
-  white-space:nowrap;
-  letter-spacing:-.3px;
+  color:white;
+  font-size:16px;
+  font-weight:700;
+  margin-right:3px;
 }
 
-.layer-select{
-  flex:1;
-  min-width:0;
-
-  height:38px;
-  padding:0 10px;
-
-  border:1px solid rgba(0,0,0,.15);
-  border-radius:10px;
-
-  background:#fff;
-  color:#111;
-
-  font-size:14px;
-  outline:none;
-}
-
-.panel-button{
-  width:38px;
-  height:38px;
+.mode-select{
+  appearance:none;
+  -webkit-appearance:none;
 
   border:0;
-  border-radius:10px;
+  outline:0;
 
-  background:#f1f1f1;
-  color:#111;
+  background:#292929;
+  color:white;
+
+  border-radius:9px;
+  padding:8px 30px 8px 11px;
+
+  font-size:14px;
+  font-weight:600;
+}
+
+.icon-btn{
+  width:36px;
+  height:36px;
+
+  border:0;
+  outline:0;
+
+  border-radius:9px;
+
+  background:#292929;
+  color:white;
 
   font-size:20px;
-  cursor:pointer;
 
   display:flex;
   align-items:center;
   justify-content:center;
-
-  flex:none;
 }
 
-.panel-button:active{
-  transform:scale(.95);
+.icon-btn:active{
+  transform:scale(.94);
 }
 
-/* ---------- STATUS ---------- */
+/* =========================
+   STATUS
+========================= */
 
 #status{
   position:absolute;
   top:72px;
-  left:50%;
-  transform:translateX(-50%);
+  left:14px;
 
-  z-index:999;
+  z-index:1000;
 
-  padding:6px 11px;
+  padding:6px 10px;
 
-  border-radius:10px;
+  border-radius:8px;
 
-  background:rgba(0,0,0,.68);
-  color:#fff;
+  background:rgba(20,20,20,.78);
+  color:white;
 
   font-size:12px;
 
   pointer-events:none;
-
-  opacity:0;
-  transition:opacity .15s ease;
 }
 
-#status.show{
-  opacity:1;
-}
+/* =========================
+   LAYERS BUTTON
+========================= */
 
-/* ---------- SETTINGS ---------- */
-
-.settings{
+#layersButton{
   position:absolute;
-  top:62px;
-  right:12px;
+  right:14px;
+  top:14px;
 
-  width:220px;
+  z-index:1000;
+
+  height:42px;
+
+  padding:0 14px;
+
+  border:0;
+  outline:0;
+
+  border-radius:12px;
+
+  background:rgba(20,20,20,.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+
+  color:white;
+
+  font-size:14px;
+  font-weight:600;
+
+  box-shadow:0 4px 18px rgba(0,0,0,.25);
+
+  transition:
+    transform .2s ease,
+    background .2s ease;
+}
+
+#layersButton:active{
+  transform:scale(.95);
+}
+
+/* =========================
+   LAYERS DRAWER
+========================= */
+
+#layersDrawer{
+  position:absolute;
+
+  top:66px;
+  right:14px;
 
   z-index:1100;
 
+  width:260px;
+
+  max-width:calc(100vw - 28px);
+
   padding:12px;
+
+  border-radius:15px;
+
+  background:rgba(20,20,20,.94);
+
+  backdrop-filter:blur(15px);
+  -webkit-backdrop-filter:blur(15px);
+
+  box-shadow:0 8px 30px rgba(0,0,0,.35);
+
+  transform:translateX(calc(100% + 30px));
+  opacity:0;
+
+  pointer-events:none;
+
+  transition:
+    transform .28s cubic-bezier(.22,.61,.36,1),
+    opacity .22s ease;
+}
+
+#layersDrawer.open{
+  transform:translateX(0);
+  opacity:1;
+  pointer-events:auto;
+}
+
+.drawer-title{
+  color:white;
+  font-size:15px;
+  font-weight:700;
+
+  margin:2px 4px 10px;
+}
+
+.layer-item{
+  width:100%;
+
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  padding:11px 10px;
+
+  border:0;
+  outline:0;
+
+  border-radius:10px;
+
+  background:#292929;
+  color:white;
+
+  margin-bottom:7px;
+
+  text-align:left;
+
+  font-size:14px;
+
+  transition:
+    background .15s ease,
+    transform .15s ease;
+}
+
+.layer-item:last-child{
+  margin-bottom:0;
+}
+
+.layer-item:active{
+  transform:scale(.98);
+}
+
+.layer-item.active{
+  background:#3a3a3a;
+}
+
+.layer-dot{
+  width:9px;
+  height:9px;
+
+  border-radius:50%;
+
+  background:#777;
+
+  flex:none;
+}
+
+.layer-item.active .layer-dot{
+  background:#36d67a;
+}
+
+/* =========================
+   SETTINGS
+========================= */
+
+#settings{
+  position:absolute;
+
+  top:60px;
+  left:12px;
+
+  z-index:1200;
+
+  width:220px;
+
+  padding:12px;
+
+  background:rgba(20,20,20,.94);
 
   border-radius:14px;
 
-  background:rgba(255,255,255,.96);
-
-  box-shadow:0 5px 25px rgba(0,0,0,.2);
+  color:white;
 
   display:none;
 
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 8px 30px rgba(0,0,0,.3);
 }
 
-.settings.open{
+#settings.open{
   display:block;
 }
 
 .settings-title{
-  font-size:15px;
+  font-size:14px;
   font-weight:700;
-  margin-bottom:10px;
+  margin-bottom:9px;
 }
 
-.theme-button{
+.theme-btn{
   width:100%;
-  padding:10px;
-
-  margin-top:6px;
 
   border:0;
+  outline:0;
+
+  padding:9px;
+
   border-radius:9px;
 
+  margin-bottom:6px;
+
+  background:#292929;
+  color:white;
+
   text-align:left;
-
-  background:#f1f1f1;
-
-  font-size:14px;
 }
 
-/* ---------- TIMELINE ---------- */
+/* =========================
+   TIMELINE
+========================= */
 
 .timeline{
   position:absolute;
 
-  left:12px;
-  right:12px;
+  left:50%;
   bottom:14px;
+
+  transform:translateX(-50%);
 
   z-index:1000;
 
+  width:min(680px,calc(100vw - 28px));
+
+  padding:10px 12px;
+
+  border-radius:15px;
+
+  background:rgba(20,20,20,.90);
+
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+
+  box-shadow:0 5px 25px rgba(0,0,0,.3);
+
+  color:white;
+}
+
+.timeline-controls{
   display:flex;
   align-items:center;
   gap:8px;
-
-  padding:9px 11px;
-
-  background:rgba(255,255,255,.94);
-
-  border-radius:14px;
-
-  box-shadow:0 3px 18px rgba(0,0,0,.18);
-
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
 }
 
 .timeline button{
   width:36px;
-  height:34px;
+  height:32px;
 
   border:0;
-  border-radius:9px;
+  outline:0;
 
-  background:#f1f1f1;
+  border-radius:8px;
 
-  font-size:17px;
+  background:#292929;
+  color:white;
 
-  cursor:pointer;
+  font-size:15px;
 }
 
 #timeSlider{
@@ -238,72 +387,21 @@ body{
 }
 
 #timeLabel{
-  min-width:95px;
-  text-align:center;
+  width:130px;
+
+  text-align:right;
 
   font-size:12px;
-  font-weight:600;
+  opacity:.85;
 }
 
-/* ---------- DARK ---------- */
-
-body.dark{
-  background:#111;
-}
-
-body.dark .top-panel,
-body.dark .timeline,
-body.dark .settings{
-  background:rgba(25,25,25,.94);
-  color:#fff;
-}
-
-body.dark .layer-select{
-  background:#222;
-  color:#fff;
-  border-color:#444;
-}
-
-body.dark .panel-button,
-body.dark .timeline button,
-body.dark .theme-button{
-  background:#333;
-  color:#fff;
-}
-
-/* ---------- GREEN ---------- */
-
-body.green .top-panel,
-body.green .timeline,
-body.green .settings{
-  background:rgba(239,248,239,.95);
-}
-
-body.green .panel-button,
-body.green .timeline button,
-body.green .theme-button{
-  background:#dcebdc;
-}
-
-/* ---------- LEAFLET ---------- */
-
-.leaflet-container{
-  background:#dfe5e8;
-}
-
-.leaflet-control-zoom{
-  border:0 !important;
-  box-shadow:0 3px 15px rgba(0,0,0,.18) !important;
-}
-
-.leaflet-control-zoom a{
-  border:0 !important;
-}
-
-/* ---------- LOADING ---------- */
+/* =========================
+   LOADING
+========================= */
 
 #loading{
   position:absolute;
+
   left:50%;
   top:50%;
 
@@ -313,14 +411,138 @@ body.green .theme-button{
 
   display:none;
 
-  padding:9px 14px;
+  padding:9px 13px;
 
-  border-radius:12px;
+  border-radius:10px;
 
-  background:rgba(0,0,0,.75);
-  color:#fff;
+  background:rgba(20,20,20,.9);
+
+  color:white;
 
   font-size:13px;
+}
+
+/* =========================
+   LIGHT THEME
+========================= */
+
+body.light .top-panel,
+body.light #layersButton,
+body.light #layersDrawer,
+body.light #settings,
+body.light .timeline,
+body.light #status{
+  background:rgba(255,255,255,.94);
+  color:#111;
+}
+
+body.light .logo,
+body.light #status,
+body.light .drawer-title{
+  color:#111;
+}
+
+body.light .mode-select,
+body.light .icon-btn,
+body.light .layer-item,
+body.light .timeline button,
+body.light .theme-btn{
+  background:#eeeeee;
+  color:#111;
+}
+
+body.light .layer-item.active{
+  background:#dddddd;
+}
+
+/* =========================
+   GREEN THEME
+========================= */
+
+body.green .top-panel,
+body.green #layersButton,
+body.green #layersDrawer,
+body.green #settings,
+body.green .timeline,
+body.green #status{
+  background:rgba(8,35,22,.94);
+}
+
+body.green .mode-select,
+body.green .icon-btn,
+body.green .layer-item,
+body.green .timeline button,
+body.green .theme-btn{
+  background:#123d29;
+  color:white;
+}
+
+body.green .layer-item.active{
+  background:#185538;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:600px){
+
+  .top-panel{
+    top:8px;
+    left:8px;
+
+    gap:5px;
+
+    padding:6px 7px;
+  }
+
+  .logo{
+    font-size:14px;
+  }
+
+  .mode-select{
+    max-width:145px;
+    font-size:12px;
+    padding:7px 24px 7px 8px;
+  }
+
+  .icon-btn{
+    width:32px;
+    height:32px;
+    font-size:17px;
+  }
+
+  #layersButton{
+    top:8px;
+    right:8px;
+
+    height:36px;
+
+    padding:0 11px;
+
+    font-size:13px;
+  }
+
+  #layersDrawer{
+    top:53px;
+    right:8px;
+    width:245px;
+  }
+
+  #status{
+    top:57px;
+    left:9px;
+  }
+
+  .timeline{
+    bottom:8px;
+    width:calc(100vw - 16px);
+  }
+
+  #timeLabel{
+    width:90px;
+    font-size:10px;
+  }
 }
 </style>
 </head>
@@ -329,57 +551,108 @@ body.green .theme-button{
 
 <div id="map"></div>
 
+<!-- TOP -->
+
 <div class="top-panel">
 
   <div class="logo">GPTrad</div>
 
-  <select id="layerSelect" class="layer-select">
+  <select id="mode" class="mode-select">
     <option value="radar">Радар (RainViewer)</option>
     <option value="warnings">Опасные явления</option>
   </select>
 
-  <button
-    id="locateBtn"
-    class="panel-button"
-    title="Моё местоположение">
-    ⌖
+  <button id="locateBtn" class="icon-btn">⌖</button>
+  <button id="reloadBtn" class="icon-btn">↻</button>
+  <button id="settingsBtn" class="icon-btn">⚙</button>
+
+</div>
+
+<div id="status">Загрузка…</div>
+
+<!-- LAYERS -->
+
+<button id="layersButton">☷ Слои</button>
+
+<div id="layersDrawer">
+
+  <div class="drawer-title">
+    Слои
+  </div>
+
+  <button class="layer-item active"
+          data-layer="oya">
+    <span class="layer-dot"></span>
+    Опасные явления
   </button>
 
-  <button
-    id="reloadBtn"
-    class="panel-button"
-    title="Обновить">
-    ↻
+  <button class="layer-item"
+          data-layer="phenomena">
+    <span class="layer-dot"></span>
+    BUFR явления
   </button>
 
-  <button
-    id="settingsBtn"
-    class="panel-button"
-    title="Настройки">
-    ⚙
+  <button class="layer-item"
+          data-layer="novosib">
+    <span class="layer-dot"></span>
+    Новосибирск
+  </button>
+
+  <button class="layer-item"
+          data-layer="vlad">
+    <span class="layer-dot"></span>
+    Владивосток
   </button>
 
 </div>
 
-<div id="status"></div>
+<!-- SETTINGS -->
 
-<div id="settings" class="settings">
+<div id="settings">
 
   <div class="settings-title">
-    Тема
+    Оформление
   </div>
 
-  <button class="theme-button" data-theme="light">
-    Светлая
-  </button>
-
-  <button class="theme-button" data-theme="dark">
+  <button class="theme-btn" data-theme="dark">
     Тёмная
   </button>
 
-  <button class="theme-button" data-theme="green">
+  <button class="theme-btn" data-theme="light">
+    Светлая
+  </button>
+
+  <button class="theme-btn" data-theme="green">
     Зелёная
   </button>
+
+</div>
+
+<!-- TIMELINE -->
+
+<div class="timeline">
+
+  <div class="timeline-controls">
+
+    <button id="backBtn">◀</button>
+
+    <button id="playBtn">▶</button>
+
+    <button id="forwardBtn">▶</button>
+
+    <input
+      id="timeSlider"
+      type="range"
+      min="0"
+      max="0"
+      value="0"
+    >
+
+    <div id="timeLabel">
+      —
+    </div>
+
+  </div>
 
 </div>
 
@@ -387,44 +660,16 @@ body.green .theme-button{
   Загрузка…
 </div>
 
-<div class="timeline">
-
-  <button id="backBtn">
-    ‹
-  </button>
-
-  <button id="playBtn">
-    ▶
-  </button>
-
-  <button id="forwardBtn">
-    ›
-  </button>
-
-  <input
-    id="timeSlider"
-    type="range"
-    min="0"
-    max="0"
-    value="0"
-  >
-
-  <div id="timeLabel">
-    —
-  </div>
-
-</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-/* =========================================================
-   GPTrad
-   ========================================================= */
 
-/* ---------- MAP ---------- */
+/* =========================================================
+   MAP
+========================================================= */
 
 const map = L.map("map", {
+
   zoomControl:true,
   attributionControl:true,
 
@@ -443,17 +688,23 @@ const map = L.map("map", {
   wheelPxPerZoomLevel:80,
 
   doubleClickZoom:true,
-  dragging:true,
 
+  dragging:true,
   inertia:true,
   inertiaDeceleration:3000,
   easeLinearity:0.2,
 
   minZoom:2,
   maxZoom:19
-}).setView([54.7, 55.9], 5);
 
-L.tileLayer(
+}).setView([55.75,37.61],5);
+
+
+/* =========================================================
+   OSM
+========================================================= */
+
+const osm = L.tileLayer(
   "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
   {
     minZoom:2,
@@ -473,209 +724,168 @@ L.tileLayer(
 
 /* =========================================================
    STATE
-   ========================================================= */
+========================================================= */
 
-let currentMode = "radar";
-
-let radarFrames = [];
 let radarLayer = null;
 
 let oyaLayer = null;
-let oyaTimes = [];
-let oyaIndex = 0;
+
+let oyaMode = "oya";
+
+let rainFrames = [];
+
+let currentFrame = 0;
 
 let playing = false;
-let playTimer = null;
 
-let userMarker = null;
+let playTimer = null;
 
 
 /* =========================================================
-   UI
-   ========================================================= */
+   ELEMENTS
+========================================================= */
 
-const layerSelect =
-  document.getElementById("layerSelect");
+const mode = document.getElementById("mode");
 
-const timeSlider =
-  document.getElementById("timeSlider");
+const status = document.getElementById("status");
 
-const timeLabel =
-  document.getElementById("timeLabel");
+const timeSlider = document.getElementById("timeSlider");
 
-const status =
-  document.getElementById("status");
+const timeLabel = document.getElementById("timeLabel");
 
-const loading =
-  document.getElementById("loading");
+const loading = document.getElementById("loading");
 
-const settings =
-  document.getElementById("settings");
+const layersButton = document.getElementById("layersButton");
 
+const layersDrawer = document.getElementById("layersDrawer");
+
+const settings = document.getElementById("settings");
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 function setStatus(text){
   status.textContent = text;
-
-  if(text){
-    status.classList.add("show");
-
-    clearTimeout(setStatus.timer);
-
-    setStatus.timer = setTimeout(()=>{
-      status.classList.remove("show");
-    },3500);
-  }else{
-    status.classList.remove("show");
-  }
 }
 
+function showLoading(text="Загрузка…"){
+  loading.textContent = text;
+  loading.style.display = "block";
+}
 
-function setLoading(value){
-  loading.style.display =
-    value ? "block" : "none";
+function hideLoading(){
+  loading.style.display = "none";
+}
+
+function formatTime(ts){
+
+  if(!ts) return "—";
+
+  const d = new Date(ts * 1000);
+
+  return d.toLocaleTimeString("ru-RU",{
+    hour:"2-digit",
+    minute:"2-digit"
+  });
 }
 
 
 /* =========================================================
-   SETTINGS
-   ========================================================= */
+   LAYERS DRAWER
+========================================================= */
 
-document
-  .getElementById("settingsBtn")
-  .addEventListener("click",()=>{
-    settings.classList.toggle("open");
-  });
+layersButton.addEventListener("click",()=>{
+
+  layersDrawer.classList.toggle("open");
+
+});
 
 
-document
-  .querySelectorAll(".theme-button")
-  .forEach(button=>{
+document.querySelectorAll(".layer-item").forEach(button=>{
 
-    button.addEventListener("click",()=>{
+  button.addEventListener("click",()=>{
 
-      const theme =
-        button.dataset.theme;
+    document.querySelectorAll(".layer-item")
+      .forEach(x=>x.classList.remove("active"));
 
-      document.body.classList.remove(
-        "dark",
-        "green"
-      );
+    button.classList.add("active");
 
-      if(theme === "dark"){
-        document.body.classList.add("dark");
-      }
+    const layer = button.dataset.layer;
 
-      if(theme === "green"){
-        document.body.classList.add("green");
-      }
+    setOyaLayer(layer);
 
-      localStorage.setItem(
-        "gptrad-theme",
-        theme
-      );
-    });
+    layersDrawer.classList.remove("open");
 
   });
 
-
-const savedTheme =
-  localStorage.getItem("gptrad-theme");
-
-if(savedTheme === "dark"){
-  document.body.classList.add("dark");
-}
-
-if(savedTheme === "green"){
-  document.body.classList.add("green");
-}
+});
 
 
 /* =========================================================
    RAINVIEWER
-   ========================================================= */
+========================================================= */
 
-async function loadRadar(){
+async function loadRainViewer(){
+
+  showLoading("Получение радара…");
 
   try{
 
-    setLoading(true);
-    setStatus("Загрузка радара…");
-
-    const response =
-      await fetch(
-        "https://api.rainviewer.com/public/weather-maps.json",
-        {
-          cache:"no-store"
-        }
-      );
-
-    if(!response.ok){
-      throw new Error(
-        "RainViewer HTTP " +
-        response.status
-      );
-    }
-
-    const data =
-      await response.json();
-
-    const frames = [];
-
-    if(data.radar){
-
-      if(Array.isArray(data.radar.past)){
-        frames.push(
-          ...data.radar.past
-        );
+    const response = await fetch(
+      "https://api.rainviewer.com/public/weather-maps.json",
+      {
+        cache:"no-store"
       }
-
-      if(Array.isArray(data.radar.nowcast)){
-        frames.push(
-          ...data.radar.nowcast
-        );
-      }
-    }
-
-    if(!frames.length){
-      throw new Error(
-        "RainViewer не вернул кадры"
-      );
-    }
-
-    radarFrames = frames;
-
-    timeSlider.min = 0;
-    timeSlider.max =
-      Math.max(0, radarFrames.length - 1);
-
-    timeSlider.value =
-      radarFrames.length - 1;
-
-    showRadarFrame(
-      radarFrames.length - 1
     );
 
-    setStatus("");
+    if(!response.ok){
+      throw new Error("RainViewer HTTP "+response.status);
+    }
+
+    const data = await response.json();
+
+    rainFrames = [
+      ...(data.radar?.past || [])
+    ];
+
+    if(!rainFrames.length){
+      throw new Error("Нет кадров радара");
+    }
+
+    currentFrame = rainFrames.length - 1;
+
+    timeSlider.min = 0;
+    timeSlider.max = rainFrames.length - 1;
+    timeSlider.value = currentFrame;
+
+    updateTimeLabel();
+
+    showRainFrame(currentFrame);
+
+    setStatus("Радар загружен");
 
   }catch(error){
 
-    console.error(
-      "RainViewer:",
-      error
-    );
+    console.error(error);
 
-    setStatus(
-      "Не удалось загрузить радар"
-    );
+    setStatus("Ошибка загрузки радара");
 
   }finally{
 
-    setLoading(false);
+    hideLoading();
+
   }
+
 }
 
 
-function createRadarLayer(frame){
+/* =========================================================
+   RAINVIEWER FRAME
+========================================================= */
+
+function makeRainLayer(frame){
 
   const url =
     "https://tilecache.rainviewer.com" +
@@ -683,6 +893,7 @@ function createRadarLayer(frame){
     "/256/{z}/{x}/{y}/2/1_1.png";
 
   return L.tileLayer(url,{
+
     tileSize:256,
 
     opacity:1,
@@ -699,1047 +910,490 @@ function createRadarLayer(frame){
 
     fadeAnimation:false
   });
+
 }
 
 
-function showRadarFrame(index){
+function showRainFrame(index){
 
-  if(!radarFrames.length){
-    return;
-  }
+  if(!rainFrames[index]) return;
 
-  index = Math.max(
-    0,
-    Math.min(
-      radarFrames.length - 1,
-      index
-    )
-  );
+  const frame = rainFrames[index];
 
-  const frame =
-    radarFrames[index];
+  const newLayer = makeRainLayer(frame);
 
-  const newLayer =
-    createRadarLayer(frame);
+  const oldLayer = radarLayer;
+
+  radarLayer = newLayer;
 
   newLayer.addTo(map);
 
+  let loaded = false;
+
   newLayer.once("load",()=>{
 
-    if(radarLayer &&
-       map.hasLayer(radarLayer)){
+    loaded = true;
 
-      map.removeLayer(
-        radarLayer
-      );
+    if(oldLayer && map.hasLayer(oldLayer)){
+      map.removeLayer(oldLayer);
     }
 
-    radarLayer = newLayer;
   });
 
   setTimeout(()=>{
 
-    if(
-      radarLayer !== newLayer &&
-      map.hasLayer(newLayer)
-    ){
+    if(!loaded && oldLayer){
 
-      if(radarLayer &&
-         map.hasLayer(radarLayer)){
-
-        map.removeLayer(
-          radarLayer
-        );
+      if(map.hasLayer(newLayer)){
+        map.removeLayer(newLayer);
       }
 
-      radarLayer = newLayer;
+      radarLayer = oldLayer;
+
     }
 
   },8000);
 
-  timeSlider.value = index;
+  updateTimeLabel();
 
-  updateTimeLabel(
-    frame.time
-  );
 }
 
 
 /* =========================================================
-   OЯ / NOWCAST WMS
-   ========================================================= */
-
-/*
- * Это тот же WMS endpoint,
- * который используется оригинальным
- * savelov/radar-wms.
- *
- * Важно:
- * здесь НЕТ Vercel proxy.
- */
+   OЯ WMS
+========================================================= */
 
 const OYA_WMS =
   "https://www.nowcast.ru/baltrad_wsgi";
 
 
-const OYA_LAYERS =
-  "bufr_phenomena," +
-  "bufr_novosib_phenomena," +
-  "bufr_vlad_phenomena";
+const OYA_LAYERS = {
+
+  oya:
+    "bufr_phenomena",
+
+  phenomena:
+    "bufr_phenomena",
+
+  novosib:
+    "bufr_novosib_phenomena",
+
+  vlad:
+    "bufr_vlad_phenomena"
+
+};
 
 
-const OYA_CAPABILITIES =
-  OYA_WMS +
-  "?SERVICE=WMS" +
-  "&VERSION=1.1.1" +
-  "&REQUEST=GetCapabilities";
+/* =========================================================
+   CREATE OЯ
+========================================================= */
 
+function createOyaLayer(){
 
-/* ---------- CREATE OЯ WMS ---------- */
-
-function createOyaLayer(time){
-
-  const params = {
-
-    layers:OYA_LAYERS,
-
-    format:"image/png",
-
-    transparent:true,
-
-    version:"1.1.1",
-
-    styles:"",
-
-    opacity:1,
-
-    zIndex:30
-  };
-
-  if(time){
-    params.time = time;
-  }
+  const layerName =
+    OYA_LAYERS[oyaMode] ||
+    OYA_LAYERS.oya;
 
   return L.tileLayer.wms(
+
     OYA_WMS,
-    params
-  );
-}
 
+    {
 
-/* ---------- PARSE CAPABILITIES ---------- */
+      layers:layerName,
 
-function parseOyaTimes(xmlText){
+      format:"image/png",
 
-  const parser =
-    new DOMParser();
+      transparent:true,
 
-  const xml =
-    parser.parseFromString(
-      xmlText,
-      "text/xml"
-    );
+      version:"1.1.1",
 
-  const parserError =
-    xml.querySelector("parsererror");
+      styles:"",
 
-  if(parserError){
-    throw new Error(
-      "WMS XML parse error"
-    );
-  }
+      opacity:1,
 
-  const layers =
-    Array.from(
-      xml.getElementsByTagName("Layer")
-    );
+      tiled:true,
 
-  const wanted =
-    "bufr_phenomena";
+      zIndex:50,
 
-  let targetLayer = null;
+      updateWhenIdle:true,
+      updateWhenZooming:false,
 
-  for(const layer of layers){
+      keepBuffer:2
 
-    const nameNode =
-      layer.getElementsByTagName("Name")[0];
-
-    if(!nameNode){
-      continue;
     }
 
-    const name =
-      nameNode.textContent
-        .trim();
-
-    /*
-     * Берём именно базовый слой,
-     * как в оригинальном demo.js.
-     */
-    if(name === wanted){
-
-      targetLayer = layer;
-      break;
-    }
-  }
-
-  if(!targetLayer){
-
-    /*
-     * Иногда сервер может отдавать
-     * объединённый слой иначе.
-     *
-     * Ищем первый слой, начинающийся
-     * с bufr_phenomena.
-     */
-
-    for(const layer of layers){
-
-      const nameNode =
-        layer.getElementsByTagName("Name")[0];
-
-      if(!nameNode){
-        continue;
-      }
-
-      const name =
-        nameNode.textContent
-          .trim();
-
-      if(
-        name === wanted ||
-        name.startsWith(wanted + ",")
-      ){
-
-        targetLayer = layer;
-        break;
-      }
-    }
-  }
-
-  if(!targetLayer){
-    throw new Error(
-      "OЯ layer not found"
-    );
-  }
-
-
-  /*
-   * В оригинальном demo.js
-   * время берётся из непосредственного
-   * child Extent.
-   */
-
-  let extent = null;
-
-  for(
-    const child of Array.from(
-      targetLayer.children
-    )
-  ){
-
-    if(
-      child.localName === "Extent" ||
-      child.nodeName === "Extent"
-    ){
-
-      extent = child;
-      break;
-    }
-  }
-
-
-  if(!extent){
-
-    /*
-     * Дополнительный fallback.
-     */
-
-    const extents =
-      targetLayer.getElementsByTagName(
-        "Extent"
-      );
-
-    if(extents.length){
-      extent = extents[0];
-    }
-  }
-
-
-  if(!extent){
-    throw new Error(
-      "OЯ time Extent not found"
-    );
-  }
-
-
-  const raw =
-    extent.textContent.trim();
-
-
-  const times =
-    raw
-      .split(",")
-      .map(x=>x.trim())
-      .filter(Boolean);
-
-
-  /*
-   * Убираем дубликаты.
-   */
-
-  return [...new Set(times)];
-}
-
-
-/* ---------- LOAD OЯ TIMES ---------- */
-
-async function loadOyaTimes(){
-
-  try{
-
-    setLoading(true);
-    setStatus(
-      "Получение времён опасных явлений…"
-    );
-
-
-    const response =
-      await fetch(
-        OYA_CAPABILITIES,
-        {
-          cache:"no-store"
-        }
-      );
-
-
-    if(!response.ok){
-
-      throw new Error(
-        "GetCapabilities HTTP " +
-        response.status
-      );
-    }
-
-
-    const xmlText =
-      await response.text();
-
-
-    const times =
-      parseOyaTimes(
-        xmlText
-      );
-
-
-    if(!times.length){
-
-      throw new Error(
-        "Времена OЯ отсутствуют"
-      );
-    }
-
-
-    oyaTimes =
-      times;
-
-
-    /*
-     * Сервер обычно отдаёт
-     * самые свежие времена в конце.
-     */
-
-    oyaIndex =
-      oyaTimes.length - 1;
-
-
-    timeSlider.min = 0;
-
-    timeSlider.max =
-      Math.max(
-        0,
-        oyaTimes.length - 1
-      );
-
-    timeSlider.value =
-      oyaIndex;
-
-
-    await showOyaTime(
-      oyaIndex
-    );
-
-
-    setStatus("");
-
-  }catch(error){
-
-    console.error(
-      "OЯ GetCapabilities:",
-      error
-    );
-
-    /*
-     * Даже если GetCapabilities
-     * заблокирован CORS, пытаемся
-     * показать текущий WMS слой
-     * без TIME.
-     */
-
-    setStatus(
-      "Времена OЯ недоступны — показываю текущие данные"
-    );
-
-    showOyaLatest();
-
-  }finally{
-
-    setLoading(false);
-  }
-}
-
-
-/* ---------- CURRENT OЯ ---------- */
-
-function showOyaLatest(){
-
-  const newLayer =
-    createOyaLayer();
-
-
-  newLayer.addTo(map);
-
-
-  if(oyaLayer){
-
-    setTimeout(()=>{
-
-      if(
-        oyaLayer &&
-        map.hasLayer(oyaLayer)
-      ){
-
-        map.removeLayer(
-          oyaLayer
-        );
-      }
-
-      oyaLayer =
-        newLayer;
-
-    },500);
-
-  }else{
-
-    oyaLayer =
-      newLayer;
-  }
-
-
-  timeLabel.textContent =
-    "текущее OЯ";
-}
-
-
-/* ---------- SHOW OЯ TIME ---------- */
-
-async function showOyaTime(index){
-
-  if(!oyaTimes.length){
-    showOyaLatest();
-    return;
-  }
-
-
-  index = Math.max(
-    0,
-    Math.min(
-      oyaTimes.length - 1,
-      index
-    )
   );
 
-
-  oyaIndex =
-    index;
-
-
-  const time =
-    oyaTimes[index];
-
-
-  const newLayer =
-    createOyaLayer(
-      time
-    );
-
-
-  /*
-   * Сначала добавляем новый слой.
-   * Старый остаётся до появления
-   * нового, чтобы карта не мигала.
-   */
-
-  newLayer.addTo(map);
-
-
-  const removeOld = ()=>{
-
-    if(
-      oyaLayer &&
-      map.hasLayer(oyaLayer)
-    ){
-
-      map.removeLayer(
-        oyaLayer
-      );
-    }
-
-    oyaLayer =
-      newLayer;
-  };
-
-
-  /*
-   * WMS tile layer может загрузить
-   * несколько тайлов.
-   */
-
-  let finished = false;
-
-  const finish = ()=>{
-
-    if(finished){
-      return;
-    }
-
-    finished = true;
-
-    removeOld();
-  };
-
-
-  newLayer.once(
-    "load",
-    finish
-  );
-
-
-  /*
-   * Fallback, если событие load
-   * не приходит.
-   */
-
-  setTimeout(
-    finish,
-    7000
-  );
-
-
-  timeSlider.value =
-    index;
-
-
-  updateTimeLabel(
-    time
-  );
 }
 
 
 /* =========================================================
-   TIME LABEL
-   ========================================================= */
+   SHOW OЯ
+========================================================= */
 
-function updateTimeLabel(value){
+function showOya(){
 
-  if(!value){
+  if(radarLayer){
 
-    timeLabel.textContent =
-      "—";
-
-    return;
-  }
-
-
-  const date =
-    new Date(
-      typeof value === "number"
-        ? value * 1000
-        : value
-    );
-
-
-  if(
-    !Number.isNaN(
-      date.getTime()
-    )
-  ){
-
-    timeLabel.textContent =
-      date.toLocaleString(
-        "ru-RU",
-        {
-          day:"2-digit",
-          month:"2-digit",
-
-          hour:"2-digit",
-          minute:"2-digit"
-        }
-      );
-
-  }else{
-
-    timeLabel.textContent =
-      String(value)
-        .replace("T"," ")
-        .replace("Z","");
-  }
-}
-
-
-/* =========================================================
-   SWITCH LAYERS
-   ========================================================= */
-
-async function switchLayer(mode){
-
-  stopPlayback();
-
-  currentMode =
-    mode;
-
-
-  if(mode === "radar"){
-
-    /*
-     * Убираем OЯ.
-     */
-
-    if(
-      oyaLayer &&
-      map.hasLayer(oyaLayer)
-    ){
-
-      map.removeLayer(
-        oyaLayer
-      );
-    }
-
-    oyaLayer = null;
-
-
-    /*
-     * Загружаем RainViewer,
-     * если ещё не загружен.
-     */
-
-    if(!radarFrames.length){
-
-      await loadRadar();
-
-    }else{
-
-      showRadarFrame(
-        Number(
-          timeSlider.value
-        )
-      );
-    }
-
-    return;
-  }
-
-
-  if(mode === "warnings"){
-
-    /*
-     * Убираем RainViewer.
-     */
-
-    if(
-      radarLayer &&
-      map.hasLayer(radarLayer)
-    ){
-
-      map.removeLayer(
-        radarLayer
-      );
-    }
+    map.removeLayer(radarLayer);
 
     radarLayer = null;
 
-
-    /*
-     * Загружаем OЯ.
-     */
-
-    await loadOyaTimes();
   }
+
+  if(oyaLayer){
+
+    map.removeLayer(oyaLayer);
+
+    oyaLayer = null;
+
+  }
+
+  oyaLayer = createOyaLayer();
+
+  oyaLayer.addTo(map);
+
+  setStatus("Опасные явления");
+
 }
 
 
 /* =========================================================
-   SELECT
-   ========================================================= */
+   CHANGE OЯ LAYER
+========================================================= */
 
-layerSelect.addEventListener(
-  "change",
-  async ()=>{
+function setOyaLayer(type){
 
-    await switchLayer(
-      layerSelect.value
-    );
+  if(mode.value !== "warnings"){
+
+    mode.value = "warnings";
+
   }
-);
+
+  oyaMode = type;
+
+  showOya();
+
+}
+
+
+/* =========================================================
+   MODE SWITCH
+========================================================= */
+
+mode.addEventListener("change",()=>{
+
+  if(mode.value === "radar"){
+
+    if(oyaLayer){
+
+      map.removeLayer(oyaLayer);
+      oyaLayer = null;
+
+    }
+
+    layersDrawer.classList.remove("open");
+
+    if(rainFrames.length){
+
+      showRainFrame(currentFrame);
+
+    }else{
+
+      loadRainViewer();
+
+    }
+
+    setStatus("Радар");
+
+  }
+
+
+  if(mode.value === "warnings"){
+
+    if(radarLayer){
+
+      map.removeLayer(radarLayer);
+      radarLayer = null;
+
+    }
+
+    layersDrawer.classList.add("open");
+
+    showOya();
+
+  }
+
+});
 
 
 /* =========================================================
    TIMELINE
-   ========================================================= */
+========================================================= */
 
-timeSlider.addEventListener(
-  "input",
-  ()=>{
+function updateTimeLabel(){
 
-    const index =
-      Number(
-        timeSlider.value
-      );
+  if(mode.value === "radar" && rainFrames[currentFrame]){
 
+    timeLabel.textContent =
+      formatTime(rainFrames[currentFrame].time);
 
-    if(currentMode === "radar"){
+  }else{
 
-      if(radarFrames[index]){
-        showRadarFrame(index);
-      }
+    timeLabel.textContent =
+      "Сейчас";
 
-    }else{
-
-      if(oyaTimes[index]){
-        showOyaTime(index);
-      }
-    }
-  }
-);
-
-
-/* ---------- BACK ---------- */
-
-document
-  .getElementById("backBtn")
-  .addEventListener(
-    "click",
-    ()=>{
-
-      const max =
-        currentMode === "radar"
-          ? radarFrames.length - 1
-          : oyaTimes.length - 1;
-
-
-      if(max < 0){
-        return;
-      }
-
-
-      let index =
-        Number(
-          timeSlider.value
-        );
-
-
-      index--;
-
-      if(index < 0){
-        index = 0;
-      }
-
-
-      timeSlider.value =
-        index;
-
-
-      if(currentMode === "radar"){
-        showRadarFrame(index);
-      }else{
-        showOyaTime(index);
-      }
-    }
-  );
-
-
-/* ---------- FORWARD ---------- */
-
-document
-  .getElementById("forwardBtn")
-  .addEventListener(
-    "click",
-    ()=>{
-
-      const max =
-        currentMode === "radar"
-          ? radarFrames.length - 1
-          : oyaTimes.length - 1;
-
-
-      if(max < 0){
-        return;
-      }
-
-
-      let index =
-        Number(
-          timeSlider.value
-        );
-
-
-      index++;
-
-      if(index > max){
-        index = max;
-      }
-
-
-      timeSlider.value =
-        index;
-
-
-      if(currentMode === "radar"){
-        showRadarFrame(index);
-      }else{
-        showOyaTime(index);
-      }
-    }
-  );
-
-
-/* ---------- PLAY ---------- */
-
-document
-  .getElementById("playBtn")
-  .addEventListener(
-    "click",
-    ()=>{
-
-      if(playing){
-
-        stopPlayback();
-
-      }else{
-
-        startPlayback();
-      }
-    }
-  );
-
-
-function startPlayback(){
-
-  const max =
-    currentMode === "radar"
-      ? radarFrames.length - 1
-      : oyaTimes.length - 1;
-
-
-  if(max < 1){
-    return;
   }
 
-
-  playing = true;
-
-  document
-    .getElementById("playBtn")
-    .textContent = "Ⅱ";
-
-
-  playTimer =
-    setInterval(()=>{
-
-      let index =
-        Number(
-          timeSlider.value
-        );
-
-
-      index++;
-
-
-      if(index > max){
-        index = 0;
-      }
-
-
-      timeSlider.value =
-        index;
-
-
-      if(currentMode === "radar"){
-
-        showRadarFrame(index);
-
-      }else{
-
-        showOyaTime(index);
-      }
-
-    },1000);
 }
 
 
-function stopPlayback(){
+timeSlider.addEventListener("input",()=>{
 
-  playing = false;
+  if(mode.value !== "radar") return;
 
-  document
-    .getElementById("playBtn")
-    .textContent = "▶";
+  currentFrame =
+    Number(timeSlider.value);
+
+  showRainFrame(currentFrame);
+
+});
 
 
-  if(playTimer){
+document.getElementById("backBtn")
+.addEventListener("click",()=>{
 
-    clearInterval(
-      playTimer
+  if(mode.value !== "radar") return;
+
+  currentFrame =
+    Math.max(0,currentFrame-1);
+
+  timeSlider.value = currentFrame;
+
+  showRainFrame(currentFrame);
+
+});
+
+
+document.getElementById("forwardBtn")
+.addEventListener("click",()=>{
+
+  if(mode.value !== "radar") return;
+
+  currentFrame =
+    Math.min(
+      rainFrames.length-1,
+      currentFrame+1
     );
 
-    playTimer = null;
+  timeSlider.value = currentFrame;
+
+  showRainFrame(currentFrame);
+
+});
+
+
+document.getElementById("playBtn")
+.addEventListener("click",()=>{
+
+  if(mode.value !== "radar") return;
+
+  playing = !playing;
+
+  document.getElementById("playBtn")
+    .textContent = playing ? "Ⅱ" : "▶";
+
+  if(playing){
+
+    clearInterval(playTimer);
+
+    playTimer = setInterval(()=>{
+
+      if(currentFrame >= rainFrames.length-1){
+
+        currentFrame = 0;
+
+      }else{
+
+        currentFrame++;
+
+      }
+
+      timeSlider.value = currentFrame;
+
+      showRainFrame(currentFrame);
+
+    },600);
+
+  }else{
+
+    clearInterval(playTimer);
+
   }
-}
+
+});
 
 
 /* =========================================================
-   LOCATE
-   ========================================================= */
+   LOCATION
+========================================================= */
 
-document
-  .getElementById("locateBtn")
-  .addEventListener(
-    "click",
-    ()=>{
+document.getElementById("locateBtn")
+.addEventListener("click",()=>{
 
-      if(!navigator.geolocation){
+  if(!navigator.geolocation){
 
-        setStatus(
-          "Геолокация недоступна"
-        );
+    setStatus("Геолокация недоступна");
 
-        return;
-      }
+    return;
 
+  }
 
-      setStatus(
-        "Определение местоположения…"
-      );
+  setStatus("Определение местоположения…");
 
+  navigator.geolocation.getCurrentPosition(
 
-      navigator.geolocation.getCurrentPosition(
+    position=>{
 
-        position=>{
+      const lat =
+        position.coords.latitude;
 
-          const lat =
-            position.coords.latitude;
+      const lon =
+        position.coords.longitude;
 
-          const lon =
-            position.coords.longitude;
-
-
-          map.setView(
-            [lat,lon],
-            Math.max(
-              map.getZoom(),
-              7
-            ),
-            {
-              animate:false
-            }
-          );
-
-
-          if(userMarker){
-
-            map.removeLayer(
-              userMarker
-            );
-          }
-
-
-          userMarker =
-            L.circleMarker(
-              [lat,lon],
-              {
-                radius:7,
-
-                weight:3,
-
-                fillOpacity:.8
-              }
-            ).addTo(map);
-
-
-          setStatus("");
-
-        },
-
-        error=>{
-
-          console.error(
-            "Geolocation:",
-            error
-          );
-
-          setStatus(
-            "Не удалось определить местоположение"
-          );
-        },
-
+      map.flyTo(
+        [lat,lon],
+        Math.max(map.getZoom(),8),
         {
-          enableHighAccuracy:true,
-
-          timeout:10000,
-
-          maximumAge:30000
+          duration:.8
         }
       );
+
+      setStatus("Ваше местоположение");
+
+    },
+
+    ()=>{
+      setStatus("Не удалось определить местоположение");
+    },
+
+    {
+      enableHighAccuracy:true,
+      timeout:10000
     }
+
   );
+
+});
 
 
 /* =========================================================
    RELOAD
-   ========================================================= */
+========================================================= */
 
-document
-  .getElementById("reloadBtn")
-  .addEventListener(
-    "click",
-    async ()=>{
+document.getElementById("reloadBtn")
+.addEventListener("click",()=>{
 
-      if(currentMode === "radar"){
+  if(mode.value === "radar"){
 
-        await loadRadar();
+    loadRainViewer();
 
-      }else{
+  }else{
 
-        await loadOyaTimes();
-      }
-    }
-  );
+    showOya();
+
+  }
+
+});
 
 
 /* =========================================================
-   INITIAL LOAD
-   ========================================================= */
+   SETTINGS
+========================================================= */
 
-(async function init(){
+document.getElementById("settingsBtn")
+.addEventListener("click",()=>{
 
-  /*
-   * Сразу загружаем RainViewer,
-   * потому что это слой по умолчанию.
-   */
+  settings.classList.toggle("open");
 
-  await loadRadar();
+});
 
-})();
+
+document.querySelectorAll(".theme-btn")
+.forEach(button=>{
+
+  button.addEventListener("click",()=>{
+
+    const theme =
+      button.dataset.theme;
+
+    document.body.classList.remove(
+      "light",
+      "green"
+    );
+
+    if(theme !== "dark"){
+
+      document.body.classList.add(theme);
+
+    }
+
+    localStorage.setItem(
+      "gptrad-theme",
+      theme
+    );
+
+  });
+
+});
+
+
+const savedTheme =
+  localStorage.getItem("gptrad-theme");
+
+if(savedTheme){
+
+  document.body.classList.remove(
+    "light",
+    "green"
+  );
+
+  if(savedTheme !== "dark"){
+
+    document.body.classList.add(
+      savedTheme
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   MAP ZOOM
+========================================================= */
+
+map.on("zoomstart",()=>{
+
+  map._gptradZooming = true;
+
+});
+
+
+map.on("zoomend",()=>{
+
+  map._gptradZooming = false;
+
+});
+
+
+/* =========================================================
+   START
+========================================================= */
+
+loadRainViewer();
+
 </script>
 
 </body>
