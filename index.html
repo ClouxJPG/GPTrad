@@ -2,8 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+
 <meta name="viewport"
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+      content="width=device-width,
+               initial-scale=1,
+               maximum-scale=1,
+               user-scalable=no">
 
 <title>GPTrad</title>
 
@@ -11,656 +15,917 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
+
+/* =========================================================
+   BASE
+========================================================= */
+
 *{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
 }
 
-html,body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-}
-
+html,
 body{
-  background:#111;
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    background:#111;
 }
 
 #map{
-  position:absolute;
-  inset:0;
-  z-index:1;
+    position:absolute;
+    inset:0;
+    z-index:1;
 }
 
-/* =========================
-   TOP PANEL
-========================= */
+
+/* =========================================================
+   TOP BAR
+========================================================= */
 
 .top-panel{
-  position:absolute;
-  top:12px;
-  left:12px;
-  z-index:1000;
 
-  display:flex;
-  align-items:center;
-  gap:8px;
+    position:absolute;
 
-  padding:8px 10px;
+    top:12px;
+    left:12px;
+    right:12px;
 
-  background:rgba(20,20,20,.88);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
+    height:54px;
 
-  border-radius:14px;
-  box-shadow:0 4px 18px rgba(0,0,0,.25);
+    z-index:1000;
+
+    display:flex;
+    align-items:center;
+
+    gap:8px;
+
+    padding:6px;
+
+    background:rgba(28,28,28,.90);
+
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+
+    border-radius:15px;
+
+    box-shadow:
+        0 5px 25px rgba(0,0,0,.25);
 }
+
+
+/* =========================================================
+   LOGO
+========================================================= */
 
 .logo{
-  color:white;
-  font-size:16px;
-  font-weight:700;
-  margin-right:3px;
+
+    color:white;
+
+    font-size:25px;
+
+    font-weight:700;
+
+    white-space:nowrap;
+
+    margin-left:8px;
+
+    margin-right:8px;
 }
 
-.mode-select{
-  appearance:none;
-  -webkit-appearance:none;
 
-  border:0;
-  outline:0;
+/* =========================================================
+   SELECTED LAYER BUTTON
+========================================================= */
 
-  background:#292929;
-  color:white;
+#selectedLayer{
 
-  border-radius:9px;
-  padding:8px 30px 8px 11px;
+    flex:1;
 
-  font-size:14px;
-  font-weight:600;
+    min-width:0;
+
+    height:42px;
+
+    border:0;
+    outline:0;
+
+    border-radius:12px;
+
+    background:#292929;
+
+    color:white;
+
+    padding:0 14px;
+
+    font-size:17px;
+
+    font-weight:650;
+
+    text-align:left;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:8px;
+
+    overflow:hidden;
 }
+
+#selectedLayerName{
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+    white-space:nowrap;
+}
+
+#selectedLayerArrow{
+
+    flex:none;
+
+    font-size:14px;
+
+    opacity:.7;
+
+    transition:
+        transform .25s ease;
+}
+
+#selectedLayer.open
+#selectedLayerArrow{
+
+    transform:rotate(180deg);
+}
+
+
+/* =========================================================
+   ICON BUTTONS
+========================================================= */
 
 .icon-btn{
-  width:36px;
-  height:36px;
 
-  border:0;
-  outline:0;
+    flex:none;
 
-  border-radius:9px;
+    width:42px;
+    height:42px;
 
-  background:#292929;
-  color:white;
+    border:0;
+    outline:0;
 
-  font-size:20px;
+    border-radius:12px;
 
-  display:flex;
-  align-items:center;
-  justify-content:center;
+    background:#292929;
+
+    color:white;
+
+    font-size:21px;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    transition:
+        transform .15s ease,
+        background .15s ease;
 }
 
 .icon-btn:active{
-  transform:scale(.94);
+
+    transform:scale(.94);
 }
 
-/* =========================
-   STATUS
-========================= */
 
-#status{
-  position:absolute;
-  top:72px;
-  left:14px;
+/* =========================================================
+   LAYER DRAWER
+========================================================= */
 
-  z-index:1000;
+#layerDrawer{
 
-  padding:6px 10px;
+    position:absolute;
 
-  border-radius:8px;
+    top:72px;
 
-  background:rgba(20,20,20,.78);
-  color:white;
+    left:50%;
 
-  font-size:12px;
+    width:calc(100% - 24px);
 
-  pointer-events:none;
+    max-width:520px;
+
+    z-index:1100;
+
+    transform:
+        translate(-50%,-18px)
+        scale(.98);
+
+    opacity:0;
+
+    pointer-events:none;
+
+    padding:10px;
+
+    border-radius:15px;
+
+    background:rgba(25,25,25,.96);
+
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+
+    box-shadow:
+        0 10px 35px rgba(0,0,0,.35);
+
+    transition:
+
+        transform .28s
+        cubic-bezier(.22,.61,.36,1),
+
+        opacity .22s ease;
 }
 
-/* =========================
-   LAYERS BUTTON
-========================= */
+#layerDrawer.open{
 
-#layersButton{
-  position:absolute;
-  right:14px;
-  top:14px;
+    transform:
+        translate(-50%,0)
+        scale(1);
 
-  z-index:1000;
+    opacity:1;
 
-  height:42px;
-
-  padding:0 14px;
-
-  border:0;
-  outline:0;
-
-  border-radius:12px;
-
-  background:rgba(20,20,20,.88);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-
-  color:white;
-
-  font-size:14px;
-  font-weight:600;
-
-  box-shadow:0 4px 18px rgba(0,0,0,.25);
-
-  transition:
-    transform .2s ease,
-    background .2s ease;
+    pointer-events:auto;
 }
 
-#layersButton:active{
-  transform:scale(.95);
+
+/* =========================================================
+   DRAWER HEADER
+========================================================= */
+
+.drawer-header{
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:700;
+
+    padding:4px 7px 9px;
 }
 
-/* =========================
-   LAYERS DRAWER
-========================= */
 
-#layersDrawer{
-  position:absolute;
-
-  top:66px;
-  right:14px;
-
-  z-index:1100;
-
-  width:260px;
-
-  max-width:calc(100vw - 28px);
-
-  padding:12px;
-
-  border-radius:15px;
-
-  background:rgba(20,20,20,.94);
-
-  backdrop-filter:blur(15px);
-  -webkit-backdrop-filter:blur(15px);
-
-  box-shadow:0 8px 30px rgba(0,0,0,.35);
-
-  transform:translateX(calc(100% + 30px));
-  opacity:0;
-
-  pointer-events:none;
-
-  transition:
-    transform .28s cubic-bezier(.22,.61,.36,1),
-    opacity .22s ease;
-}
-
-#layersDrawer.open{
-  transform:translateX(0);
-  opacity:1;
-  pointer-events:auto;
-}
-
-.drawer-title{
-  color:white;
-  font-size:15px;
-  font-weight:700;
-
-  margin:2px 4px 10px;
-}
+/* =========================================================
+   LAYER ITEM
+========================================================= */
 
 .layer-item{
-  width:100%;
 
-  display:flex;
-  align-items:center;
-  gap:10px;
+    width:100%;
 
-  padding:11px 10px;
+    min-height:48px;
 
-  border:0;
-  outline:0;
+    border:0;
+    outline:0;
 
-  border-radius:10px;
+    border-radius:11px;
 
-  background:#292929;
-  color:white;
+    background:#303030;
 
-  margin-bottom:7px;
+    color:white;
 
-  text-align:left;
+    display:flex;
 
-  font-size:14px;
+    align-items:center;
 
-  transition:
-    background .15s ease,
-    transform .15s ease;
-}
+    gap:10px;
 
-.layer-item:last-child{
-  margin-bottom:0;
+    padding:10px 12px;
+
+    font-size:15px;
+
+    text-align:left;
+
+    transition:
+        background .15s ease,
+        transform .15s ease;
 }
 
 .layer-item:active{
-  transform:scale(.98);
+
+    transform:scale(.985);
 }
 
 .layer-item.active{
-  background:#3a3a3a;
+
+    background:#3b3b3b;
 }
 
 .layer-dot{
-  width:9px;
-  height:9px;
 
-  border-radius:50%;
+    width:10px;
+    height:10px;
 
-  background:#777;
+    flex:none;
 
-  flex:none;
+    border-radius:50%;
+
+    background:#777;
 }
 
-.layer-item.active .layer-dot{
-  background:#36d67a;
+.layer-item.active
+.layer-dot{
+
+    background:#36d67a;
+
+    box-shadow:
+        0 0 8px rgba(54,214,122,.55);
 }
 
-/* =========================
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+#status{
+
+    position:absolute;
+
+    left:14px;
+    top:74px;
+
+    z-index:900;
+
+    padding:6px 10px;
+
+    border-radius:8px;
+
+    background:rgba(20,20,20,.78);
+
+    color:white;
+
+    font-size:12px;
+
+    pointer-events:none;
+
+    opacity:.9;
+}
+
+
+/* =========================================================
    SETTINGS
-========================= */
+========================================================= */
 
 #settings{
-  position:absolute;
 
-  top:60px;
-  left:12px;
+    position:absolute;
 
-  z-index:1200;
+    left:12px;
+    top:74px;
 
-  width:220px;
+    width:220px;
 
-  padding:12px;
+    z-index:1200;
 
-  background:rgba(20,20,20,.94);
+    display:none;
 
-  border-radius:14px;
+    padding:12px;
 
-  color:white;
+    border-radius:14px;
 
-  display:none;
+    background:rgba(20,20,20,.96);
 
-  box-shadow:0 8px 30px rgba(0,0,0,.3);
+    color:white;
+
+    box-shadow:
+        0 8px 30px rgba(0,0,0,.35);
 }
 
 #settings.open{
-  display:block;
+
+    display:block;
 }
 
 .settings-title{
-  font-size:14px;
-  font-weight:700;
-  margin-bottom:9px;
+
+    font-size:14px;
+
+    font-weight:700;
+
+    margin-bottom:9px;
 }
 
 .theme-btn{
-  width:100%;
 
-  border:0;
-  outline:0;
+    width:100%;
 
-  padding:9px;
+    border:0;
+    outline:0;
 
-  border-radius:9px;
+    padding:10px;
 
-  margin-bottom:6px;
+    margin-bottom:6px;
 
-  background:#292929;
-  color:white;
+    border-radius:9px;
 
-  text-align:left;
+    background:#292929;
+
+    color:white;
+
+    text-align:left;
 }
 
-/* =========================
+
+/* =========================================================
    TIMELINE
-========================= */
+========================================================= */
 
 .timeline{
-  position:absolute;
 
-  left:50%;
-  bottom:14px;
+    position:absolute;
 
-  transform:translateX(-50%);
+    left:50%;
+    bottom:14px;
 
-  z-index:1000;
+    transform:translateX(-50%);
 
-  width:min(680px,calc(100vw - 28px));
+    width:min(680px,calc(100vw - 28px));
 
-  padding:10px 12px;
+    z-index:1000;
 
-  border-radius:15px;
+    padding:10px 12px;
 
-  background:rgba(20,20,20,.90);
+    border-radius:15px;
 
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
+    background:rgba(20,20,20,.90);
 
-  box-shadow:0 5px 25px rgba(0,0,0,.3);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
 
-  color:white;
+    box-shadow:
+        0 5px 25px rgba(0,0,0,.3);
 }
 
 .timeline-controls{
-  display:flex;
-  align-items:center;
-  gap:8px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
 }
 
 .timeline button{
-  width:36px;
-  height:32px;
 
-  border:0;
-  outline:0;
+    width:36px;
+    height:32px;
 
-  border-radius:8px;
+    border:0;
+    outline:0;
 
-  background:#292929;
-  color:white;
+    border-radius:8px;
 
-  font-size:15px;
+    background:#292929;
+
+    color:white;
+
+    font-size:15px;
 }
 
 #timeSlider{
-  flex:1;
-  min-width:0;
+
+    flex:1;
+
+    min-width:0;
 }
 
 #timeLabel{
-  width:130px;
 
-  text-align:right;
+    width:100px;
 
-  font-size:12px;
-  opacity:.85;
+    text-align:right;
+
+    color:white;
+
+    font-size:11px;
+
+    opacity:.85;
 }
 
-/* =========================
+
+/* =========================================================
    LOADING
-========================= */
+========================================================= */
 
 #loading{
-  position:absolute;
 
-  left:50%;
-  top:50%;
+    position:absolute;
 
-  transform:translate(-50%,-50%);
+    left:50%;
+    top:50%;
 
-  z-index:2000;
+    transform:translate(-50%,-50%);
 
-  display:none;
+    z-index:2000;
 
-  padding:9px 13px;
+    display:none;
 
-  border-radius:10px;
+    padding:9px 13px;
 
-  background:rgba(20,20,20,.9);
+    border-radius:10px;
 
-  color:white;
+    background:rgba(20,20,20,.92);
 
-  font-size:13px;
+    color:white;
+
+    font-size:13px;
 }
 
-/* =========================
+
+/* =========================================================
    LIGHT THEME
-========================= */
+========================================================= */
 
-body.light .top-panel,
-body.light #layersButton,
-body.light #layersDrawer,
-body.light #settings,
-body.light .timeline,
-body.light #status{
-  background:rgba(255,255,255,.94);
-  color:#111;
+body.light
+.top-panel,
+body.light
+#layerDrawer,
+body.light
+#settings,
+body.light
+.timeline,
+body.light
+#status{
+
+    background:rgba(255,255,255,.94);
 }
 
-body.light .logo,
-body.light #status,
-body.light .drawer-title{
-  color:#111;
+body.light
+.logo,
+body.light
+#status,
+body.light
+.drawer-header{
+
+    color:#111;
 }
 
-body.light .mode-select,
-body.light .icon-btn,
-body.light .layer-item,
-body.light .timeline button,
-body.light .theme-btn{
-  background:#eeeeee;
-  color:#111;
+body.light
+#selectedLayer,
+body.light
+.icon-btn,
+body.light
+.layer-item,
+body.light
+.timeline button,
+body.light
+.theme-btn{
+
+    background:#eeeeee;
+
+    color:#111;
 }
 
-body.light .layer-item.active{
-  background:#dddddd;
+body.light
+.layer-item.active{
+
+    background:#dddddd;
 }
 
-/* =========================
+
+/* =========================================================
    GREEN THEME
-========================= */
+========================================================= */
 
-body.green .top-panel,
-body.green #layersButton,
-body.green #layersDrawer,
-body.green #settings,
-body.green .timeline,
-body.green #status{
-  background:rgba(8,35,22,.94);
+body.green
+.top-panel,
+body.green
+#layerDrawer,
+body.green
+#settings,
+body.green
+.timeline,
+body.green
+#status{
+
+    background:rgba(8,35,22,.94);
 }
 
-body.green .mode-select,
-body.green .icon-btn,
-body.green .layer-item,
-body.green .timeline button,
-body.green .theme-btn{
-  background:#123d29;
-  color:white;
+body.green
+#selectedLayer,
+body.green
+.icon-btn,
+body.green
+.layer-item,
+body.green
+.timeline button,
+body.green
+.theme-btn{
+
+    background:#123d29;
+
+    color:white;
 }
 
-body.green .layer-item.active{
-  background:#185538;
+body.green
+.layer-item.active{
+
+    background:#185538;
 }
 
-/* =========================
+
+/* =========================================================
    MOBILE
-========================= */
+========================================================= */
 
 @media(max-width:600px){
 
-  .top-panel{
-    top:8px;
-    left:8px;
+    .top-panel{
 
-    gap:5px;
+        top:8px;
+        left:8px;
+        right:8px;
 
-    padding:6px 7px;
-  }
+        height:54px;
 
-  .logo{
-    font-size:14px;
-  }
+        gap:5px;
+    }
 
-  .mode-select{
-    max-width:145px;
-    font-size:12px;
-    padding:7px 24px 7px 8px;
-  }
+    .logo{
 
-  .icon-btn{
-    width:32px;
-    height:32px;
-    font-size:17px;
-  }
+        font-size:21px;
 
-  #layersButton{
-    top:8px;
-    right:8px;
+        margin-left:6px;
 
-    height:36px;
+        margin-right:3px;
+    }
 
-    padding:0 11px;
+    #selectedLayer{
 
-    font-size:13px;
-  }
+        height:42px;
 
-  #layersDrawer{
-    top:53px;
-    right:8px;
-    width:245px;
-  }
+        padding:0 11px;
 
-  #status{
-    top:57px;
-    left:9px;
-  }
+        font-size:16px;
+    }
 
-  .timeline{
-    bottom:8px;
-    width:calc(100vw - 16px);
-  }
+    .icon-btn{
 
-  #timeLabel{
-    width:90px;
-    font-size:10px;
-  }
+        width:38px;
+        height:38px;
+
+        border-radius:11px;
+
+        font-size:19px;
+    }
+
+    #layerDrawer{
+
+        top:70px;
+
+        width:calc(100% - 16px);
+    }
+
+    #status{
+
+        top:68px;
+        left:9px;
+    }
+
+    .timeline{
+
+        bottom:8px;
+
+        width:calc(100vw - 16px);
+    }
+
+    #timeLabel{
+
+        width:85px;
+
+        font-size:10px;
+    }
 }
+
 </style>
 </head>
 
+
 <body>
+
 
 <div id="map"></div>
 
-<!-- TOP -->
+
+<!-- =======================================================
+     TOP BAR
+======================================================== -->
 
 <div class="top-panel">
 
-  <div class="logo">GPTrad</div>
 
-  <select id="mode" class="mode-select">
-    <option value="radar">Радар (RainViewer)</option>
-    <option value="warnings">Опасные явления</option>
-  </select>
+    <div class="logo">
+        GPTrad
+    </div>
 
-  <button id="locateBtn" class="icon-btn">⌖</button>
-  <button id="reloadBtn" class="icon-btn">↻</button>
-  <button id="settingsBtn" class="icon-btn">⚙</button>
+
+    <!-- ВЫБРАННЫЙ СЛОЙ -->
+
+    <button
+        id="selectedLayer"
+        type="button">
+
+        <span id="selectedLayerName">
+            Опасные явления
+        </span>
+
+        <span id="selectedLayerArrow">
+            ▾
+        </span>
+
+    </button>
+
+
+    <button
+        id="locateBtn"
+        class="icon-btn"
+        type="button">
+
+        ⌖
+
+    </button>
+
+
+    <button
+        id="reloadBtn"
+        class="icon-btn"
+        type="button">
+
+        ↻
+
+    </button>
+
+
+    <button
+        id="settingsBtn"
+        class="icon-btn"
+        type="button">
+
+        ⚙
+
+    </button>
 
 </div>
 
-<div id="status">Загрузка…</div>
 
-<!-- LAYERS -->
+<!-- =======================================================
+     LAYER DRAWER
+======================================================== -->
 
-<button id="layersButton">☷ Слои</button>
+<div id="layerDrawer">
 
-<div id="layersDrawer">
+    <div class="drawer-header">
+        Слои
+    </div>
 
-  <div class="drawer-title">
-    Слои
-  </div>
 
-  <button class="layer-item active"
-          data-layer="oya">
-    <span class="layer-dot"></span>
-    Опасные явления
-  </button>
+    <button
+        class="layer-item active"
+        data-layer="oya"
+        type="button">
 
-  <button class="layer-item"
-          data-layer="phenomena">
-    <span class="layer-dot"></span>
-    BUFR явления
-  </button>
+        <span class="layer-dot"></span>
 
-  <button class="layer-item"
-          data-layer="novosib">
-    <span class="layer-dot"></span>
-    Новосибирск
-  </button>
+        <span>
+            Опасные явления
+        </span>
 
-  <button class="layer-item"
-          data-layer="vlad">
-    <span class="layer-dot"></span>
-    Владивосток
-  </button>
+    </button>
 
 </div>
 
-<!-- SETTINGS -->
+
+<!-- =======================================================
+     STATUS
+======================================================== -->
+
+<div id="status">
+    Загрузка…
+</div>
+
+
+<!-- =======================================================
+     SETTINGS
+======================================================== -->
 
 <div id="settings">
 
-  <div class="settings-title">
-    Оформление
-  </div>
+    <div class="settings-title">
+        Оформление
+    </div>
 
-  <button class="theme-btn" data-theme="dark">
-    Тёмная
-  </button>
 
-  <button class="theme-btn" data-theme="light">
-    Светлая
-  </button>
+    <button
+        class="theme-btn"
+        data-theme="dark">
 
-  <button class="theme-btn" data-theme="green">
-    Зелёная
-  </button>
+        Тёмная
+
+    </button>
+
+
+    <button
+        class="theme-btn"
+        data-theme="light">
+
+        Светлая
+
+    </button>
+
+
+    <button
+        class="theme-btn"
+        data-theme="green">
+
+        Зелёная
+
+    </button>
 
 </div>
 
-<!-- TIMELINE -->
+
+<!-- =======================================================
+     TIMELINE
+======================================================== -->
 
 <div class="timeline">
 
-  <div class="timeline-controls">
+    <div class="timeline-controls">
 
-    <button id="backBtn">◀</button>
 
-    <button id="playBtn">▶</button>
+        <button
+            id="backBtn"
+            type="button">
 
-    <button id="forwardBtn">▶</button>
+            ◀
 
-    <input
-      id="timeSlider"
-      type="range"
-      min="0"
-      max="0"
-      value="0"
-    >
+        </button>
 
-    <div id="timeLabel">
-      —
+
+        <button
+            id="playBtn"
+            type="button">
+
+            ▶
+
+        </button>
+
+
+        <button
+            id="forwardBtn"
+            type="button">
+
+            ▶
+
+        </button>
+
+
+        <input
+            id="timeSlider"
+            type="range"
+            min="0"
+            max="0"
+            value="0">
+
+
+        <div id="timeLabel">
+            —
+        </div>
+
+
     </div>
 
-  </div>
-
 </div>
+
 
 <div id="loading">
-  Загрузка…
+    Загрузка…
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
 
 <script>
 
@@ -670,34 +935,48 @@ body.green .layer-item.active{
 
 const map = L.map("map", {
 
-  zoomControl:true,
-  attributionControl:true,
+    zoomControl:true,
 
-  zoomSnap:0,
-  zoomDelta:0.5,
+    attributionControl:true,
 
-  zoomAnimation:false,
-  fadeAnimation:false,
-  markerZoomAnimation:false,
-  zoomAnimationThreshold:0,
+    zoomSnap:0,
 
-  touchZoom:true,
-  scrollWheelZoom:true,
+    zoomDelta:0.5,
 
-  wheelDebounceTime:20,
-  wheelPxPerZoomLevel:80,
+    zoomAnimation:false,
 
-  doubleClickZoom:true,
+    fadeAnimation:false,
 
-  dragging:true,
-  inertia:true,
-  inertiaDeceleration:3000,
-  easeLinearity:0.2,
+    markerZoomAnimation:false,
 
-  minZoom:2,
-  maxZoom:19
+    zoomAnimationThreshold:0,
 
-}).setView([55.75,37.61],5);
+    touchZoom:true,
+
+    scrollWheelZoom:true,
+
+    wheelDebounceTime:20,
+
+    wheelPxPerZoomLevel:80,
+
+    doubleClickZoom:true,
+
+    dragging:true,
+
+    inertia:true,
+
+    inertiaDeceleration:3000,
+
+    easeLinearity:0.2,
+
+    minZoom:2,
+
+    maxZoom:19
+
+}).setView(
+    [55.75,37.61],
+    5
+);
 
 
 /* =========================================================
@@ -705,21 +984,79 @@ const map = L.map("map", {
 ========================================================= */
 
 const osm = L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    minZoom:2,
-    maxZoom:19,
 
-    tileSize:256,
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 
-    updateWhenIdle:true,
-    updateWhenZooming:false,
+    {
 
-    keepBuffer:3,
+        minZoom:2,
 
-    attribution:"© OpenStreetMap"
-  }
+        maxZoom:19,
+
+        tileSize:256,
+
+        updateWhenIdle:true,
+
+        updateWhenZooming:false,
+
+        keepBuffer:3,
+
+        attribution:
+            "© OpenStreetMap"
+
+    }
+
 ).addTo(map);
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const selectedLayer =
+    document.getElementById(
+        "selectedLayer"
+    );
+
+const selectedLayerName =
+    document.getElementById(
+        "selectedLayerName"
+    );
+
+const selectedLayerArrow =
+    document.getElementById(
+        "selectedLayerArrow"
+    );
+
+const layerDrawer =
+    document.getElementById(
+        "layerDrawer"
+    );
+
+const status =
+    document.getElementById(
+        "status"
+    );
+
+const loading =
+    document.getElementById(
+        "loading"
+    );
+
+const timeSlider =
+    document.getElementById(
+        "timeSlider"
+    );
+
+const timeLabel =
+    document.getElementById(
+        "timeLabel"
+    );
+
+const settings =
+    document.getElementById(
+        "settings"
+    );
 
 
 /* =========================================================
@@ -730,97 +1067,13 @@ let radarLayer = null;
 
 let oyaLayer = null;
 
-let oyaMode = "oya";
-
 let rainFrames = [];
 
 let currentFrame = 0;
 
-let playing = false;
-
 let playTimer = null;
 
-
-/* =========================================================
-   ELEMENTS
-========================================================= */
-
-const mode = document.getElementById("mode");
-
-const status = document.getElementById("status");
-
-const timeSlider = document.getElementById("timeSlider");
-
-const timeLabel = document.getElementById("timeLabel");
-
-const loading = document.getElementById("loading");
-
-const layersButton = document.getElementById("layersButton");
-
-const layersDrawer = document.getElementById("layersDrawer");
-
-const settings = document.getElementById("settings");
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function setStatus(text){
-  status.textContent = text;
-}
-
-function showLoading(text="Загрузка…"){
-  loading.textContent = text;
-  loading.style.display = "block";
-}
-
-function hideLoading(){
-  loading.style.display = "none";
-}
-
-function formatTime(ts){
-
-  if(!ts) return "—";
-
-  const d = new Date(ts * 1000);
-
-  return d.toLocaleTimeString("ru-RU",{
-    hour:"2-digit",
-    minute:"2-digit"
-  });
-}
-
-
-/* =========================================================
-   LAYERS DRAWER
-========================================================= */
-
-layersButton.addEventListener("click",()=>{
-
-  layersDrawer.classList.toggle("open");
-
-});
-
-
-document.querySelectorAll(".layer-item").forEach(button=>{
-
-  button.addEventListener("click",()=>{
-
-    document.querySelectorAll(".layer-item")
-      .forEach(x=>x.classList.remove("active"));
-
-    button.classList.add("active");
-
-    const layer = button.dataset.layer;
-
-    setOyaLayer(layer);
-
-    layersDrawer.classList.remove("open");
-
-  });
-
-});
+let playing = false;
 
 
 /* =========================================================
@@ -829,201 +1082,303 @@ document.querySelectorAll(".layer-item").forEach(button=>{
 
 async function loadRainViewer(){
 
-  showLoading("Получение радара…");
-
-  try{
-
-    const response = await fetch(
-      "https://api.rainviewer.com/public/weather-maps.json",
-      {
-        cache:"no-store"
-      }
+    showLoading(
+        "Получение радара…"
     );
 
-    if(!response.ok){
-      throw new Error("RainViewer HTTP "+response.status);
+    try{
+
+        const response =
+            await fetch(
+                "https://api.rainviewer.com/public/weather-maps.json",
+                {
+                    cache:"no-store"
+                }
+            );
+
+        if(!response.ok){
+
+            throw new Error(
+                "HTTP " +
+                response.status
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+
+        rainFrames = [
+            ...(data.radar?.past || [])
+        ];
+
+
+        if(!rainFrames.length){
+
+            throw new Error(
+                "Нет кадров"
+            );
+
+        }
+
+
+        currentFrame =
+            rainFrames.length - 1;
+
+
+        timeSlider.min = 0;
+
+        timeSlider.max =
+            rainFrames.length - 1;
+
+        timeSlider.value =
+            currentFrame;
+
+
+        updateTimeLabel();
+
+
+        showRainFrame(
+            currentFrame
+        );
+
+
+        setStatus(
+            "Радар загружен"
+        );
+
+
+    }catch(error){
+
+        console.error(
+            "RainViewer:",
+            error
+        );
+
+        setStatus(
+            "Ошибка радара"
+        );
+
+    }finally{
+
+        hideLoading();
+
     }
-
-    const data = await response.json();
-
-    rainFrames = [
-      ...(data.radar?.past || [])
-    ];
-
-    if(!rainFrames.length){
-      throw new Error("Нет кадров радара");
-    }
-
-    currentFrame = rainFrames.length - 1;
-
-    timeSlider.min = 0;
-    timeSlider.max = rainFrames.length - 1;
-    timeSlider.value = currentFrame;
-
-    updateTimeLabel();
-
-    showRainFrame(currentFrame);
-
-    setStatus("Радар загружен");
-
-  }catch(error){
-
-    console.error(error);
-
-    setStatus("Ошибка загрузки радара");
-
-  }finally{
-
-    hideLoading();
-
-  }
 
 }
 
 
 /* =========================================================
-   RAINVIEWER FRAME
+   RAINVIEWER LAYER
 ========================================================= */
 
 function makeRainLayer(frame){
 
-  const url =
-    "https://tilecache.rainviewer.com" +
-    frame.path +
-    "/256/{z}/{x}/{y}/2/1_1.png";
+    const url =
 
-  return L.tileLayer(url,{
+        "https://tilecache.rainviewer.com" +
 
-    tileSize:256,
+        frame.path +
 
-    opacity:1,
+        "/256/{z}/{x}/{y}/2/1_1.png";
 
-    minZoom:2,
-    maxZoom:18,
 
-    zIndex:10,
+    return L.tileLayer(
 
-    updateWhenIdle:true,
-    updateWhenZooming:false,
+        url,
 
-    keepBuffer:3,
+        {
 
-    fadeAnimation:false
-  });
+            tileSize:256,
+
+            opacity:1,
+
+            minZoom:2,
+
+            maxZoom:18,
+
+            zIndex:10,
+
+            updateWhenIdle:true,
+
+            updateWhenZooming:false,
+
+            keepBuffer:3
+
+        }
+
+    );
 
 }
 
+
+/* =========================================================
+   SHOW RAIN FRAME
+========================================================= */
 
 function showRainFrame(index){
 
-  if(!rainFrames[index]) return;
+    if(!rainFrames[index]){
 
-  const frame = rainFrames[index];
-
-  const newLayer = makeRainLayer(frame);
-
-  const oldLayer = radarLayer;
-
-  radarLayer = newLayer;
-
-  newLayer.addTo(map);
-
-  let loaded = false;
-
-  newLayer.once("load",()=>{
-
-    loaded = true;
-
-    if(oldLayer && map.hasLayer(oldLayer)){
-      map.removeLayer(oldLayer);
-    }
-
-  });
-
-  setTimeout(()=>{
-
-    if(!loaded && oldLayer){
-
-      if(map.hasLayer(newLayer)){
-        map.removeLayer(newLayer);
-      }
-
-      radarLayer = oldLayer;
+        return;
 
     }
 
-  },8000);
 
-  updateTimeLabel();
+    const newLayer =
+        makeRainLayer(
+            rainFrames[index]
+        );
+
+
+    const oldLayer =
+        radarLayer;
+
+
+    radarLayer =
+        newLayer;
+
+
+    newLayer.addTo(map);
+
+
+    let loaded = false;
+
+
+    newLayer.once(
+        "load",
+        ()=>{
+
+            loaded = true;
+
+
+            if(
+                oldLayer &&
+                map.hasLayer(
+                    oldLayer
+                )
+            ){
+
+                map.removeLayer(
+                    oldLayer
+                );
+
+            }
+
+        }
+    );
+
+
+    setTimeout(
+        ()=>{
+
+            if(
+                !loaded &&
+                oldLayer
+            ){
+
+                if(
+                    map.hasLayer(
+                        newLayer
+                    )
+                ){
+
+                    map.removeLayer(
+                        newLayer
+                    );
+
+                }
+
+                radarLayer =
+                    oldLayer;
+
+            }
+
+        },
+        8000
+    );
+
+
+    updateTimeLabel();
 
 }
+
+
+/* =========================================================
+   OЯ — ORIGINAL BALTRAD WMS
+========================================================= */
+
+/*
+   Именно такая схема используется
+   в оригинальном radar-wms demo.
+
+   Один выбранный продукт состоит
+   из трёх источников.
+*/
+
+const OYA_WMS =
+    "https://www.nowcast.ru/baltrad_wsgi";
+
+
+const OYA_LAYER =
+    "bufr_phenomena," +
+    "bufr_novosib_phenomena," +
+    "bufr_vlad_phenomena";
 
 
 /* =========================================================
    OЯ WMS
 ========================================================= */
 
-const OYA_WMS =
-  "https://www.nowcast.ru/baltrad_wsgi";
-
-
-const OYA_LAYERS = {
-
-  oya:
-    "bufr_phenomena",
-
-  phenomena:
-    "bufr_phenomena",
-
-  novosib:
-    "bufr_novosib_phenomena",
-
-  vlad:
-    "bufr_vlad_phenomena"
-
-};
-
-
-/* =========================================================
-   CREATE OЯ
-========================================================= */
-
 function createOyaLayer(){
 
-  const layerName =
-    OYA_LAYERS[oyaMode] ||
-    OYA_LAYERS.oya;
+    /*
+       Не используем /api/oya.
 
-  return L.tileLayer.wms(
+       Leaflet сам формирует WMS GetMap
+       запрос к Nowcast.
+    */
 
-    OYA_WMS,
+    return L.tileLayer.wms(
 
-    {
+        OYA_WMS,
 
-      layers:layerName,
+        {
 
-      format:"image/png",
+            layers:
+                OYA_LAYER,
 
-      transparent:true,
+            format:
+                "image/png",
 
-      version:"1.1.1",
+            transparent:
+                true,
 
-      styles:"",
+            version:
+                "1.1.1",
 
-      opacity:1,
+            styles:
+                "",
 
-      tiled:true,
+            opacity:
+                0.7,
 
-      zIndex:50,
+            zIndex:
+                50,
 
-      updateWhenIdle:true,
-      updateWhenZooming:false,
+            updateWhenIdle:
+                true,
 
-      keepBuffer:2
+            updateWhenZooming:
+                false,
 
-    }
+            keepBuffer:
+                2
 
-  );
+        }
+
+    );
 
 }
 
@@ -1034,363 +1389,609 @@ function createOyaLayer(){
 
 function showOya(){
 
-  if(radarLayer){
+    /*
+       Убираем RainViewer.
+    */
 
-    map.removeLayer(radarLayer);
+    if(
+        radarLayer &&
+        map.hasLayer(
+            radarLayer
+        )
+    ){
 
-    radarLayer = null;
-
-  }
-
-  if(oyaLayer){
-
-    map.removeLayer(oyaLayer);
-
-    oyaLayer = null;
-
-  }
-
-  oyaLayer = createOyaLayer();
-
-  oyaLayer.addTo(map);
-
-  setStatus("Опасные явления");
-
-}
-
-
-/* =========================================================
-   CHANGE OЯ LAYER
-========================================================= */
-
-function setOyaLayer(type){
-
-  if(mode.value !== "warnings"){
-
-    mode.value = "warnings";
-
-  }
-
-  oyaMode = type;
-
-  showOya();
-
-}
-
-
-/* =========================================================
-   MODE SWITCH
-========================================================= */
-
-mode.addEventListener("change",()=>{
-
-  if(mode.value === "radar"){
-
-    if(oyaLayer){
-
-      map.removeLayer(oyaLayer);
-      oyaLayer = null;
+        map.removeLayer(
+            radarLayer
+        );
 
     }
 
-    layersDrawer.classList.remove("open");
+    radarLayer =
+        null;
 
-    if(rainFrames.length){
 
-      showRainFrame(currentFrame);
+    /*
+       Старый OЯ тоже удаляем.
+    */
+
+    if(
+        oyaLayer &&
+        map.hasLayer(
+            oyaLayer
+        )
+    ){
+
+        map.removeLayer(
+            oyaLayer
+        );
+
+    }
+
+
+    /*
+       Создаём настоящий WMS.
+    */
+
+    oyaLayer =
+        createOyaLayer();
+
+
+    oyaLayer.addTo(map);
+
+
+    setStatus(
+        "Опасные явления"
+    );
+
+}
+
+
+/* =========================================================
+   SELECTED LAYER MENU
+========================================================= */
+
+selectedLayer.addEventListener(
+    "click",
+    ()=>{
+
+        const opened =
+            layerDrawer.classList.toggle(
+                "open"
+            );
+
+
+        selectedLayer.classList.toggle(
+            "open",
+            opened
+        );
+
+    }
+);
+
+
+/* =========================================================
+   OЯ SELECT
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".layer-item"
+    )
+    .forEach(
+        button=>{
+
+            button.addEventListener(
+                "click",
+                ()=>{
+
+                    document
+                        .querySelectorAll(
+                            ".layer-item"
+                        )
+                        .forEach(
+                            item=>
+                                item.classList.remove(
+                                    "active"
+                                )
+                        );
+
+
+                    button.classList.add(
+                        "active"
+                    );
+
+
+                    selectedLayerName.textContent =
+                        "Опасные явления";
+
+
+                    layerDrawer.classList.remove(
+                        "open"
+                    );
+
+                    selectedLayer.classList.remove(
+                        "open"
+                    );
+
+
+                    showOya();
+
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   TIME LABEL
+========================================================= */
+
+function formatTime(ts){
+
+    if(!ts){
+
+        return "—";
+
+    }
+
+
+    const date =
+        new Date(
+            ts * 1000
+        );
+
+
+    return date.toLocaleTimeString(
+        "ru-RU",
+        {
+
+            hour:"2-digit",
+
+            minute:"2-digit"
+
+        }
+    );
+
+}
+
+
+function updateTimeLabel(){
+
+    if(
+        rainFrames[currentFrame]
+    ){
+
+        timeLabel.textContent =
+            formatTime(
+                rainFrames[
+                    currentFrame
+                ].time
+            );
 
     }else{
 
-      loadRainViewer();
+        timeLabel.textContent =
+            "—";
 
     }
 
-    setStatus("Радар");
-
-  }
-
-
-  if(mode.value === "warnings"){
-
-    if(radarLayer){
-
-      map.removeLayer(radarLayer);
-      radarLayer = null;
-
-    }
-
-    layersDrawer.classList.add("open");
-
-    showOya();
-
-  }
-
-});
+}
 
 
 /* =========================================================
    TIMELINE
 ========================================================= */
 
-function updateTimeLabel(){
+timeSlider.addEventListener(
+    "input",
+    ()=>{
 
-  if(mode.value === "radar" && rainFrames[currentFrame]){
-
-    timeLabel.textContent =
-      formatTime(rainFrames[currentFrame].time);
-
-  }else{
-
-    timeLabel.textContent =
-      "Сейчас";
-
-  }
-
-}
+        currentFrame =
+            Number(
+                timeSlider.value
+            );
 
 
-timeSlider.addEventListener("input",()=>{
+        showRainFrame(
+            currentFrame
+        );
 
-  if(mode.value !== "radar") return;
-
-  currentFrame =
-    Number(timeSlider.value);
-
-  showRainFrame(currentFrame);
-
-});
+    }
+);
 
 
-document.getElementById("backBtn")
-.addEventListener("click",()=>{
+document
+    .getElementById(
+        "backBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-  if(mode.value !== "radar") return;
+            if(
+                !rainFrames.length
+            ){
 
-  currentFrame =
-    Math.max(0,currentFrame-1);
+                return;
 
-  timeSlider.value = currentFrame;
-
-  showRainFrame(currentFrame);
-
-});
+            }
 
 
-document.getElementById("forwardBtn")
-.addEventListener("click",()=>{
+            currentFrame =
+                Math.max(
+                    0,
+                    currentFrame - 1
+                );
 
-  if(mode.value !== "radar") return;
 
-  currentFrame =
-    Math.min(
-      rainFrames.length-1,
-      currentFrame+1
+            timeSlider.value =
+                currentFrame;
+
+
+            showRainFrame(
+                currentFrame
+            );
+
+        }
     );
 
-  timeSlider.value = currentFrame;
 
-  showRainFrame(currentFrame);
+document
+    .getElementById(
+        "forwardBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-});
+            if(
+                !rainFrames.length
+            ){
+
+                return;
+
+            }
 
 
-document.getElementById("playBtn")
-.addEventListener("click",()=>{
+            currentFrame =
+                Math.min(
+                    rainFrames.length - 1,
+                    currentFrame + 1
+                );
 
-  if(mode.value !== "radar") return;
 
-  playing = !playing;
+            timeSlider.value =
+                currentFrame;
 
-  document.getElementById("playBtn")
-    .textContent = playing ? "Ⅱ" : "▶";
 
-  if(playing){
+            showRainFrame(
+                currentFrame
+            );
 
-    clearInterval(playTimer);
+        }
+    );
 
-    playTimer = setInterval(()=>{
 
-      if(currentFrame >= rainFrames.length-1){
+document
+    .getElementById(
+        "playBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-        currentFrame = 0;
+            if(
+                !rainFrames.length
+            ){
 
-      }else{
+                return;
 
-        currentFrame++;
+            }
 
-      }
 
-      timeSlider.value = currentFrame;
+            playing =
+                !playing;
 
-      showRainFrame(currentFrame);
 
-    },600);
+            document
+                .getElementById(
+                    "playBtn"
+                )
+                .textContent =
+                    playing
+                    ? "Ⅱ"
+                    : "▶";
 
-  }else{
 
-    clearInterval(playTimer);
+            clearInterval(
+                playTimer
+            );
 
-  }
 
-});
+            if(playing){
+
+                playTimer =
+                    setInterval(
+                        ()=>{
+
+                            currentFrame++;
+
+
+                            if(
+                                currentFrame >=
+                                rainFrames.length
+                            ){
+
+                                currentFrame = 0;
+
+                            }
+
+
+                            timeSlider.value =
+                                currentFrame;
+
+
+                            showRainFrame(
+                                currentFrame
+                            );
+
+                        },
+                        600
+                    );
+
+            }
+
+        }
+    );
 
 
 /* =========================================================
    LOCATION
 ========================================================= */
 
-document.getElementById("locateBtn")
-.addEventListener("click",()=>{
+document
+    .getElementById(
+        "locateBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-  if(!navigator.geolocation){
+            if(
+                !navigator.geolocation
+            ){
 
-    setStatus("Геолокация недоступна");
+                setStatus(
+                    "Геолокация недоступна"
+                );
 
-    return;
+                return;
 
-  }
+            }
 
-  setStatus("Определение местоположения…");
 
-  navigator.geolocation.getCurrentPosition(
+            setStatus(
+                "Определение местоположения…"
+            );
 
-    position=>{
 
-      const lat =
-        position.coords.latitude;
+            navigator
+                .geolocation
+                .getCurrentPosition(
 
-      const lon =
-        position.coords.longitude;
+                    position=>{
 
-      map.flyTo(
-        [lat,lon],
-        Math.max(map.getZoom(),8),
-        {
-          duration:.8
+                        const lat =
+                            position.coords
+                                .latitude;
+
+
+                        const lon =
+                            position.coords
+                                .longitude;
+
+
+                        map.flyTo(
+
+                            [
+                                lat,
+                                lon
+                            ],
+
+                            Math.max(
+                                map.getZoom(),
+                                8
+                            ),
+
+                            {
+                                duration:.8
+                            }
+
+                        );
+
+
+                        setStatus(
+                            "Ваше местоположение"
+                        );
+
+                    },
+
+
+                    ()=>{
+                        setStatus(
+                            "Не удалось определить местоположение"
+                        );
+                    },
+
+
+                    {
+
+                        enableHighAccuracy:true,
+
+                        timeout:10000
+
+                    }
+
+                );
+
         }
-      );
-
-      setStatus("Ваше местоположение");
-
-    },
-
-    ()=>{
-      setStatus("Не удалось определить местоположение");
-    },
-
-    {
-      enableHighAccuracy:true,
-      timeout:10000
-    }
-
-  );
-
-});
+    );
 
 
 /* =========================================================
    RELOAD
 ========================================================= */
 
-document.getElementById("reloadBtn")
-.addEventListener("click",()=>{
+document
+    .getElementById(
+        "reloadBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-  if(mode.value === "radar"){
+            if(
+                oyaLayer &&
+                map.hasLayer(
+                    oyaLayer
+                )
+            ){
 
-    loadRainViewer();
+                showOya();
 
-  }else{
+            }else{
 
-    showOya();
+                loadRainViewer();
 
-  }
+            }
 
-});
+        }
+    );
 
 
 /* =========================================================
    SETTINGS
 ========================================================= */
 
-document.getElementById("settingsBtn")
-.addEventListener("click",()=>{
+document
+    .getElementById(
+        "settingsBtn"
+    )
+    .addEventListener(
+        "click",
+        ()=>{
 
-  settings.classList.toggle("open");
+            settings.classList.toggle(
+                "open"
+            );
 
-});
-
-
-document.querySelectorAll(".theme-btn")
-.forEach(button=>{
-
-  button.addEventListener("click",()=>{
-
-    const theme =
-      button.dataset.theme;
-
-    document.body.classList.remove(
-      "light",
-      "green"
+        }
     );
 
-    if(theme !== "dark"){
 
-      document.body.classList.add(theme);
+document
+    .querySelectorAll(
+        ".theme-btn"
+    )
+    .forEach(
+        button=>{
 
-    }
+            button.addEventListener(
+                "click",
+                ()=>{
 
-    localStorage.setItem(
-      "gptrad-theme",
-      theme
+                    const theme =
+                        button.dataset.theme;
+
+
+                    document.body.classList.remove(
+                        "light",
+                        "green"
+                    );
+
+
+                    if(
+                        theme !== "dark"
+                    ){
+
+                        document.body.classList.add(
+                            theme
+                        );
+
+                    }
+
+
+                    localStorage.setItem(
+                        "gptrad-theme",
+                        theme
+                    );
+
+                }
+            );
+
+        }
     );
 
-  });
 
-});
-
+/* =========================================================
+   RESTORE THEME
+========================================================= */
 
 const savedTheme =
-  localStorage.getItem("gptrad-theme");
+    localStorage.getItem(
+        "gptrad-theme"
+    );
+
 
 if(savedTheme){
 
-  document.body.classList.remove(
-    "light",
-    "green"
-  );
-
-  if(savedTheme !== "dark"){
-
-    document.body.classList.add(
-      savedTheme
+    document.body.classList.remove(
+        "light",
+        "green"
     );
 
-  }
+
+    if(
+        savedTheme !== "dark"
+    ){
+
+        document.body.classList.add(
+            savedTheme
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   MAP ZOOM
+   CLOSE LAYER MENU WHEN CLICKING MAP
 ========================================================= */
 
-map.on("zoomstart",()=>{
+map.on(
+    "click",
+    ()=>{
 
-  map._gptradZooming = true;
+        layerDrawer.classList.remove(
+            "open"
+        );
 
-});
+        selectedLayer.classList.remove(
+            "open"
+        );
 
-
-map.on("zoomend",()=>{
-
-  map._gptradZooming = false;
-
-});
+    }
+);
 
 
 /* =========================================================
    START
 ========================================================= */
+
+/*
+   По умолчанию запускаем RainViewer.
+*/
 
 loadRainViewer();
 
