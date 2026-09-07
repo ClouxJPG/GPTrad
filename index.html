@@ -34,7 +34,9 @@ inset:0;
 z-index:1;
 }
 
-/* TOP */
+/* =========================================================
+   TOP
+========================================================= */
 
 .top-panel{
 position:absolute;
@@ -135,7 +137,9 @@ transition:transform .15s ease;
 transform:scale(.94);
 }
 
-/* DRAWER */
+/* =========================================================
+   DRAWER
+========================================================= */
 
 #layerDrawer{
 position:absolute;
@@ -232,7 +236,9 @@ background:#36d67a;
 box-shadow:0 0 8px rgba(54,214,122,.55);
 }
 
-/* STATUS */
+/* =========================================================
+   STATUS
+========================================================= */
 
 #status{
 position:absolute;
@@ -254,7 +260,9 @@ pointer-events:none;
 opacity:.9;
 }
 
-/* SETTINGS */
+/* =========================================================
+   SETTINGS
+========================================================= */
 
 #settings{
 position:absolute;
@@ -262,11 +270,9 @@ position:absolute;
 left:12px;
 top:74px;
 
-width:220px;
+width:240px;
 
 z-index:1200;
-
-display:none;
 
 padding:12px;
 
@@ -276,16 +282,122 @@ background:rgba(20,20,20,.96);
 color:white;
 
 box-shadow:0 8px 30px rgba(0,0,0,.35);
+
+opacity:0;
+visibility:hidden;
+pointer-events:none;
+
+transform:translateY(-10px) scale(.97);
+
+max-height:0;
+overflow:hidden;
+
+transition:
+opacity .25s ease,
+transform .28s cubic-bezier(.22,.61,.36,1),
+max-height .32s ease,
+visibility 0s linear .32s;
 }
 
 #settings.open{
-display:block;
+opacity:1;
+visibility:visible;
+pointer-events:auto;
+
+transform:translateY(0) scale(1);
+
+max-height:500px;
+
+transition:
+opacity .25s ease,
+transform .28s cubic-bezier(.22,.61,.36,1),
+max-height .32s ease,
+visibility 0s linear 0s;
 }
 
 .settings-title{
-font-size:14px;
+font-size:15px;
 font-weight:700;
-margin-bottom:9px;
+margin-bottom:10px;
+}
+
+.settings-section{
+margin-bottom:7px;
+}
+
+.settings-section:last-child{
+margin-bottom:0;
+}
+
+.settings-section-btn{
+width:100%;
+
+height:40px;
+
+border:0;
+outline:0;
+
+border-radius:10px;
+
+background:#292929;
+color:white;
+
+font-size:14px;
+font-weight:600;
+
+display:flex;
+align-items:center;
+justify-content:space-between;
+
+padding:0 11px;
+
+transition:
+background .15s ease,
+transform .15s ease;
+}
+
+.settings-section-btn:active{
+transform:scale(.98);
+}
+
+.settings-section-arrow{
+font-size:12px;
+opacity:.65;
+
+transition:
+transform .25s ease;
+}
+
+.settings-section.open
+.settings-section-arrow{
+transform:rotate(180deg);
+}
+
+.settings-subpanel{
+max-height:0;
+opacity:0;
+
+overflow:hidden;
+
+transform:translateY(-4px);
+
+transition:
+max-height .3s ease,
+opacity .2s ease,
+transform .25s ease;
+
+padding:0 2px;
+}
+
+.settings-section.open
+.settings-subpanel{
+max-height:180px;
+opacity:1;
+
+transform:translateY(0);
+
+padding-top:7px;
+padding-bottom:2px;
 }
 
 .theme-btn{
@@ -294,7 +406,8 @@ width:100%;
 border:0;
 outline:0;
 
-padding:10px;
+padding:9px 10px;
+
 margin-bottom:6px;
 
 border-radius:9px;
@@ -303,9 +416,40 @@ background:#292929;
 color:white;
 
 text-align:left;
+
+font-size:13px;
 }
 
-/* TIMELINE */
+.theme-btn:last-child{
+margin-bottom:0;
+}
+
+.frame-count-row{
+display:flex;
+align-items:center;
+gap:9px;
+
+padding:3px 1px 2px;
+}
+
+#frameCountSlider{
+flex:1;
+min-width:0;
+}
+
+#frameCountValue{
+min-width:34px;
+
+text-align:right;
+
+font-size:13px;
+font-weight:700;
+color:white;
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
 
 .timeline{
 position:absolute;
@@ -319,7 +463,7 @@ width:min(680px,calc(100vw - 28px));
 
 z-index:1000;
 
-padding:10px 12px;
+padding:8px 12px 9px;
 
 border-radius:15px;
 
@@ -331,15 +475,53 @@ backdrop-filter:blur(12px);
 box-shadow:0 5px 25px rgba(0,0,0,.3);
 }
 
+.timeline-play{
+width:100%;
+
+display:flex;
+justify-content:center;
+
+margin-bottom:6px;
+}
+
+#playBtn{
+width:38px;
+height:30px;
+
+border:0;
+outline:0;
+
+border-radius:8px;
+
+background:#292929;
+color:white;
+
+font-size:14px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+transition:
+transform .15s ease,
+background .15s ease;
+}
+
+#playBtn:active{
+transform:scale(.92);
+}
+
 .timeline-controls{
 display:flex;
 align-items:center;
-gap:8px;
+gap:7px;
 }
 
-.timeline button{
+.timeline-arrow{
 width:36px;
 height:32px;
+
+flex:none;
 
 border:0;
 outline:0;
@@ -350,22 +532,47 @@ background:#292929;
 color:white;
 
 font-size:15px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+transition:transform .15s ease;
+}
+
+.timeline-arrow:active{
+transform:scale(.92);
+}
+
+.timeline-slider-wrap{
+flex:1;
+min-width:0;
+
+display:flex;
+align-items:center;
 }
 
 #timeSlider{
-flex:1;
+width:100%;
 min-width:0;
+margin:0;
 }
 
 #timeLabel{
-width:100px;
-text-align:right;
+width:100%;
+
+margin-top:5px;
+
+text-align:center;
+
 color:white;
 font-size:11px;
 opacity:.85;
 }
 
-/* LOADING */
+/* =========================================================
+   LOADING
+========================================================= */
 
 #loading{
 position:absolute;
@@ -390,7 +597,9 @@ color:white;
 font-size:13px;
 }
 
-/* LIGHT */
+/* =========================================================
+   LIGHT
+========================================================= */
 
 body.light .top-panel,
 body.light #layerDrawer,
@@ -409,8 +618,10 @@ color:#111;
 body.light #selectedLayer,
 body.light .icon-btn,
 body.light .layer-item,
-body.light .timeline button,
-body.light .theme-btn{
+body.light .timeline-arrow,
+body.light #playBtn,
+body.light .theme-btn,
+body.light .settings-section-btn{
 background:#eeeeee;
 color:#111;
 }
@@ -419,7 +630,13 @@ body.light .layer-item.active{
 background:#dddddd;
 }
 
-/* GREEN */
+body.light #frameCountValue{
+color:#111;
+}
+
+/* =========================================================
+   GREEN
+========================================================= */
 
 body.green .top-panel,
 body.green #layerDrawer,
@@ -432,8 +649,10 @@ background:rgba(8,35,22,.94);
 body.green #selectedLayer,
 body.green .icon-btn,
 body.green .layer-item,
-body.green .timeline button,
-body.green .theme-btn{
+body.green .timeline-arrow,
+body.green #playBtn,
+body.green .theme-btn,
+body.green .settings-section-btn{
 background:#123d29;
 color:white;
 }
@@ -442,7 +661,9 @@ body.green .layer-item.active{
 background:#185538;
 }
 
-/* MOBILE */
+/* =========================================================
+   MOBILE
+========================================================= */
 
 @media(max-width:600px){
 
@@ -483,14 +704,23 @@ top:68px;
 left:9px;
 }
 
+#settings{
+left:8px;
+top:68px;
+width:235px;
+}
+
 .timeline{
 bottom:8px;
 width:calc(100vw - 16px);
 }
 
 #timeLabel{
-width:85px;
 font-size:10px;
+}
+
+.timeline-arrow{
+width:35px;
 }
 
 }
@@ -502,7 +732,9 @@ font-size:10px;
 
 <div id="map"></div>
 
-<!-- TOP -->
+<!-- =====================================================
+     TOP
+===================================================== -->
 
 <div class="top-panel">
 
@@ -537,7 +769,9 @@ GPTrad
 </div>
 
 
-<!-- LAYERS -->
+<!-- =====================================================
+     LAYERS
+===================================================== -->
 
 <div id="layerDrawer">
 
@@ -575,42 +809,119 @@ data-layer="oya">
 </div>
 
 
+<!-- =====================================================
+     SETTINGS
+===================================================== -->
+
 <div id="settings">
 
 <div class="settings-title">
-Оформление
+Настройки
 </div>
 
-<button class="theme-btn" data-theme="dark">
+
+<div class="settings-section"
+id="appearanceSection">
+
+<button class="settings-section-btn"
+id="appearanceToggle">
+
+<span>
+Оформление
+</span>
+
+<span class="settings-section-arrow">
+▾
+</span>
+
+</button>
+
+<div class="settings-subpanel">
+
+<button class="theme-btn"
+data-theme="dark">
 Тёмная
 </button>
 
-<button class="theme-btn" data-theme="light">
+<button class="theme-btn"
+data-theme="light">
 Светлая
 </button>
 
-<button class="theme-btn" data-theme="green">
+<button class="theme-btn"
+data-theme="green">
 Зелёная
 </button>
 
 </div>
 
+</div>
+
+
+<div class="settings-section"
+id="frameCountSection">
+
+<button class="settings-section-btn"
+id="frameCountToggle">
+
+<span>
+Кол. кадров
+</span>
+
+<span class="settings-section-arrow">
+▾
+</span>
+
+</button>
+
+<div class="settings-subpanel">
+
+<div class="frame-count-row">
+
+<input
+id="frameCountSlider"
+type="range"
+min="1"
+max="1"
+value="1">
+
+<div id="frameCountValue">
+—
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- =====================================================
+     TIMELINE
+===================================================== -->
 
 <div class="timeline">
 
-<div class="timeline-controls">
-
-<button id="backBtn">
-◀
-</button>
+<div class="timeline-play">
 
 <button id="playBtn">
 ▶
 </button>
 
-<button id="forwardBtn">
-▶
+</div>
+
+
+<div class="timeline-controls">
+
+<button id="backBtn"
+class="timeline-arrow">
+◀
 </button>
+
+
+<div class="timeline-slider-wrap">
 
 <input id="timeSlider"
 type="range"
@@ -618,10 +929,19 @@ min="0"
 max="0"
 value="0">
 
-<div id="timeLabel">
-—
 </div>
 
+
+<button id="forwardBtn"
+class="timeline-arrow">
+▶
+</button>
+
+</div>
+
+
+<div id="timeLabel">
+—
 </div>
 
 </div>
@@ -737,9 +1057,29 @@ document.getElementById("timeSlider");
 const timeLabel=
 document.getElementById("timeLabel");
 
-
 const settings=
 document.getElementById("settings");
+
+const appearanceSection=
+document.getElementById("appearanceSection");
+
+const appearanceToggle=
+document.getElementById("appearanceToggle");
+
+const frameCountSection=
+document.getElementById("frameCountSection");
+
+const frameCountToggle=
+document.getElementById("frameCountToggle");
+
+const frameCountSlider=
+document.getElementById("frameCountSlider");
+
+const frameCountValue=
+document.getElementById("frameCountValue");
+
+const playBtn=
+document.getElementById("playBtn");
 
 
 /* =========================================================
@@ -749,14 +1089,6 @@ document.getElementById("settings");
 let activeLayer="radar";
 
 let radarLayer=null;
-
-let oyaImage=null;
-
-let oyaLoading=false;
-
-let oyaRequestId=0;
-
-let oyaRefreshTimer=null;
 
 
 /*
@@ -769,18 +1101,73 @@ let currentFrame=0;
 
 
 /*
-OЯ
+ОЯ — полный список времени,
+полученный из GetCapabilities.
+*/
 
-oxaTimes содержит Unix timestamps.
+let oyaAllTimes=[];
+
+
+/*
+ОЯ — выбранная часть времени.
 */
 
 let oyaTimes=[];
 
 let oyaFrameIndex=0;
 
+let oyaFrameCount=0;
+
+
+/*
+ОЯ текущий overlay.
+*/
+
+let oyaImage=null;
+
+
+/*
+Кэш ОЯ.
+
+Ключ:
+время + область карты + размер изображения.
+
+Значение:
+Blob URL готового изображения.
+*/
+
+const oyaFrameCache=
+new Map();
+
+
+/*
+Запросы, которые сейчас идут.
+
+Они не отменяются при обычном
+переключении кадров — если такой
+кадр успеет загрузиться, он
+останется в кэше.
+*/
+
+const oyaPendingRequests=
+new Map();
+
+
 let oyaCapabilitiesLoaded=false;
 
 let oyaCapabilitiesLoading=false;
+
+let oyaRefreshTimer=null;
+
+
+/*
+Поколение кэша.
+
+При смене слоя или ручном
+обновлении увеличивается.
+*/
+
+let oyaCacheGeneration=0;
 
 
 /*
@@ -840,10 +1227,9 @@ minute:"2-digit"
 }
 
 
-/*
-Преобразование ISO времени
-в Unix timestamp.
-*/
+/* =========================================================
+   ISO → UNIX
+========================================================= */
 
 function isoToUnix(value){
 
@@ -862,10 +1248,9 @@ t/1000
 }
 
 
-/*
-Определяем временные значения
-из текста Extent / Dimension.
-*/
+/* =========================================================
+   PARSE OЯ TIMES
+========================================================= */
 
 function parseOyaTimes(text){
 
@@ -909,363 +1294,7 @@ return[
 
 
 /* =========================================================
-   RAINVIEWER
-========================================================= */
-
-async function loadRainViewer(){
-
-showLoading(
-"Загрузка радара…"
-);
-
-try{
-
-const r=
-await fetch(
-"https://api.rainviewer.com/public/weather-maps.json",
-{
-cache:"no-store"
-}
-);
-
-if(
-!r.ok
-)
-throw new Error(
-"RainViewer "+r.status
-);
-
-const data=
-await r.json();
-
-rainFrames=
-Array.isArray(
-data.radar?.past
-)
-?data.radar.past
-:[];
-
-if(
-!rainFrames.length
-)
-throw new Error(
-"Нет кадров"
-);
-
-
-/*
-Строго сортируем по времени.
-*/
-
-rainFrames.sort(
-(a,b)=>a.time-b.time
-);
-
-
-/*
-Последний доступный кадр.
-*/
-
-currentFrame=
-rainFrames.length-1;
-
-
-/*
-Таймлайн.
-*/
-
-timeSlider.min=0;
-
-timeSlider.max=
-Math.max(
-0,
-rainFrames.length-1
-);
-
-timeSlider.value=
-currentFrame;
-
-updateTimeLabel();
-
-
-showRainFrame(
-currentFrame
-);
-
-setStatus(
-"Радар RainViewer"
-);
-
-}catch(e){
-
-console.error(
-"RainViewer:",
-e
-);
-
-setStatus(
-"Ошибка RainViewer"
-);
-
-}finally{
-
-hideLoading();
-
-}
-
-}
-
-
-/* =========================================================
-   REMOVE RAIN LAYERS
-========================================================= */
-
-function removeAllRainLayers(){
-
-map.eachLayer(
-layer=>{
-
-if(
-layer instanceof L.TileLayer &&
-layer!==osmLayer
-){
-
-const url=
-layer.getTileUrl
-?layer.getTileUrl({
-x:0,
-y:0,
-z:0
-})
-:"";
-
-if(
-typeof url==="string" &&
-url.includes(
-"rainviewer"
-)
-){
-
-map.removeLayer(
-layer
-);
-
-}
-
-}
-
-}
-);
-
-}
-
-
-/* =========================================================
-   RAIN TILE
-========================================================= */
-
-function makeRainLayer(frame){
-
-return L.tileLayer(
-
-"https://tilecache.rainviewer.com"+
-frame.path+
-"/256/{z}/{x}/{y}/2/1_1.png",
-
-{
-
-tileSize:256,
-
-opacity:1,
-
-minZoom:2,
-
-maxZoom:7,
-
-zIndex:10,
-
-updateWhenIdle:true,
-
-updateWhenZooming:false,
-
-keepBuffer:2,
-
-noWrap:false
-
-}
-
-);
-
-}
-
-
-/* =========================================================
-   RAIN FRAME
-========================================================= */
-
-function showRainFrame(index){
-
-if(
-!rainFrames[index]
-)
-return;
-
-
-/*
-Игнорируем запросы,
-если уже не выбран RainViewer.
-*/
-
-if(
-activeLayer!=="radar"
-)
-return;
-
-
-const frame=
-rainFrames[index];
-
-const requestId=
-++rainFrameRequestId;
-
-
-/*
-НОВОЕ:
-старый слой НЕ удаляем сразу.
-
-Сначала добавляем новый.
-*/
-
-const newLayer=
-makeRainLayer(
-frame
-);
-
-newLayer.addTo(map);
-
-
-/*
-Если новый слой успешно
-начал загружаться — удаляем
-старый.
-
-Если пользователь уже
-переключил кадр — удаляем
-только этот устаревший слой.
-*/
-
-newLayer.once(
-"load",
-()=>{
-
-if(
-requestId!==rainFrameRequestId ||
-activeLayer!=="radar"
-){
-
-if(
-map.hasLayer(
-newLayer
-)
-){
-
-map.removeLayer(
-newLayer
-);
-
-}
-
-return;
-
-}
-
-
-const oldLayer=
-radarLayer;
-
-radarLayer=
-newLayer;
-
-
-/*
-Старый кадр удаляем только
-после загрузки нового.
-*/
-
-if(
-oldLayer &&
-map.hasLayer(
-oldLayer
-)
-){
-
-map.removeLayer(
-oldLayer
-);
-
-}
-
-}
-);
-
-
-/*
-Если тайлы не загрузились,
-не оставляем бесконечный
-мусорный слой.
-*/
-
-const cleanupTimer=
-setTimeout(
-()=>{
-
-if(
-requestId!==rainFrameRequestId
-)
-return;
-
-if(
-radarLayer!==newLayer
-){
-
-if(
-map.hasLayer(
-newLayer
-)
-){
-
-map.removeLayer(
-newLayer
-);
-
-}
-
-}
-
-},
-15000
-);
-
-
-newLayer.once(
-"load",
-()=>{
-
-clearTimeout(
-cleanupTimer
-);
-
-}
-);
-
-
-updateTimeLabel();
-
-}
-
-
-/* =========================================================
-   OЯ
+   OЯ LAYER
 ========================================================= */
 
 const OYA_PROXY=
@@ -1312,459 +1341,90 @@ lat*Math.PI/360
 
 
 /* =========================================================
-   OЯ CAPABILITIES
+   OЯ CACHE CLEAR
 ========================================================= */
 
-async function loadOyaCapabilities(){
-
-if(
-oyaCapabilitiesLoaded
-&&
-oyaTimes.length
-){
-
-return true;
-
-}
-
-
-if(
-oyaCapabilitiesLoading
-){
-
-return false;
-
-}
-
-
-oyaCapabilitiesLoading=true;
-
-setStatus(
-"Получение времени ОЯ…"
-);
-
-
-try{
-
-const response=
-await fetch(
-OYA_PROXY+
-"?action=capabilities",
-{
-cache:"no-store"
-}
-);
-
-
-if(
-!response.ok
-){
-
-throw new Error(
-"Capabilities "+response.status
-);
-
-}
-
-
-const xmlText=
-await response.text();
-
-
-const parser=
-new DOMParser();
-
-const xml=
-parser.parseFromString(
-xmlText,
-"text/xml"
-);
-
-
-const parserError=
-xml.querySelector(
-"parsererror"
-);
-
-if(
-parserError
-){
-
-throw new Error(
-"Ошибка XML"
-);
-
-}
-
-
-let times=[];
-
+function clearOyaCache(){
 
 /*
-Ищем слой bufr_phenomena.
+Удаляем все Blob URLs,
+чтобы браузер мог освободить
+занятую память.
 */
-
-const layers=
-Array.from(
-xml.getElementsByTagName(
-"Layer"
-)
-);
-
 
 for(
-const layer of layers
+const value of
+oyaFrameCache.values()
 ){
 
-const nameNode=
-Array.from(
-layer.children
-)
-.find(
-node=>node.localName==="Name"
+if(
+value &&
+value.blobUrl
+){
+
+URL.revokeObjectURL(
+value.blobUrl
 );
 
-
-if(
-!nameNode
-)
-continue;
-
-
-const name=
-nameNode.textContent.trim();
-
-
-if(
-name!=="bufr_phenomena" &&
-!name.startsWith(
-"bufr_phenomena"
-)
-){
-
-continue;
+}
 
 }
+
+oyaFrameCache.clear();
 
 
 /*
-Extent name="time"
+Также очищаем список ожидающих
+запросов.
 */
 
-const extentNodes=
-Array.from(
-layer.children
-)
-.filter(
-node=>
-node.localName==="Extent" ||
-node.localName==="Dimension"
-);
-
-
-for(
-const node of extentNodes
-){
-
-const name=
-node.getAttribute(
-"name"
-);
-
-if(
-name &&
-name.toLowerCase()!=="time"
-)
-continue;
-
-const text=
-node.textContent.trim();
-
-const parsed=
-parseOyaTimes(text);
-
-if(
-parsed.length
-){
-
-times.push(
-...parsed
-);
-
-}
-
-}
+oyaPendingRequests.clear();
 
 
 /*
-Иногда TIME лежит
-в Dimension/Extent глубже.
+Новое поколение кэша.
 */
 
-if(
-!times.length
-){
-
-const descendants=
-Array.from(
-layer.getElementsByTagName("*")
-);
-
-for(
-const node of descendants
-){
-
-if(
-node.localName!=="Extent" &&
-node.localName!=="Dimension"
-)
-continue;
-
-
-const name=
-node.getAttribute(
-"name"
-);
-
-if(
-name &&
-name.toLowerCase()!=="time"
-)
-continue;
-
-
-const parsed=
-parseOyaTimes(
-node.textContent.trim()
-);
-
-if(
-parsed.length
-){
-
-times.push(
-...parsed
-);
-
-}
-
-}
-
-}
-
-}
-
-
-times=[
-...new Set(times)
-].sort(
-(a,b)=>a-b
-);
-
-
-/*
-Иногда GetCapabilities
-может вернуть интервалы вида:
-
-start/end/period
-
-Попробуем разобрать их отдельно.
-*/
-
-if(
-!times.length
-){
-
-for(
-const node of
-Array.from(
-xml.getElementsByTagName("*")
-)
-){
-
-if(
-node.localName!=="Extent" &&
-node.localName!=="Dimension"
-)
-continue;
-
-
-const name=
-node.getAttribute(
-"name"
-);
-
-if(
-name &&
-name.toLowerCase()!=="time"
-)
-continue;
-
-
-const value=
-node.textContent.trim();
-
-
-if(
-value.includes("/")
-)
-{
-
-const parts=
-value.split("/");
-
-if(
-parts.length>=2
-){
-
-const start=
-isoToUnix(
-parts[0]
-);
-
-const end=
-isoToUnix(
-parts[1]
-);
-
-if(
-start!==null &&
-end!==null
-){
-
-/*
-Если период задан,
-создаём точки примерно
-каждые 10 минут.
-*/
-
-let step=
-600;
-
-if(
-parts[2]
-){
-
-const match=
-parts[2].match(
-/PT(\d+)M/i
-);
-
-if(
-match
-){
-
-step=
-Math.max(
-60,
-Number(match[1])*60
-);
-
-}
-
-}
-
-
-for(
-let t=start;
-t<=end;
-t+=step
-){
-
-times.push(t);
-
-}
-
-}
-
-}
-
-}
-
-}
-
-}
-
-
-times=[
-...new Set(times)
-].sort(
-(a,b)=>a-b
-);
-
-
-if(
-!times.length
-){
-
-throw new Error(
-"В GetCapabilities нет времени"
-);
-
-}
-
-
-oyaTimes=times;
-
-oyaCapabilitiesLoaded=true;
-
-
-/*
-Начинаем с последнего
-доступного времени.
-*/
-
-oyaFrameIndex=
-oyaTimes.length-1;
-
-
-/*
-Общий таймлайн.
-*/
-
-timeSlider.min=0;
-
-timeSlider.max=
-oyaTimes.length-1;
-
-timeSlider.value=
-oyaFrameIndex;
-
-updateTimeLabel();
-
-setStatus(
-"Опасные явления"
-);
-
-return true;
-
-}catch(error){
-
-console.error(
-"OЯ capabilities:",
-error
-);
-
-setStatus(
-"Ошибка времени ОЯ"
-);
-
-return false;
-
-}finally{
-
-oyaCapabilitiesLoading=false;
-
-}
+oyaCacheGeneration++;
 
 }
 
 
 /* =========================================================
-   OЯ URL
+   OЯ CACHE KEY
 ========================================================= */
 
-function makeOyaUrl(timeValue){
+function makeOyaCacheKey(
+timeValue,
+bounds,
+width,
+height
+){
+
+const sw=
+bounds.getSouthWest();
+
+const ne=
+bounds.getNorthEast();
+
+return[
+timeValue,
+sw.lat.toFixed(5),
+sw.lng.toFixed(5),
+ne.lat.toFixed(5),
+ne.lng.toFixed(5),
+width,
+height
+].join("|");
+
+}
+
+
+/* =========================================================
+   OЯ REQUEST DATA
+========================================================= */
+
+function getOyaRequestData(timeValue){
 
 const bounds=
 map.getBounds();
@@ -1857,15 +1517,676 @@ timeValue*1000
 });
 
 
-return OYA_PROXY+
+return{
+
+url:
+OYA_PROXY+
 "?"+
-params.toString();
+params.toString(),
+
+bounds,
+
+width,
+
+height
+
+};
 
 }
 
 
 /* =========================================================
-   OЯ FRAME
+   OЯ CAPABILITIES
+========================================================= */
+
+async function loadOyaCapabilities(){
+
+if(
+oyaCapabilitiesLoaded
+&&
+oyaAllTimes.length
+){
+
+return true;
+
+}
+
+
+if(
+oyaCapabilitiesLoading
+){
+
+/*
+Ждём существующую загрузку.
+*/
+
+while(
+oyaCapabilitiesLoading
+){
+
+await new Promise(
+resolve=>
+setTimeout(
+resolve,
+50
+)
+);
+
+}
+
+return(
+oyaCapabilitiesLoaded &&
+oyaAllTimes.length>0
+);
+
+}
+
+
+oyaCapabilitiesLoading=true;
+
+setStatus(
+"Получение времени ОЯ…"
+);
+
+
+try{
+
+const response=
+await fetch(
+OYA_PROXY+
+"?action=capabilities",
+{
+cache:"no-store"
+}
+);
+
+
+if(
+!response.ok
+){
+
+throw new Error(
+"Capabilities "+response.status
+);
+
+}
+
+
+const xmlText=
+await response.text();
+
+
+const parser=
+new DOMParser();
+
+const xml=
+parser.parseFromString(
+xmlText,
+"text/xml"
+);
+
+
+const parserError=
+xml.querySelector(
+"parsererror"
+);
+
+if(
+parserError
+){
+
+throw new Error(
+"Ошибка XML"
+);
+
+}
+
+
+let times=[];
+
+
+/*
+Ищем нужный слой.
+*/
+
+const layers=
+Array.from(
+xml.getElementsByTagName(
+"Layer"
+)
+);
+
+
+for(
+const layer of layers
+){
+
+const nameNode=
+Array.from(
+layer.children
+)
+.find(
+node=>node.localName==="Name"
+);
+
+
+if(
+!nameNode
+)
+continue;
+
+
+const name=
+nameNode.textContent.trim();
+
+
+if(
+name!=="bufr_phenomena" &&
+!name.startsWith(
+"bufr_phenomena"
+)
+){
+
+continue;
+
+}
+
+
+/*
+Extent / Dimension.
+*/
+
+const extentNodes=
+Array.from(
+layer.children
+)
+.filter(
+node=>
+node.localName==="Extent" ||
+node.localName==="Dimension"
+);
+
+
+for(
+const node of extentNodes
+){
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+
+const text=
+node.textContent.trim();
+
+
+const parsed=
+parseOyaTimes(text);
+
+if(
+parsed.length
+){
+
+times.push(
+...parsed
+);
+
+}
+
+}
+
+
+/*
+Ищем глубже.
+*/
+
+const descendants=
+Array.from(
+layer.getElementsByTagName("*")
+);
+
+
+for(
+const node of descendants
+){
+
+if(
+node.localName!=="Extent" &&
+node.localName!=="Dimension"
+)
+continue;
+
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+
+const parsed=
+parseOyaTimes(
+node.textContent.trim()
+);
+
+if(
+parsed.length
+){
+
+times.push(
+...parsed
+);
+
+}
+
+}
+
+}
+
+
+/*
+Убираем дубликаты.
+*/
+
+times=[
+...new Set(times)
+].sort(
+(a,b)=>a-b
+);
+
+
+/*
+Поддержка интервала:
+start/end/period.
+*/
+
+if(
+!times.length
+){
+
+for(
+const node of
+Array.from(
+xml.getElementsByTagName("*")
+)
+){
+
+if(
+node.localName!=="Extent" &&
+node.localName!=="Dimension"
+)
+continue;
+
+
+const name=
+node.getAttribute(
+"name"
+);
+
+if(
+name &&
+name.toLowerCase()!=="time"
+)
+continue;
+
+
+const value=
+node.textContent.trim();
+
+
+if(
+!value.includes("/")
+)
+continue;
+
+
+const parts=
+value.split("/");
+
+
+if(
+parts.length<2
+)
+continue;
+
+
+const start=
+isoToUnix(
+parts[0]
+);
+
+const end=
+isoToUnix(
+parts[1]
+);
+
+
+if(
+start===null ||
+end===null
+)
+continue;
+
+
+let step=600;
+
+
+if(
+parts[2]
+){
+
+const match=
+parts[2].match(
+/PT(\d+)M/i
+);
+
+
+if(
+match
+){
+
+step=
+Math.max(
+60,
+Number(match[1])*60
+);
+
+}
+
+}
+
+
+for(
+let t=start;
+t<=end;
+t+=step
+){
+
+times.push(t);
+
+}
+
+}
+
+}
+
+
+times=[
+...new Set(times)
+].sort(
+(a,b)=>a-b
+);
+
+
+if(
+!times.length
+){
+
+throw new Error(
+"В GetCapabilities нет времени"
+);
+
+}
+
+
+/*
+Сохраняем ПОЛНЫЙ список.
+*/
+
+oyaAllTimes=times;
+
+oyaCapabilitiesLoaded=true;
+
+
+/*
+Если количество кадров
+ещё не выбрано — берём всё.
+*/
+
+const savedCount=
+Number(
+localStorage.getItem(
+"gptrad-oya-frame-count"
+)
+);
+
+
+if(
+Number.isFinite(savedCount) &&
+savedCount>=1
+){
+
+oyaFrameCount=
+Math.min(
+savedCount,
+oyaAllTimes.length
+);
+
+}else{
+
+oyaFrameCount=
+oyaAllTimes.length;
+
+}
+
+
+/*
+Настраиваем маленький
+ползунок количества кадров.
+*/
+
+frameCountSlider.min=1;
+
+frameCountSlider.max=
+oyaAllTimes.length;
+
+frameCountSlider.value=
+oyaFrameCount;
+
+frameCountValue.textContent=
+oyaFrameCount;
+
+
+/*
+Формируем выбранный список.
+*/
+
+applyOyaFrameCount(
+oyaFrameCount,
+false
+);
+
+
+setStatus(
+"Опасные явления"
+);
+
+return true;
+
+}catch(error){
+
+console.error(
+"OЯ capabilities:",
+error
+);
+
+setStatus(
+"Ошибка времени ОЯ"
+);
+
+return false;
+
+}finally{
+
+oyaCapabilitiesLoading=false;
+
+}
+
+}
+
+
+/* =========================================================
+   APPLY OЯ FRAME COUNT
+========================================================= */
+
+function applyOyaFrameCount(
+count,
+preserveCurrent=true
+){
+
+if(
+!oyaAllTimes.length
+)
+return;
+
+
+const oldTime=
+preserveCurrent &&
+oyaTimes.length &&
+oyaTimes[oyaFrameIndex]
+?
+oyaTimes[oyaFrameIndex]
+:null;
+
+
+oyaFrameCount=
+Math.max(
+1,
+Math.min(
+Number(count),
+oyaAllTimes.length
+)
+);
+
+
+/*
+Берём последние N кадров.
+*/
+
+oyaTimes=
+oyaAllTimes.slice(
+-oyaFrameCount
+);
+
+
+/*
+Пытаемся сохранить
+текущий момент времени.
+*/
+
+let newIndex=
+oyaTimes.length-1;
+
+
+if(
+oldTime!==null
+){
+
+const found=
+oyaTimes.indexOf(
+oldTime
+);
+
+if(
+found!==-1
+){
+
+newIndex=found;
+
+}
+
+}
+
+
+oyaFrameIndex=newIndex;
+
+
+/*
+Главный таймлайн.
+*/
+
+timeSlider.min=0;
+
+timeSlider.max=
+Math.max(
+0,
+oyaTimes.length-1
+);
+
+timeSlider.value=
+oyaFrameIndex;
+
+updateTimeLabel();
+
+
+frameCountSlider.value=
+oyaFrameCount;
+
+frameCountValue.textContent=
+oyaFrameCount;
+
+}
+
+
+/* =========================================================
+   OЯ URL
+========================================================= */
+
+function makeOyaUrl(timeValue){
+
+return getOyaRequestData(
+timeValue
+).url;
+
+}
+
+
+/* =========================================================
+   OЯ CREATE OVERLAY
+========================================================= */
+
+function createOyaOverlay(
+blobUrl,
+bounds
+){
+
+const overlay=
+L.imageOverlay(
+blobUrl,
+bounds,
+{
+
+opacity:.75,
+
+interactive:false,
+
+zIndex:50
+
+}
+);
+
+
+overlay.addTo(map);
+
+return overlay;
+
+}
+
+
+/* =========================================================
+   OЯ LOAD FRAME
 ========================================================= */
 
 async function loadOyaFrame(index){
@@ -1892,6 +2213,10 @@ return;
 }
 
 
+/*
+Защита индекса.
+*/
+
 if(
 index<0 ||
 index>=oyaTimes.length
@@ -1899,89 +2224,300 @@ index>=oyaTimes.length
 return;
 
 
-oyaFrameIndex=
-index;
+oyaFrameIndex=index;
 
-timeSlider.value=
-index;
+timeSlider.value=index;
 
 updateTimeLabel();
 
 
+const timeValue=
+oyaTimes[index];
+
+const requestData=
+getOyaRequestData(
+timeValue
+);
+
+const cacheKey=
+makeOyaCacheKey(
+timeValue,
+requestData.bounds,
+requestData.width,
+requestData.height
+);
+
+
+/* =====================================================
+   КАДР УЖЕ В КЭШЕ
+===================================================== */
+
+const cached=
+oyaFrameCache.get(
+cacheKey
+);
+
+
+if(
+cached &&
+cached.blobUrl
+){
+
+if(
+activeLayer!=="oya"
+)
+return;
+
+
+const oldImage=
+oyaImage;
+
+const newOverlay=
+createOyaOverlay(
+cached.blobUrl,
+requestData.bounds
+);
+
+
+/*
+Удаляем только текущий
+визуальный overlay.
+
+Сам кэш не трогаем.
+*/
+
+if(
+oldImage &&
+map.hasLayer(
+oldImage
+)
+){
+
+map.removeLayer(
+oldImage
+);
+
+}
+
+
+oyaImage=
+newOverlay;
+
+setStatus(
+"Опасные явления"
+);
+
+return;
+
+}
+
+
+/* =====================================================
+   ТАКОЙ ЗАПРОС УЖЕ ИДЁТ
+===================================================== */
+
+if(
+oyaPendingRequests.has(
+cacheKey
+)
+){
+
+try{
+
+const result=
+await oyaPendingRequests.get(
+cacheKey
+);
+
+if(
+!result
+)
+return;
+
+
+if(
+activeLayer!=="oya"
+)
+return;
+
+
+if(
+oyaTimes[oyaFrameIndex]!==timeValue
+)
+return;
+
+
+const oldImage=
+oyaImage;
+
+const newOverlay=
+createOyaOverlay(
+result.blobUrl,
+requestData.bounds
+);
+
+
+if(
+oldImage &&
+map.hasLayer(
+oldImage
+)
+){
+
+map.removeLayer(
+oldImage
+);
+
+}
+
+
+oyaImage=
+newOverlay;
+
+setStatus(
+"Опасные явления"
+);
+
+}catch(error){
+
+console.error(
+"OЯ pending:",
+error
+);
+
+}
+
+return;
+
+}
+
+
+/* =====================================================
+   НОВЫЙ ЗАПРОС
+===================================================== */
+
 const requestId=
 ++oyaFrameRequestId;
 
-oyaLoading=true;
+const generation=
+oyaCacheGeneration;
+
 
 setStatus(
 "Загрузка ОЯ…"
 );
 
 
-const timeValue=
-oyaTimes[index];
+const promise=
+(async()=>{
 
-const url=
-makeOyaUrl(
-timeValue
+try{
+
+const response=
+await fetch(
+requestData.url,
+{
+cache:"force-cache"
+}
 );
 
 
-console.log(
-"OЯ WMS:",
-url
-);
-
-
-const img=
-new Image();
-
-
-let finished=false;
-
-
-const timeout=
-setTimeout(
-()=>{
-
 if(
-finished
-)
-return;
-
-finished=true;
-
-oyaLoading=false;
-
-
-if(
-requestId===
-oyaFrameRequestId
+!response.ok
 ){
 
-setStatus(
-"ОЯ: сервер не ответил"
+throw new Error(
+"ОЯ image "+response.status
 );
 
 }
 
-},
-15000
-);
+
+const blob=
+await response.blob();
 
 
-img.onload=()=>{
+/*
+Если пользователь сменил слой
+или очистил кэш во время запроса,
+не сохраняем этот результат.
+*/
 
 if(
-finished
+generation!==oyaCacheGeneration
+){
+
+return null;
+
+}
+
+
+const blobUrl=
+URL.createObjectURL(
+blob
+);
+
+
+/*
+Кладём изображение в кэш.
+
+Оно останется там до смены
+слоя или очистки страницы.
+*/
+
+oyaFrameCache.set(
+cacheKey,
+{
+blobUrl,
+timeValue
+}
+);
+
+
+return{
+blobUrl
+};
+
+}catch(error){
+
+console.error(
+"OЯ frame:",
+error
+);
+
+return null;
+
+}
+
+})();
+
+
+oyaPendingRequests.set(
+cacheKey,
+promise
+);
+
+
+try{
+
+const result=
+await promise;
+
+
+/*
+Удаляем promise из списка
+только после завершения.
+*/
+
+oyaPendingRequests.delete(
+cacheKey
+);
+
+
+if(
+!result
 )
 return;
-
-finished=true;
-
-clearTimeout(
-timeout
-);
 
 
 if(
@@ -1989,90 +2525,81 @@ requestId!==oyaFrameRequestId ||
 activeLayer!=="oya"
 ){
 
+/*
+Кадр всё равно остался
+в кэше.
+
+Просто сейчас его
+не показываем.
+*/
+
 return;
 
 }
 
 
 /*
-Используем те же границы,
-для которых был сделан запрос.
-*/
-
-const bounds=
-map.getBounds();
-
-
-const overlay=
-L.imageOverlay(
-url,
-bounds,
-{
-
-opacity:.75,
-
-interactive:false,
-
-zIndex:50
-
-}
-);
-
-
-overlay.addTo(map);
-
-
-/*
-Старый кадр удаляем
-ТОЛЬКО после успешной
-загрузки нового.
+Проверяем, что пользователь
+по-прежнему находится на этом
+времени.
 */
 
 if(
-oyaImage &&
+oyaTimes[oyaFrameIndex]!==timeValue
+){
+
+return;
+
+}
+
+
+const oldImage=
+oyaImage;
+
+
+const newOverlay=
+createOyaOverlay(
+result.blobUrl,
+requestData.bounds
+);
+
+
+/*
+Старый видимый overlay
+удаляем только после того,
+как новый успешно создан.
+*/
+
+if(
+oldImage &&
 map.hasLayer(
-oyaImage
+oldImage
 )
 ){
 
 map.removeLayer(
-oyaImage
+oldImage
 );
 
 }
 
 
 oyaImage=
-overlay;
+newOverlay;
 
-oyaLoading=false;
 
 setStatus(
 "Опасные явления"
 );
 
-};
+}catch(error){
 
-
-img.onerror=()=>{
-
-if(
-finished
-)
-return;
-
-finished=true;
-
-clearTimeout(
-timeout
+oyaPendingRequests.delete(
+cacheKey
 );
 
-oyaLoading=false;
-
-
 if(
-requestId===
-oyaRequestId
+requestId===oyaFrameRequestId
 ){
 
 setStatus(
@@ -2081,10 +2608,7 @@ setStatus(
 
 }
 
-};
-
-
-img.src=url;
+}
 
 }
 
@@ -2096,15 +2620,15 @@ img.src=url;
 async function showOya(){
 
 /*
-Останавливаем
-переключение RainViewer.
+Останавливаем RainViewer
+playback-запросы.
 */
 
 rainFrameRequestId++;
 
 
 /*
-Убираем RainViewer.
+Удаляем текущий RainViewer.
 */
 
 if(
@@ -2124,7 +2648,8 @@ radarLayer=null;
 
 
 /*
-Загружаем времена.
+Если времена ещё не получены —
+получаем их.
 */
 
 const ready=
@@ -2136,21 +2661,17 @@ if(
 return;
 
 
+if(
+!oyaTimes.length
+)
+return;
+
+
 /*
-Показываем последний
-доступный кадр.
+Последний доступный кадр.
 */
 
-if(
-oyaTimes.length
-){
-
 oyaFrameIndex=
-oyaTimes.length-1;
-
-timeSlider.min=0;
-
-timeSlider.max=
 oyaTimes.length-1;
 
 timeSlider.value=
@@ -2158,11 +2679,10 @@ oyaFrameIndex;
 
 updateTimeLabel();
 
+
 loadOyaFrame(
 oyaFrameIndex
 );
-
-}
 
 }
 
@@ -2198,6 +2718,17 @@ if(
 oyaTimes.length
 ){
 
+/*
+При изменении карты старый
+bbox уже не подходит.
+
+Поэтому запрашиваем текущий
+кадр для новой области.
+
+Старые кадры при этом НЕ
+удаляются из кэша.
+*/
+
 loadOyaFrame(
 oyaFrameIndex
 );
@@ -2218,109 +2749,270 @@ scheduleOyaRefresh
 
 
 /* =========================================================
-   LAYER MENU
+   RAINVIEWER
 ========================================================= */
 
-selectedLayer.addEventListener(
-"click",
-()=>{
+async function loadRainViewer(){
 
-const open=
-layerDrawer.classList.toggle(
-"open"
+showLoading(
+"Загрузка радара…"
 );
 
-selectedLayer.classList.toggle(
-"open",
-open
-);
+try{
 
+const r=
+await fetch(
+"https://api.rainviewer.com/public/weather-maps.json",
+{
+cache:"no-store"
 }
 );
+
+if(
+!r.ok
+)
+throw new Error(
+"RainViewer "+r.status
+);
+
+const data=
+await r.json();
+
+rainFrames=
+Array.isArray(
+data.radar?.past
+)
+?data.radar.past
+:[];
+
+if(
+!rainFrames.length
+)
+throw new Error(
+"Нет кадров"
+);
+
+
+rainFrames.sort(
+(a,b)=>a.time-b.time
+);
+
+
+currentFrame=
+rainFrames.length-1;
+
+
+timeSlider.min=0;
+
+timeSlider.max=
+Math.max(
+0,
+rainFrames.length-1
+);
+
+timeSlider.value=
+currentFrame;
+
+updateTimeLabel();
+
+
+showRainFrame(
+currentFrame
+);
+
+setStatus(
+"Радар RainViewer"
+);
+
+}catch(e){
+
+console.error(
+"RainViewer:",
+e
+);
+
+setStatus(
+"Ошибка RainViewer"
+);
+
+}finally{
+
+hideLoading();
+
+}
+
+}
 
 
 /* =========================================================
-   SELECT LAYER
+   RAIN TILE
 ========================================================= */
 
-document
-.querySelectorAll(
-".layer-item"
-)
-.forEach(
-button=>{
+function makeRainLayer(frame){
 
-button.addEventListener(
-"click",
+return L.tileLayer(
+
+"https://tilecache.rainviewer.com"+
+frame.path+
+"/256/{z}/{x}/{y}/2/1_1.png",
+
+{
+
+tileSize:256,
+
+opacity:1,
+
+minZoom:2,
+
+maxZoom:7,
+
+zIndex:10,
+
+updateWhenIdle:true,
+
+updateWhenZooming:false,
+
+keepBuffer:2,
+
+noWrap:false
+
+}
+
+);
+
+}
+
+
+/* =========================================================
+   RAIN FRAME
+========================================================= */
+
+function showRainFrame(index){
+
+if(
+!rainFrames[index]
+)
+return;
+
+
+if(
+activeLayer!=="radar"
+)
+return;
+
+
+const frame=
+rainFrames[index];
+
+const requestId=
+++rainFrameRequestId;
+
+
+const newLayer=
+makeRainLayer(
+frame
+);
+
+newLayer.addTo(map);
+
+
+newLayer.once(
+"load",
 ()=>{
 
-const type=
-button.dataset.layer;
+if(
+requestId!==rainFrameRequestId ||
+activeLayer!=="radar"
+){
 
-
-document
-.querySelectorAll(
-".layer-item"
+if(
+map.hasLayer(
+newLayer
 )
-.forEach(
-x=>{
+){
 
-x.classList.remove(
-"active"
+map.removeLayer(
+newLayer
 );
 
 }
-);
+
+return;
+
+}
 
 
-button.classList.add(
-"active"
-);
+const oldLayer=
+radarLayer;
+
+radarLayer=
+newLayer;
 
 
 if(
-type==="oya"
+oldLayer &&
+map.hasLayer(
+oldLayer
+)
 ){
 
-activeLayer=
-"oya";
-
-selectedLayerName.textContent=
-"Опасные явления";
-
-showOya();
+map.removeLayer(
+oldLayer
+);
 
 }
 
+}
+);
+
+
+const cleanupTimer=
+setTimeout(
+()=>{
 
 if(
-type==="radar"
+requestId!==rainFrameRequestId
+)
+return;
+
+if(
+radarLayer!==newLayer
 ){
 
-activeLayer=
-"radar";
+if(
+map.hasLayer(
+newLayer
+)
+){
 
-selectedLayerName.textContent=
-"Радар (RainViewer)";
-
-showRadar();
-
-}
-
-
-layerDrawer.classList.remove(
-"open"
-);
-
-selectedLayer.classList.remove(
-"open"
+map.removeLayer(
+newLayer
 );
 
 }
+
+}
+
+},
+15000
+);
+
+
+newLayer.once(
+"load",
+()=>{
+
+clearTimeout(
+cleanupTimer
 );
 
 }
 );
+
+
+updateTimeLabel();
+
+}
 
 
 /* =========================================================
@@ -2330,7 +3022,7 @@ selectedLayer.classList.remove(
 function showRadar(){
 
 /*
-Отменяем старые ОЯ.
+Останавливаем ОЯ.
 */
 
 oyaRequestId++;
@@ -2339,7 +3031,7 @@ oyaFrameRequestId++;
 
 
 /*
-Удаляем OЯ.
+Удаляем текущий OЯ overlay.
 */
 
 if(
@@ -2356,6 +3048,15 @@ oyaImage
 }
 
 oyaImage=null;
+
+
+/*
+ВАЖНО:
+Очищаем весь кэш ОЯ
+при переключении слоя.
+*/
+
+clearOyaCache();
 
 
 /*
@@ -2670,11 +3371,7 @@ oyaFrameIndex
    PLAY
 ========================================================= */
 
-document
-.getElementById(
-"playBtn"
-)
-.addEventListener(
+playBtn.addEventListener(
 "click",
 ()=>{
 
@@ -2707,11 +3404,7 @@ playing=
 !playing;
 
 
-document
-.getElementById(
-"playBtn"
-)
-.textContent=
+playBtn.textContent=
 playing
 ?"Ⅱ"
 :"▶";
@@ -2748,6 +3441,8 @@ currentFrame=0;
 timeSlider.value=
 currentFrame;
 
+updateTimeLabel();
+
 showRainFrame(
 currentFrame
 );
@@ -2775,6 +3470,8 @@ oyaFrameIndex=0;
 timeSlider.value=
 oyaFrameIndex;
 
+updateTimeLabel();
+
 loadOyaFrame(
 oyaFrameIndex
 );
@@ -2789,6 +3486,26 @@ oyaFrameIndex
 
 }
 );
+
+
+/* =========================================================
+   STOP PLAYBACK WHEN SWITCHING LAYER
+========================================================= */
+
+function stopPlayback(){
+
+playing=false;
+
+clearInterval(
+playTimer
+);
+
+playTimer=null;
+
+playBtn.textContent=
+"▶";
+
+}
 
 
 /* =========================================================
@@ -2884,19 +3601,44 @@ document
 "click",
 ()=>{
 
+stopPlayback();
+
+
 if(
 activeLayer==="oya"
 ){
 
 /*
-Обновляем именно
-GetCapabilities, чтобы
-получить новые времена.
+Ручное обновление ОЯ —
+полностью очищаем старый
+кэш и заново получаем
+доступные времена.
 */
+
+if(
+oyaImage &&
+map.hasLayer(
+oyaImage
+)
+){
+
+map.removeLayer(
+oyaImage
+);
+
+}
+
+oyaImage=null;
+
+clearOyaCache();
 
 oyaCapabilitiesLoaded=false;
 
+oyaAllTimes=[];
+
 oyaTimes=[];
+
+oyaFrameIndex=0;
 
 showOya();
 
@@ -2911,7 +3653,7 @@ loadRainViewer();
 
 
 /* =========================================================
-   SETTINGS
+   SETTINGS OPEN
 ========================================================= */
 
 document
@@ -2929,6 +3671,104 @@ settings.classList.toggle(
 }
 );
 
+
+/* =========================================================
+   APPEARANCE
+========================================================= */
+
+appearanceToggle.addEventListener(
+"click",
+()=>{
+
+appearanceSection.classList.toggle(
+"open"
+);
+
+}
+);
+
+
+/* =========================================================
+   FRAME COUNT
+========================================================= */
+
+frameCountToggle.addEventListener(
+"click",
+()=>{
+
+frameCountSection.classList.toggle(
+"open"
+);
+
+}
+);
+
+
+/*
+Когда пользователь двигает
+ползунок количества кадров.
+*/
+
+frameCountSlider.addEventListener(
+"input",
+()=>{
+
+if(
+activeLayer!=="oya"
+){
+
+/*
+Ползунок всё равно можно
+настроить только после
+получения OЯ capabilities.
+*/
+
+return;
+
+}
+
+
+const count=
+Number(
+frameCountSlider.value
+);
+
+
+oyaFrameCount=count;
+
+frameCountValue.textContent=
+count;
+
+
+/*
+Сохраняем выбор.
+*/
+
+localStorage.setItem(
+"gptrad-oya-frame-count",
+String(count)
+);
+
+
+/*
+Перестраиваем основной
+таймлайн.
+
+Кэш при этом НЕ очищается.
+*/
+
+applyOyaFrameCount(
+count,
+true
+);
+
+}
+);
+
+
+/* =========================================================
+   THEME
+========================================================= */
 
 document
 .querySelectorAll(
@@ -2975,7 +3815,7 @@ theme
 
 
 /* =========================================================
-   THEME
+   THEME RESTORE
 ========================================================= */
 
 const savedTheme=
@@ -3008,7 +3848,111 @@ savedTheme
 
 
 /* =========================================================
-   CLOSE MENU
+   SELECT LAYER
+========================================================= */
+
+selectedLayer.addEventListener(
+"click",
+()=>{
+
+const open=
+layerDrawer.classList.toggle(
+"open"
+);
+
+selectedLayer.classList.toggle(
+"open",
+open
+);
+
+});
+
+
+document
+.querySelectorAll(
+".layer-item"
+)
+.forEach(
+button=>{
+
+button.addEventListener(
+"click",
+()=>{
+
+const type=
+button.dataset.layer;
+
+
+document
+.querySelectorAll(
+".layer-item"
+)
+.forEach(
+x=>{
+
+x.classList.remove(
+"active"
+);
+
+}
+);
+
+
+button.classList.add(
+"active"
+);
+
+
+stopPlayback();
+
+
+if(
+type==="oya"
+){
+
+activeLayer=
+"oya";
+
+selectedLayerName.textContent=
+"Опасные явления";
+
+showOya();
+
+}
+
+
+if(
+type==="radar"
+){
+
+activeLayer=
+"radar";
+
+selectedLayerName.textContent=
+"Радар (RainViewer)";
+
+showRadar();
+
+}
+
+
+layerDrawer.classList.remove(
+"open"
+);
+
+selectedLayer.classList.remove(
+"open"
+);
+
+}
+);
+
+}
+);
+
+
+/* =========================================================
+   CLOSE LAYER DRAWER
 ========================================================= */
 
 map.on(
@@ -3022,6 +3966,39 @@ layerDrawer.classList.remove(
 selectedLayer.classList.remove(
 "open"
 );
+
+});
+
+
+/* =========================================================
+   PAGE UNLOAD
+========================================================= */
+
+window.addEventListener(
+"beforeunload",
+()=>{
+
+/*
+Освобождаем Blob URLs.
+*/
+
+for(
+const value of
+oyaFrameCache.values()
+){
+
+if(
+value &&
+value.blobUrl
+){
+
+URL.revokeObjectURL(
+value.blobUrl
+);
+
+}
+
+}
 
 });
 
