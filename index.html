@@ -2,187 +2,1389 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               maximum-scale=1.0, user-scalable=no">
+
 <title>GPTrad</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 <style>
-*{box-sizing:border-box}
-html,body,#map{margin:0;width:100%;height:100%;overflow:hidden}
-body{font-family:Arial,sans-serif;background:#111}
-#map{position:fixed;inset:0}
-.panel{
-  position:fixed;
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Arial,sans-serif;
+}
+
+#map{
+  width:100%;
+  height:100%;
+  background:#111;
+}
+
+.top-panel{
+  position:absolute;
   z-index:1000;
-  top:14px;
-  left:14px;
-  right:14px;
-  background:rgba(18,18,22,.92);
-  color:#fff;
-  border-radius:16px;
-  padding:12px;
-  box-shadow:0 5px 25px #0008;
-  backdrop-filter:blur(10px);
+  top:10px;
+  left:10px;
+  right:10px;
+  height:52px;
+
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  padding:8px 10px;
+
+  background:rgba(20,20,20,.88);
+  border-radius:12px;
+  color:white;
+
+  box-shadow:0 3px 15px rgba(0,0,0,.3);
 }
-.title{font-size:20px;font-weight:700;margin-bottom:10px}
-.row{display:flex;gap:7px;align-items:center}
-button{border:0;background:#292a30;color:#fff;border-radius:10px;padding:10px 13px;font-size:14px}
-button:active{transform:scale(.96)}
-select{flex:1;min-width:0;background:#292a30;color:#fff;border:0;border-radius:10px;padding:10px}
-#status{margin-top:9px;font-size:12px;opacity:.7}
+
+.title{
+  font-weight:700;
+  margin-right:auto;
+}
+
+select,
+button{
+  border:0;
+  outline:none;
+}
+
+select{
+  height:34px;
+  border-radius:8px;
+  padding:0 8px;
+  background:#333;
+  color:white;
+}
+
+button{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  background:#333;
+  color:white;
+  font-size:18px;
+  cursor:pointer;
+}
+
+button:active{
+  transform:scale(.95);
+}
+
+.status{
+  position:absolute;
+  z-index:1000;
+
+  top:70px;
+  left:50%;
+  transform:translateX(-50%);
+
+  padding:5px 10px;
+
+  border-radius:8px;
+
+  background:rgba(20,20,20,.75);
+  color:white;
+
+  font-size:12px;
+
+  pointer-events:none;
+}
+
 .timeline{
-  position:fixed;
-  z-index:1001;
-  left:12px;
-  right:12px;
-  bottom:18px;
-  background:rgba(18,18,22,.94);
-  padding:12px;
-  border-radius:16px;
-  box-shadow:0 5px 25px #0008;
+  position:absolute;
+  z-index:1000;
+
+  left:10px;
+  right:10px;
+  bottom:12px;
+
+  height:54px;
+
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  padding:8px 10px;
+
+  background:rgba(20,20,20,.88);
+  border-radius:12px;
+
+  box-shadow:0 3px 15px rgba(0,0,0,.3);
 }
-#time{width:100%;accent-color:#fff}
-.times{display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:12px;margin-top:5px}
-#play{min-width:65px}
+
+.timeline button{
+  flex:0 0 34px;
+}
+
+#slider{
+  flex:1;
+}
+
+#timeLabel{
+  min-width:120px;
+  text-align:center;
+  color:white;
+  font-size:12px;
+}
+
+.leaflet-control-attribution{
+  font-size:9px;
+}
 </style>
 </head>
+
 <body>
+
 <div id="map"></div>
 
-<div class="panel">
+<div class="top-panel">
+
   <div class="title">GPTrad</div>
-  <div class="row">
-    <select id="layer">
-      <option value="radar">Радар (RainViewer)</option>
-      <option value="warnings">Опасные явления</option>
-    </select>
-    <button id="loc">⌖</button>
-    <button id="reload">↻</button>
-  </div>
-  <div id="status">Загрузка…</div>
+
+  <select id="layer">
+    <option value="radar">Радар (RainViewer)</option>
+    <option value="warnings">Опасные явления</option>
+  </select>
+
+  <button id="locate">⌖</button>
+  <button id="reload">↻</button>
+
+</div>
+
+<div class="status" id="status">
+  Загрузка…
 </div>
 
 <div class="timeline">
-  <input id="time" type="range" min="0" max="0" value="0">
-  <div class="times">
-    <button id="back">−10 мин</button>
-    <span id="label">—</span>
-    <button id="forward">+10 мин</button>
-    <button id="play">▶</button>
-  </div>
+
+  <button id="back">‹</button>
+
+  <input
+    id="slider"
+    type="range"
+    min="0"
+    max="0"
+    value="0"
+  >
+
+  <button id="play">▶</button>
+
+  <button id="forward">›</button>
+
+  <div id="timeLabel">—</div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json";
 
-const map = L.map("map", {zoomControl:false}).setView([54.7,55.99],5);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-  maxZoom:12,
-  attribution:"© OpenStreetMap · Радар: RainViewer.com"
-}).addTo(map);
-L.control.zoom({position:"bottomright"}).addTo(map);
+<script>
+
+/* ============================================================
+   НАСТРОЙКИ
+   ============================================================ */
+
+/*
+ * Здесь должен быть сервер, где работает vector_wms.wsgi.
+ *
+ * Например:
+ *
+ * const VECTOR_BASE = "https://example.ru";
+ *
+ * Тогда запрос будет:
+ *
+ * https://example.ru/vector_wsgi?time=...
+ *
+ * Если /vector_wsgi находится непосредственно на твоём
+ * рабочем домене — укажи его здесь.
+ */
+const VECTOR_BASE = "";
+
+
+/* ============================================================
+   КАРТА
+   ============================================================ */
+
+const map = L.map("map", {
+  zoomControl:true,
+  attributionControl:true
+}).setView([54.74,55.97],5);
+
+L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    maxZoom:19,
+    attribution:"© OpenStreetMap"
+  }
+).addTo(map);
+
+
+/* ============================================================
+   UI
+   ============================================================ */
+
+const layerSelect = document.getElementById("layer");
+const slider      = document.getElementById("slider");
+const back        = document.getElementById("back");
+const forward     = document.getElementById("forward");
+const play        = document.getElementById("play");
+const locate      = document.getElementById("locate");
+const reload      = document.getElementById("reload");
+const status      = document.getElementById("status");
+const timeLabel   = document.getElementById("timeLabel");
+
+
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
 
 let frames = [];
+
+let currentIndex = 0;
+
 let radarLayer = null;
+
+let radarLoadingLayer = null;
+
+let warningsLayer = L.layerGroup();
+
 let playing = false;
-let timer = null;
 
-// Слой "опасных явлений". У Росгидромета/МЧС нет открытого live-фида
-// (ни BUFR, ни JSON), который можно дёрнуть прямо из браузера без ключа
-// и договорённостей — только человекочитаемые бюллетени на meteoinfo.ru
-// и на сайтах региональных mchs.gov.ru. Когда появится нормальный источник
-// (свой бэкенд, который его парсит), просто вызови:
-//   renderWarnings([{lat:55.75, lon:37.6, title:"Гроза, град"}, ...])
-const warningsLayer = L.layerGroup();
-function renderWarnings(items){
-  warningsLayer.clearLayers();
-  items.forEach(w=>{
-    L.circleMarker([w.lat, w.lon], {radius:8, color:"#ff5252", fillColor:"#ff5252", fillOpacity:.85})
-      .bindPopup(`<b>${w.title}</b>`)
-      .addTo(warningsLayer);
-  });
+let playTimer = null;
+
+
+/*
+ * Кэш слоёв.
+ *
+ * index -> {
+ *   layer,
+ *   loaded
+ * }
+ */
+const radarCache = new Map();
+
+
+/*
+ * Кэш ОЯ.
+ *
+ * timestamp -> Leaflet layer
+ */
+const warningCache = new Map();
+
+
+/* ============================================================
+   СТАТУС
+   ============================================================ */
+
+function setStatus(text){
+  status.textContent = text;
 }
 
-const slider = document.getElementById("time");
-const label = document.getElementById("label");
-const status = document.getElementById("status");
-const layerSelect = document.getElementById("layer");
 
-function setStatus(t){ status.textContent = t; }
+/* ============================================================
+   ФОРМАТ ВРЕМЕНИ
+   ============================================================ */
 
-function showFrame(i){
-  if(!frames.length) return;
-  i = Math.max(0, Math.min(i, frames.length-1));
-  slider.value = i;
-  const f = frames[i];
-  label.textContent = new Date(f.time).toLocaleString("ru-RU",{
-    day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
-  }) + (f.forecast ? " · прогноз" : "");
-  if(radarLayer) map.removeLayer(radarLayer);
-  radarLayer = L.tileLayer(f.url, {opacity:.75, tileSize:256, zIndex:5}).addTo(map);
+function formatTime(timestamp, forecast){
+
+  const d = new Date(timestamp * 1000);
+
+  return d.toLocaleString("ru-RU",{
+    day:"2-digit",
+    month:"2-digit",
+    hour:"2-digit",
+    minute:"2-digit"
+  }) + (forecast ? " · прогноз" : "");
 }
+
+
+/* ============================================================
+   RAINVIEWER
+   ============================================================ */
 
 async function loadFrames(){
-  setStatus("Загрузка радара…");
+
   try{
-    const res = await fetch(RAINVIEWER_API);
-    const data = await res.json();
-    const host = data.host;
-    const past = (data.radar && data.radar.past) || [];
-    const nowcast = (data.radar && data.radar.nowcast) || [];
-    // 2 — цветовая схема Universal Blue, "1_1" — сглаживание+снег.
-    // Другие варианты: https://www.rainviewer.com/api/color-schemes.html
-    frames = [...past, ...nowcast].map((f, idx)=>({
-      time: f.time*1000,
-      url: `${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
-      forecast: idx >= past.length
-    }));
-    slider.max = frames.length-1;
-    if(layerSelect.value==="radar") showFrame(past.length-1);
-    setStatus("Готово · обновляется раз в 10 мин");
-  }catch(e){
-    setStatus("Не удалось загрузить радар");
+
+    setStatus("Загрузка радара…");
+
+    const response = await fetch(
+      "https://api.rainviewer.com/public/weather-maps.json",
+      {
+        cache:"no-store"
+      }
+    );
+
+    if(!response.ok){
+      throw new Error("RainViewer HTTP " + response.status);
+    }
+
+    const data = await response.json();
+
+    const result = [];
+
+    const past = data.radar?.past || [];
+    const nowcast = data.radar?.nowcast || [];
+
+    for(const f of past){
+
+      result.push({
+        time:f.time,
+        forecast:false,
+        path:f.path,
+        url:
+          data.host +
+          f.path +
+          "/256/{z}/{x}/{y}/2/1_1.png"
+      });
+
+    }
+
+    for(const f of nowcast){
+
+      result.push({
+        time:f.time,
+        forecast:true,
+        path:f.path,
+        url:
+          data.host +
+          f.path +
+          "/256/{z}/{x}/{y}/2/1_1.png"
+      });
+
+    }
+
+    if(!result.length){
+      throw new Error("Кадры не найдены");
+    }
+
+    /*
+     * Удаляем старые дубликаты времени.
+     */
+    const unique = [];
+
+    const seen = new Set();
+
+    for(const f of result){
+
+      if(seen.has(f.time)) continue;
+
+      seen.add(f.time);
+
+      unique.push(f);
+    }
+
+    frames = unique;
+
+    slider.max = Math.max(0,frames.length - 1);
+
+    /*
+     * Если раньше уже был выбран кадр,
+     * стараемся сохранить его.
+     */
+    currentIndex = Math.min(
+      currentIndex,
+      frames.length - 1
+    );
+
+    slider.value = currentIndex;
+
+    /*
+     * Первый запуск.
+     */
+    if(!radarLayer){
+
+      await showFrame(currentIndex,true);
+
+    }else{
+
+      await showFrame(currentIndex,true);
+
+    }
+
+    /*
+     * Предзагрузка соседних кадров.
+     */
+    preloadAround(currentIndex);
+
+    setStatus("Радар готов");
+
+  }catch(error){
+
+    console.error(error);
+
+    setStatus("Ошибка загрузки радара");
+
   }
+
 }
 
-slider.addEventListener("input", ()=>{ showFrame(Number(slider.value)); });
-document.getElementById("back").onclick = ()=>{ showFrame(Number(slider.value)-1); };
-document.getElementById("forward").onclick = ()=>{ showFrame(Number(slider.value)+1); };
 
-document.getElementById("play").onclick = ()=>{
-  playing = !playing;
-  document.getElementById("play").textContent = playing ? "⏸" : "▶";
-  if(timer) clearInterval(timer);
-  if(playing){
-    timer = setInterval(()=>{
-      let n = Number(slider.value)+1;
-      if(n>=frames.length) n=0;
-      showFrame(n);
-    }, 600);
+/* ============================================================
+   СОЗДАНИЕ СЛОЯ РАДАРА
+   ============================================================ */
+
+function createRadarLayer(index){
+
+  const frame = frames[index];
+
+  if(!frame) return null;
+
+  return L.tileLayer(
+    frame.url,
+    {
+      opacity:.75,
+      tileSize:256,
+      zIndex:5,
+      updateWhenZooming:false,
+      updateWhenIdle:true,
+      keepBuffer:2
+    }
+  );
+}
+
+
+/* ============================================================
+   ОЖИДАНИЕ ЗАГРУЗКИ СЛОЯ
+   ============================================================ */
+
+function waitForLayer(layer){
+
+  return new Promise(resolve => {
+
+    let finished = false;
+
+    function done(){
+
+      if(finished) return;
+
+      finished = true;
+
+      resolve();
+
+    }
+
+    layer.once("load",done);
+
+    /*
+     * Если браузер уже взял все тайлы из cache,
+     * load может пройти очень быстро.
+     *
+     * Страховка от вечного ожидания.
+     */
+    setTimeout(done,8000);
+
+  });
+
+}
+
+
+/* ============================================================
+   БЕСШОВНАЯ СМЕНА КАДРА
+   ============================================================ */
+
+async function showFrame(index,force=false){
+
+  if(!frames.length) return;
+
+  index = Math.max(
+    0,
+    Math.min(index,frames.length - 1)
+  );
+
+  currentIndex = index;
+
+  slider.value = index;
+
+  const frame = frames[index];
+
+  timeLabel.textContent =
+    formatTime(
+      frame.time,
+      frame.forecast
+    );
+
+
+  /*
+   * Если этот кадр уже является текущим,
+   * ничего делать не нужно.
+   */
+  if(
+    !force &&
+    radarLayer &&
+    radarLayer._gptradIndex === index
+  ){
+
+    preloadAround(index);
+
+    return;
   }
-};
 
-document.getElementById("reload").onclick = ()=>{ loadFrames(); };
 
-document.getElementById("loc").onclick = ()=>{
-  map.locate({setView:true, maxZoom:8});
-};
-map.on("locationfound", e=>{ L.circleMarker(e.latlng,{radius:7}).addTo(map); });
-map.on("locationerror", ()=>{ setStatus("Геолокация недоступна"); });
+  /*
+   * 1. Сначала проверяем кэш.
+   */
+  let entry = radarCache.get(index);
 
-layerSelect.addEventListener("change", ()=>{
-  if(layerSelect.value==="warnings"){
-    if(radarLayer) map.removeLayer(radarLayer);
-    warningsLayer.addTo(map);
-    setStatus("Слой готов, но без источника данных — см. renderWarnings() в коде");
+
+  /*
+   * 2. Если слоя ещё нет — создаём.
+   */
+  if(!entry){
+
+    const newLayer = createRadarLayer(index);
+
+    if(!newLayer) return;
+
+    entry = {
+      layer:newLayer,
+      loaded:false
+    };
+
+    radarCache.set(index,entry);
+
+    /*
+     * НОВЫЙ слой добавляется ПОВЕРХ старого.
+     *
+     * Старый пока НЕ удаляем.
+     */
+    newLayer._gptradIndex = index;
+
+    newLayer.addTo(map);
+
+    /*
+     * Ждём готовности.
+     */
+    await waitForLayer(newLayer);
+
+    entry.loaded = true;
+
   }else{
-    map.removeLayer(warningsLayer);
-    showFrame(Number(slider.value));
+
+    /*
+     * Кэшированный слой уже есть.
+     */
+    if(!entry.layer._map){
+
+      entry.layer.addTo(map);
+
+    }
+
   }
-});
+
+
+  /*
+   * 3. Теперь новый слой готов.
+   *
+   * Только здесь удаляем старый.
+   */
+  const oldLayer = radarLayer;
+
+  radarLayer = entry.layer;
+
+  radarLayer.setOpacity(.75);
+
+  if(
+    oldLayer &&
+    oldLayer !== radarLayer
+  ){
+
+    map.removeLayer(oldLayer);
+
+    /*
+     * Старый слой оставляем в кэше,
+     * чтобы можно было вернуться мгновенно.
+     */
+  }
+
+
+  /*
+   * 4. Ограничиваем кэш.
+   */
+  trimRadarCache(index);
+
+
+  /*
+   * 5. Загружаем соседние кадры.
+   */
+  preloadAround(index);
+
+}
+
+
+/* ============================================================
+   ПРЕДЗАГРУЗКА КАДРОВ
+   ============================================================ */
+
+function preloadFrame(index){
+
+  if(
+    index < 0 ||
+    index >= frames.length
+  ) return;
+
+  if(radarCache.has(index)) return;
+
+  const layer = createRadarLayer(index);
+
+  if(!layer) return;
+
+  layer._gptradIndex = index;
+
+  /*
+   * Сначала делаем слой прозрачным.
+   *
+   * Он будет загружаться в фоне.
+   */
+  layer.setOpacity(0);
+
+  layer.addTo(map);
+
+  const entry = {
+    layer:layer,
+    loaded:false
+  };
+
+  radarCache.set(index,entry);
+
+  layer.once("load",() => {
+
+    entry.loaded = true;
+
+    /*
+     * Если этот кадр не текущий,
+     * оставляем его прозрачным.
+     */
+    if(radarLayer !== layer){
+
+      layer.setOpacity(0);
+
+    }
+
+  });
+
+}
+
+
+/*
+ * Предзагружаем предыдущий и следующий кадр.
+ */
+function preloadAround(index){
+
+  preloadFrame(index - 1);
+  preloadFrame(index + 1);
+}
+
+
+/* ============================================================
+   ОГРАНИЧЕНИЕ КЭША
+   ============================================================ */
+
+function trimRadarCache(center){
+
+  for(const [index,entry] of radarCache){
+
+    if(
+      Math.abs(index - center) > 2 &&
+      entry.layer !== radarLayer
+    ){
+
+      if(entry.layer._map){
+
+        map.removeLayer(entry.layer);
+
+      }
+
+      radarCache.delete(index);
+
+    }
+
+  }
+
+}
+
+
+/* ============================================================
+   ОЯ
+   ============================================================ */
+
+
+/*
+ * Расчёт конечной точки вектора.
+ *
+ * Используется тот же географический принцип,
+ * что и в demo/dmrl.html репозитория.
+ */
+function destination(
+  lng,
+  lat,
+  dist,
+  heading
+){
+
+  const R = 6371;
+
+  lat *= Math.PI / 180;
+  lng *= Math.PI / 180;
+  heading *= Math.PI / 180;
+
+  const lat2 =
+    Math.asin(
+      Math.sin(lat) *
+      Math.cos(dist / R) +
+
+      Math.cos(lat) *
+      Math.sin(dist / R) *
+      Math.cos(heading)
+    );
+
+  const lng2 =
+    lng +
+    Math.atan2(
+      Math.sin(heading) *
+      Math.sin(dist / R) *
+      Math.cos(lat),
+
+      Math.cos(dist / R) -
+      Math.sin(lat) *
+      Math.sin(lat2)
+    );
+
+  return [
+    180 / Math.PI * lng2,
+    180 / Math.PI * lat2
+  ];
+
+}
+
+
+/* ============================================================
+   ЗАПРОС ОЯ
+   ============================================================ */
+
+async function loadWarnings(timestamp){
+
+  /*
+   * Уже загружено.
+   */
+  if(warningCache.has(timestamp)){
+
+    return warningCache.get(timestamp);
+
+  }
+
+
+  /*
+   * Если endpoint не задан,
+   * просто возвращаем пустой слой.
+   */
+  if(!VECTOR_BASE){
+
+    console.warn(
+      "VECTOR_BASE не задан"
+    );
+
+    return L.layerGroup();
+
+  }
+
+
+  const url =
+    VECTOR_BASE.replace(/\/$/,"") +
+    "/vector_wsgi?time=" +
+    encodeURIComponent(
+      new Date(timestamp * 1000)
+        .toISOString()
+        .replace(".000","")
+    );
+
+
+  try{
+
+    const response = await fetch(
+      url,
+      {
+        cache:"no-store"
+      }
+    );
+
+    if(!response.ok){
+
+      throw new Error(
+        "vector_wsgi HTTP " +
+        response.status
+      );
+
+    }
+
+    const data = await response.json();
+
+    const layer = L.layerGroup();
+
+
+    /*
+     * Формат репозитория:
+     *
+     * [
+     *   latitude,
+     *   longitude,
+     *   distance,
+     *   bearing
+     * ]
+     */
+    for(const item of data){
+
+      if(!Array.isArray(item)) continue;
+
+      const lat = Number(item[0]);
+      const lon = Number(item[1]);
+      const dist = Number(item[2]);
+      const bearing = Number(item[3]);
+
+      if(
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        !Number.isFinite(dist) ||
+        !Number.isFinite(bearing)
+      ){
+
+        continue;
+
+      }
+
+
+      /*
+       * Не рисуем нулевые/служебные значения.
+       */
+      if(dist <= 0) continue;
+
+      /*
+       * bearing=511 в исходном WSGI означает
+       * отсутствие направления.
+       */
+      if(bearing === 511) continue;
+
+
+      /*
+       * В оригинальном demo расстояние
+       * преобразуется через *3.6.
+       */
+      const distance = dist * 3.6;
+
+      const end = destination(
+        lon,
+        lat,
+        distance,
+        bearing
+      );
+
+
+      /*
+       * Сам центр.
+       */
+      L.circleMarker(
+        [lat,lon],
+        {
+          radius:4,
+          color:"#ff3030",
+          weight:2,
+          fillColor:"#ff3030",
+          fillOpacity:.9
+        }
+      ).addTo(layer);
+
+
+      /*
+       * Направление/перемещение.
+       */
+      L.polyline(
+        [
+          [lat,lon],
+          [end[1],end[0]]
+        ],
+        {
+          color:"#ff3030",
+          weight:3,
+          opacity:.9
+        }
+      ).addTo(layer);
+
+
+      /*
+       * Наконечник.
+       */
+      L.circleMarker(
+        [end[1],end[0]],
+        {
+          radius:3,
+          color:"#ff3030",
+          fillColor:"#ff3030",
+          fillOpacity:.9,
+          weight:1
+        }
+      ).addTo(layer);
+
+    }
+
+
+    warningCache.set(
+      timestamp,
+      layer
+    );
+
+    return layer;
+
+
+  }catch(error){
+
+    console.error(
+      "Ошибка vector_wsgi:",
+      error
+    );
+
+    /*
+     * Не ломаем интерфейс.
+     */
+    return L.layerGroup();
+
+  }
+
+}
+
+
+/* ============================================================
+   ПОКАЗ ОЯ
+   ============================================================ */
+
+async function showWarnings(index){
+
+  if(!frames[index]) return;
+
+  const timestamp =
+    frames[index].time;
+
+
+  setStatus("Загрузка опасных явлений…");
+
+
+  const layer =
+    await loadWarnings(timestamp);
+
+
+  /*
+   * Старый слой ОЯ не держим.
+   */
+  if(warningsLayer){
+
+    map.removeLayer(
+      warningsLayer
+    );
+
+  }
+
+
+  warningsLayer = layer;
+
+
+  warningsLayer.addTo(map);
+
+
+  setStatus("Опасные явления");
+
+
+}
+
+
+/* ============================================================
+   ПЕРЕКЛЮЧЕНИЕ СЛОЁВ
+   ============================================================ */
+
+layerSelect.addEventListener(
+  "change",
+  async () => {
+
+    if(layerSelect.value === "radar"){
+
+      /*
+       * ОЯ убрать.
+       */
+      if(warningsLayer){
+
+        map.removeLayer(
+          warningsLayer
+        );
+
+      }
+
+
+      /*
+       * Показать текущий радар.
+       */
+      if(radarLayer){
+
+        radarLayer.setOpacity(.75);
+
+        if(!radarLayer._map){
+
+          radarLayer.addTo(map);
+
+        }
+
+      }else{
+
+        await showFrame(
+          currentIndex,
+          true
+        );
+
+      }
+
+
+      setStatus("Радар готов");
+
+
+    }else{
+
+      /*
+       * Радар не удаляем.
+       *
+       * Просто скрываем его.
+       */
+      if(radarLayer){
+
+        radarLayer.setOpacity(0);
+
+      }
+
+
+      await showWarnings(
+        currentIndex
+      );
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   SLIDER
+   ============================================================ */
+
+slider.addEventListener(
+  "input",
+  async () => {
+
+    const index =
+      Number(slider.value);
+
+    currentIndex = index;
+
+
+    /*
+     * Время меняем сразу.
+     */
+    if(frames[index]){
+
+      timeLabel.textContent =
+        formatTime(
+          frames[index].time,
+          frames[index].forecast
+        );
+
+    }
+
+
+    /*
+     * При режиме радара — бесшовный swap.
+     */
+    if(layerSelect.value === "radar"){
+
+      await showFrame(index);
+
+    }else{
+
+      /*
+       * Для ОЯ тоже сразу грузим соответствующий
+       * временной слой.
+       */
+      await showWarnings(index);
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   НАЗАД
+   ============================================================ */
+
+back.addEventListener(
+  "click",
+  async () => {
+
+    const next =
+      Math.max(
+        0,
+        currentIndex - 1
+      );
+
+    slider.value = next;
+
+    slider.dispatchEvent(
+      new Event("input")
+    );
+
+  }
+);
+
+
+/* ============================================================
+   ВПЕРЁД
+   ============================================================ */
+
+forward.addEventListener(
+  "click",
+  async () => {
+
+    const next =
+      Math.min(
+        frames.length - 1,
+        currentIndex + 1
+      );
+
+    slider.value = next;
+
+    slider.dispatchEvent(
+      new Event("input")
+    );
+
+  }
+);
+
+
+/* ============================================================
+   PLAY / PAUSE
+   ============================================================ */
+
+function stopPlayback(){
+
+  playing = false;
+
+  if(playTimer){
+
+    clearInterval(
+      playTimer
+    );
+
+    playTimer = null;
+
+  }
+
+  play.textContent = "▶";
+
+}
+
+
+function startPlayback(){
+
+  if(playing) return;
+
+  playing = true;
+
+  play.textContent = "Ⅱ";
+
+
+  playTimer =
+    setInterval(
+      async () => {
+
+        let next =
+          currentIndex + 1;
+
+
+        if(next >= frames.length){
+
+          next = 0;
+
+        }
+
+
+        slider.value = next;
+
+        await (
+          async () => {
+
+            currentIndex = next;
+
+            if(layerSelect.value === "radar"){
+
+              await showFrame(next);
+
+            }else{
+
+              await showWarnings(next);
+
+            }
+
+          }
+        )();
+
+      },
+      600
+    );
+
+}
+
+
+play.addEventListener(
+  "click",
+  () => {
+
+    if(playing){
+
+      stopPlayback();
+
+    }else{
+
+      startPlayback();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   ГЕОЛОКАЦИЯ
+   ============================================================ */
+
+locate.addEventListener(
+  "click",
+  () => {
+
+    if(!navigator.geolocation){
+
+      return;
+
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+
+        const lat =
+          position.coords.latitude;
+
+        const lon =
+          position.coords.longitude;
+
+        map.setView(
+          [lat,lon],
+          8
+        );
+
+      },
+      error => {
+
+        console.error(
+          "Geolocation:",
+          error
+        );
+
+      },
+      {
+        enableHighAccuracy:true,
+        timeout:10000,
+        maximumAge:60000
+      }
+    );
+
+  }
+);
+
+
+/* ============================================================
+   RELOAD
+   ============================================================ */
+
+reload.addEventListener(
+  "click",
+  async () => {
+
+    /*
+     * Сохраняем текущий кадр.
+     */
+    const oldIndex =
+      currentIndex;
+
+
+    /*
+     * Не трогаем интерфейс.
+     */
+    await loadFrames();
+
+
+    /*
+     * Возвращаемся к прежнему индексу,
+     * если он ещё существует.
+     */
+    currentIndex =
+      Math.min(
+        oldIndex,
+        frames.length - 1
+      );
+
+    slider.value =
+      currentIndex;
+
+
+    if(layerSelect.value === "warnings"){
+
+      await showWarnings(
+        currentIndex
+      );
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   ПЕРИОДИЧЕСКОЕ ОБНОВЛЕНИЕ
+   ============================================================ */
+
+setInterval(
+  async () => {
+
+    await loadFrames();
+
+  },
+  10 * 60 * 1000
+);
+
+
+/* ============================================================
+   СТАРТ
+   ============================================================ */
 
 loadFrames();
-setInterval(loadFrames, 10*60*1000);
+
 </script>
+
 </body>
 </html>
