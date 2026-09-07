@@ -5,20 +5,16 @@
 
 <meta name="viewport"
       content="width=device-width,
-               initial-scale=1,
-               maximum-scale=1,
-               user-scalable=no">
+      initial-scale=1,
+      maximum-scale=1,
+      user-scalable=no">
 
 <title>GPTrad</title>
 
 <link rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
-
-/* =========================================================
-   BASE
-========================================================= */
 
 *{
     box-sizing:border-box;
@@ -52,7 +48,7 @@ body{
 
 
 /* =========================================================
-   TOP BAR
+   TOP
 ========================================================= */
 
 .top-panel{
@@ -86,10 +82,6 @@ body{
 }
 
 
-/* =========================================================
-   LOGO
-========================================================= */
-
 .logo{
 
     color:white;
@@ -101,13 +93,12 @@ body{
     white-space:nowrap;
 
     margin-left:8px;
-
     margin-right:8px;
 }
 
 
 /* =========================================================
-   SELECTED LAYER BUTTON
+   SELECTED LAYER
 ========================================================= */
 
 #selectedLayer{
@@ -165,15 +156,14 @@ body{
         transform .25s ease;
 }
 
-#selectedLayer.open
-#selectedLayerArrow{
+#selectedLayer.open #selectedLayerArrow{
 
     transform:rotate(180deg);
 }
 
 
 /* =========================================================
-   ICON BUTTONS
+   BUTTONS
 ========================================================= */
 
 .icon-btn{
@@ -195,17 +185,14 @@ body{
     font-size:21px;
 
     display:flex;
-
     align-items:center;
     justify-content:center;
 
     transition:
-        transform .15s ease,
-        background .15s ease;
+        transform .15s ease;
 }
 
 .icon-btn:active{
-
     transform:scale(.94);
 }
 
@@ -249,10 +236,8 @@ body{
         0 10px 35px rgba(0,0,0,.35);
 
     transition:
-
         transform .28s
         cubic-bezier(.22,.61,.36,1),
-
         opacity .22s ease;
 }
 
@@ -266,11 +251,6 @@ body{
 
     pointer-events:auto;
 }
-
-
-/* =========================================================
-   DRAWER HEADER
-========================================================= */
 
 .drawer-header{
 
@@ -304,12 +284,13 @@ body{
     color:white;
 
     display:flex;
-
     align-items:center;
 
     gap:10px;
 
     padding:10px 12px;
+
+    margin-bottom:7px;
 
     font-size:15px;
 
@@ -320,13 +301,15 @@ body{
         transform .15s ease;
 }
 
-.layer-item:active{
+.layer-item:last-child{
+    margin-bottom:0;
+}
 
+.layer-item:active{
     transform:scale(.985);
 }
 
 .layer-item.active{
-
     background:#3b3b3b;
 }
 
@@ -342,8 +325,7 @@ body{
     background:#777;
 }
 
-.layer-item.active
-.layer-dot{
+.layer-item.active .layer-dot{
 
     background:#36d67a;
 
@@ -411,7 +393,6 @@ body{
 }
 
 #settings.open{
-
     display:block;
 }
 
@@ -552,93 +533,64 @@ body{
 
 
 /* =========================================================
-   LIGHT THEME
+   LIGHT
 ========================================================= */
 
-body.light
-.top-panel,
-body.light
-#layerDrawer,
-body.light
-#settings,
-body.light
-.timeline,
-body.light
-#status{
+body.light .top-panel,
+body.light #layerDrawer,
+body.light #settings,
+body.light .timeline,
+body.light #status{
 
     background:rgba(255,255,255,.94);
 }
 
-body.light
-.logo,
-body.light
-#status,
-body.light
-.drawer-header{
+body.light .logo,
+body.light #status,
+body.light .drawer-header{
 
     color:#111;
 }
 
-body.light
-#selectedLayer,
-body.light
-.icon-btn,
-body.light
-.layer-item,
-body.light
-.timeline button,
-body.light
-.theme-btn{
+body.light #selectedLayer,
+body.light .icon-btn,
+body.light .layer-item,
+body.light .timeline button,
+body.light .theme-btn{
 
     background:#eeeeee;
-
     color:#111;
 }
 
-body.light
-.layer-item.active{
-
+body.light .layer-item.active{
     background:#dddddd;
 }
 
 
 /* =========================================================
-   GREEN THEME
+   GREEN
 ========================================================= */
 
-body.green
-.top-panel,
-body.green
-#layerDrawer,
-body.green
-#settings,
-body.green
-.timeline,
-body.green
-#status{
+body.green .top-panel,
+body.green #layerDrawer,
+body.green #settings,
+body.green .timeline,
+body.green #status{
 
     background:rgba(8,35,22,.94);
 }
 
-body.green
-#selectedLayer,
-body.green
-.icon-btn,
-body.green
-.layer-item,
-body.green
-.timeline button,
-body.green
-.theme-btn{
+body.green #selectedLayer,
+body.green .icon-btn,
+body.green .layer-item,
+body.green .timeline button,
+body.green .theme-btn{
 
     background:#123d29;
-
     color:white;
 }
 
-body.green
-.layer-item.active{
-
+body.green .layer-item.active{
     background:#185538;
 }
 
@@ -665,7 +617,6 @@ body.green
         font-size:21px;
 
         margin-left:6px;
-
         margin-right:3px;
     }
 
@@ -727,25 +678,22 @@ body.green
 
 
 <!-- =======================================================
-     TOP BAR
+     TOP
 ======================================================== -->
 
 <div class="top-panel">
-
 
     <div class="logo">
         GPTrad
     </div>
 
 
-    <!-- ВЫБРАННЫЙ СЛОЙ -->
-
     <button
         id="selectedLayer"
         type="button">
 
         <span id="selectedLayerName">
-            Опасные явления
+            Радар (RainViewer)
         </span>
 
         <span id="selectedLayerArrow">
@@ -788,7 +736,7 @@ body.green
 
 
 <!-- =======================================================
-     LAYER DRAWER
+     LAYERS
 ======================================================== -->
 
 <div id="layerDrawer">
@@ -800,6 +748,20 @@ body.green
 
     <button
         class="layer-item active"
+        data-layer="radar"
+        type="button">
+
+        <span class="layer-dot"></span>
+
+        <span>
+            Радар (RainViewer)
+        </span>
+
+    </button>
+
+
+    <button
+        class="layer-item"
         data-layer="oya"
         type="button">
 
@@ -871,7 +833,6 @@ body.green
 
     <div class="timeline-controls">
 
-
         <button
             id="backBtn"
             type="button">
@@ -911,7 +872,6 @@ body.green
             —
         </div>
 
-
     </div>
 
 </div>
@@ -923,7 +883,7 @@ body.green
 
 
 <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
 
@@ -933,7 +893,7 @@ body.green
    MAP
 ========================================================= */
 
-const map = L.map("map", {
+const map = L.map("map",{
 
     zoomControl:true,
 
@@ -967,7 +927,7 @@ const map = L.map("map", {
 
     inertiaDeceleration:3000,
 
-    easeLinearity:0.2,
+    easeLinearity:.2,
 
     minZoom:2,
 
@@ -983,10 +943,8 @@ const map = L.map("map", {
    OSM
 ========================================================= */
 
-const osm = L.tileLayer(
-
+L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-
     {
 
         minZoom:2,
@@ -1005,7 +963,6 @@ const osm = L.tileLayer(
             "© OpenStreetMap"
 
     }
-
 ).addTo(map);
 
 
@@ -1021,11 +978,6 @@ const selectedLayer =
 const selectedLayerName =
     document.getElementById(
         "selectedLayerName"
-    );
-
-const selectedLayerArrow =
-    document.getElementById(
-        "selectedLayerArrow"
     );
 
 const layerDrawer =
@@ -1063,6 +1015,8 @@ const settings =
    STATE
 ========================================================= */
 
+let activeLayer = "radar";
+
 let radarLayer = null;
 
 let oyaLayer = null;
@@ -1071,9 +1025,36 @@ let rainFrames = [];
 
 let currentFrame = 0;
 
+let playing = false;
+
 let playTimer = null;
 
-let playing = false;
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function setStatus(text){
+
+    status.textContent = text;
+
+}
+
+function showLoading(text){
+
+    loading.textContent = text;
+
+    loading.style.display =
+        "block";
+
+}
+
+function hideLoading(){
+
+    loading.style.display =
+        "none";
+
+}
 
 
 /* =========================================================
@@ -1083,7 +1064,7 @@ let playing = false;
 async function loadRainViewer(){
 
     showLoading(
-        "Получение радара…"
+        "Загрузка радара…"
     );
 
     try{
@@ -1096,6 +1077,7 @@ async function loadRainViewer(){
                 }
             );
 
+
         if(!response.ok){
 
             throw new Error(
@@ -1105,19 +1087,19 @@ async function loadRainViewer(){
 
         }
 
+
         const data =
             await response.json();
 
 
-        rainFrames = [
-            ...(data.radar?.past || [])
-        ];
+        rainFrames =
+            data.radar?.past || [];
 
 
         if(!rainFrames.length){
 
             throw new Error(
-                "Нет кадров"
+                "Кадры не найдены"
             );
 
         }
@@ -1127,7 +1109,8 @@ async function loadRainViewer(){
             rainFrames.length - 1;
 
 
-        timeSlider.min = 0;
+        timeSlider.min =
+            0;
 
         timeSlider.max =
             rainFrames.length - 1;
@@ -1145,7 +1128,7 @@ async function loadRainViewer(){
 
 
         setStatus(
-            "Радар загружен"
+            "Радар RainViewer"
         );
 
 
@@ -1157,7 +1140,7 @@ async function loadRainViewer(){
         );
 
         setStatus(
-            "Ошибка радара"
+            "Ошибка RainViewer"
         );
 
     }finally{
@@ -1170,24 +1153,19 @@ async function loadRainViewer(){
 
 
 /* =========================================================
-   RAINVIEWER LAYER
+   RAINVIEWER TILE
 ========================================================= */
 
-function makeRainLayer(frame){
+function createRainLayer(frame){
 
     const url =
-
         "https://tilecache.rainviewer.com" +
-
         frame.path +
-
         "/256/{z}/{x}/{y}/2/1_1.png";
 
 
     return L.tileLayer(
-
         url,
-
         {
 
             tileSize:256,
@@ -1204,30 +1182,29 @@ function makeRainLayer(frame){
 
             updateWhenZooming:false,
 
-            keepBuffer:3
+            keepBuffer:3,
+
+            crossOrigin:true
 
         }
-
     );
 
 }
 
 
 /* =========================================================
-   SHOW RAIN FRAME
+   RAIN FRAME
 ========================================================= */
 
 function showRainFrame(index){
 
     if(!rainFrames[index]){
-
         return;
-
     }
 
 
     const newLayer =
-        makeRainLayer(
+        createRainLayer(
             rainFrames[index]
         );
 
@@ -1296,7 +1273,7 @@ function showRainFrame(index){
             }
 
         },
-        8000
+        7000
     );
 
 
@@ -1306,16 +1283,8 @@ function showRainFrame(index){
 
 
 /* =========================================================
-   OЯ — ORIGINAL BALTRAD WMS
+   OЯ / BALTRAD
 ========================================================= */
-
-/*
-   Именно такая схема используется
-   в оригинальном radar-wms demo.
-
-   Один выбранный продукт состоит
-   из трёх источников.
-*/
 
 const OYA_WMS =
     "https://www.nowcast.ru/baltrad_wsgi";
@@ -1327,23 +1296,19 @@ const OYA_LAYER =
     "bufr_vlad_phenomena";
 
 
-/* =========================================================
-   OЯ WMS
-========================================================= */
+/*
+    ВАЖНО:
+
+    OЯ создаётся только при выборе.
+
+    При старте сайта никакого WMS
+    запроса к Nowcast нет.
+*/
 
 function createOyaLayer(){
 
-    /*
-       Не используем /api/oya.
-
-       Leaflet сам формирует WMS GetMap
-       запрос к Nowcast.
-    */
-
     return L.tileLayer.wms(
-
         OYA_WMS,
-
         {
 
             layers:
@@ -1362,10 +1327,20 @@ function createOyaLayer(){
                 "",
 
             opacity:
-                0.7,
+                .75,
 
             zIndex:
                 50,
+
+            /*
+                512 вместо 256.
+
+                На одном экране будет
+                значительно меньше WMS-запросов.
+            */
+
+            tileSize:
+                512,
 
             updateWhenIdle:
                 true,
@@ -1374,10 +1349,12 @@ function createOyaLayer(){
                 false,
 
             keepBuffer:
-                2
+                1,
+
+            detectRetina:
+                false
 
         }
-
     );
 
 }
@@ -1390,7 +1367,7 @@ function createOyaLayer(){
 function showOya(){
 
     /*
-       Убираем RainViewer.
+        Удаляем RainViewer.
     */
 
     if(
@@ -1411,7 +1388,82 @@ function showOya(){
 
 
     /*
-       Старый OЯ тоже удаляем.
+        Если OЯ ещё нет —
+        создаём только сейчас.
+    */
+
+    if(!oyaLayer){
+
+        setStatus(
+            "Загрузка ОЯ…"
+        );
+
+
+        oyaLayer =
+            createOyaLayer();
+
+
+        oyaLayer.on(
+            "loading",
+            ()=>{
+                setStatus(
+                    "Загрузка ОЯ…"
+                );
+            }
+        );
+
+
+        oyaLayer.on(
+            "load",
+            ()=>{
+                setStatus(
+                    "Опасные явления"
+                );
+            }
+        );
+
+
+        oyaLayer.on(
+            "tileerror",
+            ()=>{
+                setStatus(
+                    "Ошибка загрузки ОЯ"
+                );
+            }
+        );
+
+
+        oyaLayer.addTo(map);
+
+    }else{
+
+        if(
+            !map.hasLayer(
+                oyaLayer
+            )
+        ){
+
+            oyaLayer.addTo(map);
+
+        }
+
+        setStatus(
+            "Опасные явления"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SHOW RAIN
+========================================================= */
+
+function showRadar(){
+
+    /*
+        Убираем OЯ.
     */
 
     if(
@@ -1429,32 +1481,40 @@ function showOya(){
 
 
     /*
-       Создаём настоящий WMS.
+        Если кадры уже есть —
+        просто показываем текущий.
     */
 
-    oyaLayer =
-        createOyaLayer();
+    if(
+        rainFrames.length
+    ){
 
+        showRainFrame(
+            currentFrame
+        );
 
-    oyaLayer.addTo(map);
+        setStatus(
+            "Радар RainViewer"
+        );
 
+    }else{
 
-    setStatus(
-        "Опасные явления"
-    );
+        loadRainViewer();
+
+    }
 
 }
 
 
 /* =========================================================
-   SELECTED LAYER MENU
+   SELECTED LAYER BUTTON
 ========================================================= */
 
 selectedLayer.addEventListener(
     "click",
     ()=>{
 
-        const opened =
+        const open =
             layerDrawer.classList.toggle(
                 "open"
             );
@@ -1462,7 +1522,7 @@ selectedLayer.addEventListener(
 
         selectedLayer.classList.toggle(
             "open",
-            opened
+            open
         );
 
     }
@@ -1470,69 +1530,91 @@ selectedLayer.addEventListener(
 
 
 /* =========================================================
-   OЯ SELECT
+   LAYER SELECT
 ========================================================= */
 
 document
-    .querySelectorAll(
-        ".layer-item"
-    )
-    .forEach(
-        button=>{
+.querySelectorAll(".layer-item")
+.forEach(button=>{
 
-            button.addEventListener(
-                "click",
-                ()=>{
+    button.addEventListener(
+        "click",
+        ()=>{
 
-                    document
-                        .querySelectorAll(
-                            ".layer-item"
-                        )
-                        .forEach(
-                            item=>
-                                item.classList.remove(
-                                    "active"
-                                )
-                        );
+            const type =
+                button.dataset.layer;
 
 
-                    button.classList.add(
-                        "active"
-                    );
+            document
+            .querySelectorAll(
+                ".layer-item"
+            )
+            .forEach(
+                x =>
+                x.classList.remove(
+                    "active"
+                )
+            );
 
 
-                    selectedLayerName.textContent =
-                        "Опасные явления";
+            button.classList.add(
+                "active"
+            );
 
 
-                    layerDrawer.classList.remove(
-                        "open"
-                    );
+            if(type === "oya"){
 
-                    selectedLayer.classList.remove(
-                        "open"
-                    );
+                activeLayer =
+                    "oya";
 
 
-                    showOya();
+                selectedLayerName.textContent =
+                    "Опасные явления";
 
-                }
+
+                showOya();
+
+            }
+
+
+            if(type === "radar"){
+
+                activeLayer =
+                    "radar";
+
+
+                selectedLayerName.textContent =
+                    "Радар (RainViewer)";
+
+
+                showRadar();
+
+            }
+
+
+            layerDrawer.classList.remove(
+                "open"
+            );
+
+
+            selectedLayer.classList.remove(
+                "open"
             );
 
         }
     );
 
+});
+
 
 /* =========================================================
-   TIME LABEL
+   TIME
 ========================================================= */
 
 function formatTime(ts){
 
     if(!ts){
-
         return "—";
-
     }
 
 
@@ -1545,11 +1627,8 @@ function formatTime(ts){
     return date.toLocaleTimeString(
         "ru-RU",
         {
-
             hour:"2-digit",
-
             minute:"2-digit"
-
         }
     );
 
@@ -1559,6 +1638,7 @@ function formatTime(ts){
 function updateTimeLabel(){
 
     if(
+        activeLayer === "radar" &&
         rainFrames[currentFrame]
     ){
 
@@ -1572,7 +1652,7 @@ function updateTimeLabel(){
     }else{
 
         timeLabel.textContent =
-            "—";
+            "Сейчас";
 
     }
 
@@ -1580,12 +1660,21 @@ function updateTimeLabel(){
 
 
 /* =========================================================
-   TIMELINE
+   SLIDER
 ========================================================= */
 
 timeSlider.addEventListener(
     "input",
     ()=>{
+
+        if(
+            activeLayer !== "radar"
+        ){
+
+            return;
+
+        }
+
 
         currentFrame =
             Number(
@@ -1601,149 +1690,182 @@ timeSlider.addEventListener(
 );
 
 
+/* =========================================================
+   BACK
+========================================================= */
+
 document
-    .getElementById(
-        "backBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
+.getElementById("backBtn")
+.addEventListener(
+    "click",
+    ()=>{
 
-            if(
-                !rainFrames.length
-            ){
+        if(
+            activeLayer !== "radar"
+        ){
 
-                return;
+            return;
 
-            }
+        }
 
 
-            currentFrame =
-                Math.max(
-                    0,
-                    currentFrame - 1
+        if(
+            !rainFrames.length
+        ){
+
+            return;
+
+        }
+
+
+        currentFrame =
+            Math.max(
+                0,
+                currentFrame - 1
+            );
+
+
+        timeSlider.value =
+            currentFrame;
+
+
+        showRainFrame(
+            currentFrame
+        );
+
+    }
+);
+
+
+/* =========================================================
+   FORWARD
+========================================================= */
+
+document
+.getElementById("forwardBtn")
+.addEventListener(
+    "click",
+    ()=>{
+
+        if(
+            activeLayer !== "radar"
+        ){
+
+            return;
+
+        }
+
+
+        if(
+            !rainFrames.length
+        ){
+
+            return;
+
+        }
+
+
+        currentFrame =
+            Math.min(
+                rainFrames.length - 1,
+                currentFrame + 1
+            );
+
+
+        timeSlider.value =
+            currentFrame;
+
+
+        showRainFrame(
+            currentFrame
+        );
+
+    }
+);
+
+
+/* =========================================================
+   PLAY
+========================================================= */
+
+document
+.getElementById("playBtn")
+.addEventListener(
+    "click",
+    ()=>{
+
+        if(
+            activeLayer !== "radar"
+        ){
+
+            return;
+
+        }
+
+
+        if(
+            !rainFrames.length
+        ){
+
+            return;
+
+        }
+
+
+        playing =
+            !playing;
+
+
+        document
+        .getElementById(
+            "playBtn"
+        )
+        .textContent =
+            playing
+            ? "Ⅱ"
+            : "▶";
+
+
+        clearInterval(
+            playTimer
+        );
+
+
+        if(playing){
+
+            playTimer =
+                setInterval(
+                    ()=>{
+
+                        currentFrame++;
+
+
+                        if(
+                            currentFrame >=
+                            rainFrames.length
+                        ){
+
+                            currentFrame = 0;
+
+                        }
+
+
+                        timeSlider.value =
+                            currentFrame;
+
+
+                        showRainFrame(
+                            currentFrame
+                        );
+
+                    },
+                    600
                 );
 
-
-            timeSlider.value =
-                currentFrame;
-
-
-            showRainFrame(
-                currentFrame
-            );
-
         }
-    );
 
-
-document
-    .getElementById(
-        "forwardBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
-
-            if(
-                !rainFrames.length
-            ){
-
-                return;
-
-            }
-
-
-            currentFrame =
-                Math.min(
-                    rainFrames.length - 1,
-                    currentFrame + 1
-                );
-
-
-            timeSlider.value =
-                currentFrame;
-
-
-            showRainFrame(
-                currentFrame
-            );
-
-        }
-    );
-
-
-document
-    .getElementById(
-        "playBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
-
-            if(
-                !rainFrames.length
-            ){
-
-                return;
-
-            }
-
-
-            playing =
-                !playing;
-
-
-            document
-                .getElementById(
-                    "playBtn"
-                )
-                .textContent =
-                    playing
-                    ? "Ⅱ"
-                    : "▶";
-
-
-            clearInterval(
-                playTimer
-            );
-
-
-            if(playing){
-
-                playTimer =
-                    setInterval(
-                        ()=>{
-
-                            currentFrame++;
-
-
-                            if(
-                                currentFrame >=
-                                rainFrames.length
-                            ){
-
-                                currentFrame = 0;
-
-                            }
-
-
-                            timeSlider.value =
-                                currentFrame;
-
-
-                            showRainFrame(
-                                currentFrame
-                            );
-
-                        },
-                        600
-                    );
-
-            }
-
-        }
-    );
+    }
+);
 
 
 /* =========================================================
@@ -1751,92 +1873,75 @@ document
 ========================================================= */
 
 document
-    .getElementById(
-        "locateBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
+.getElementById("locateBtn")
+.addEventListener(
+    "click",
+    ()=>{
 
-            if(
-                !navigator.geolocation
-            ){
-
-                setStatus(
-                    "Геолокация недоступна"
-                );
-
-                return;
-
-            }
-
+        if(
+            !navigator.geolocation
+        ){
 
             setStatus(
-                "Определение местоположения…"
+                "Геолокация недоступна"
             );
 
-
-            navigator
-                .geolocation
-                .getCurrentPosition(
-
-                    position=>{
-
-                        const lat =
-                            position.coords
-                                .latitude;
-
-
-                        const lon =
-                            position.coords
-                                .longitude;
-
-
-                        map.flyTo(
-
-                            [
-                                lat,
-                                lon
-                            ],
-
-                            Math.max(
-                                map.getZoom(),
-                                8
-                            ),
-
-                            {
-                                duration:.8
-                            }
-
-                        );
-
-
-                        setStatus(
-                            "Ваше местоположение"
-                        );
-
-                    },
-
-
-                    ()=>{
-                        setStatus(
-                            "Не удалось определить местоположение"
-                        );
-                    },
-
-
-                    {
-
-                        enableHighAccuracy:true,
-
-                        timeout:10000
-
-                    }
-
-                );
+            return;
 
         }
-    );
+
+
+        setStatus(
+            "Определение местоположения…"
+        );
+
+
+        navigator
+        .geolocation
+        .getCurrentPosition(
+
+            position=>{
+
+                const lat =
+                    position.coords.latitude;
+
+                const lon =
+                    position.coords.longitude;
+
+
+                map.flyTo(
+                    [lat,lon],
+                    Math.max(
+                        map.getZoom(),
+                        8
+                    ),
+                    {
+                        duration:.8
+                    }
+                );
+
+
+                setStatus(
+                    "Ваше местоположение"
+                );
+
+            },
+
+            ()=>{
+                setStatus(
+                    "Не удалось определить местоположение"
+                );
+            },
+
+            {
+                enableHighAccuracy:true,
+                timeout:10000
+            }
+
+        );
+
+    }
+);
 
 
 /* =========================================================
@@ -1844,30 +1949,41 @@ document
 ========================================================= */
 
 document
-    .getElementById(
-        "reloadBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
+.getElementById("reloadBtn")
+.addEventListener(
+    "click",
+    ()=>{
 
-            if(
-                oyaLayer &&
-                map.hasLayer(
+        if(
+            activeLayer === "oya"
+        ){
+
+            /*
+                Полностью пересоздаём OЯ,
+                чтобы получить свежий WMS.
+            */
+
+            if(oyaLayer){
+
+                map.removeLayer(
                     oyaLayer
-                )
-            ){
+                );
 
-                showOya();
-
-            }else{
-
-                loadRainViewer();
+                oyaLayer = null;
 
             }
 
+
+            showOya();
+
+        }else{
+
+            loadRainViewer();
+
         }
-    );
+
+    }
+);
 
 
 /* =========================================================
@@ -1875,63 +1991,57 @@ document
 ========================================================= */
 
 document
-    .getElementById(
-        "settingsBtn"
-    )
-    .addEventListener(
-        "click",
-        ()=>{
+.getElementById("settingsBtn")
+.addEventListener(
+    "click",
+    ()=>{
 
-            settings.classList.toggle(
-                "open"
-            );
+        settings.classList.toggle(
+            "open"
+        );
 
-        }
-    );
+    }
+);
 
 
 document
-    .querySelectorAll(
-        ".theme-btn"
-    )
-    .forEach(
-        button=>{
+.querySelectorAll(".theme-btn")
+.forEach(button=>{
 
-            button.addEventListener(
-                "click",
-                ()=>{
+    button.addEventListener(
+        "click",
+        ()=>{
 
-                    const theme =
-                        button.dataset.theme;
+            const theme =
+                button.dataset.theme;
 
 
-                    document.body.classList.remove(
-                        "light",
-                        "green"
-                    );
+            document.body.classList.remove(
+                "light",
+                "green"
+            );
 
 
-                    if(
-                        theme !== "dark"
-                    ){
+            if(
+                theme !== "dark"
+            ){
 
-                        document.body.classList.add(
-                            theme
-                        );
+                document.body.classList.add(
+                    theme
+                );
 
-                    }
+            }
 
 
-                    localStorage.setItem(
-                        "gptrad-theme",
-                        theme
-                    );
-
-                }
+            localStorage.setItem(
+                "gptrad-theme",
+                theme
             );
 
         }
     );
+
+});
 
 
 /* =========================================================
@@ -1966,7 +2076,7 @@ if(savedTheme){
 
 
 /* =========================================================
-   CLOSE LAYER MENU WHEN CLICKING MAP
+   CLOSE MENU
 ========================================================= */
 
 map.on(
@@ -1990,7 +2100,10 @@ map.on(
 ========================================================= */
 
 /*
-   По умолчанию запускаем RainViewer.
+    По умолчанию — RainViewer.
+
+    OЯ вообще не трогаем,
+    пока пользователь его не выберет.
 */
 
 loadRainViewer();
