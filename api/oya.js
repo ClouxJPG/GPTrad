@@ -2,7 +2,6 @@ const TARGET = "https://www.nowcast.ru/baltrad_wsgi";
 
 export default async function handler(req, res) {
   try {
-    // CORS preflight
     if (req.method === "OPTIONS") {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
@@ -10,7 +9,6 @@ export default async function handler(req, res) {
       return res.status(204).end();
     }
 
-    // Собираем параметры запроса
     const query = new URLSearchParams();
 
     for (const [key, value] of Object.entries(req.query || {})) {
@@ -25,7 +23,8 @@ export default async function handler(req, res) {
 
     const targetUrl = `${TARGET}?${query.toString()}`;
 
-    // Запрос к Nowcast
+    console.log("OYA request:", targetUrl);
+
     const upstream = await fetch(targetUrl, {
       method: "GET",
       headers: {
@@ -42,21 +41,40 @@ export default async function handler(req, res) {
     console.log(
       "OYA upstream:",
       upstream.status,
-      upstream.statusText,
-      targetUrl
+      upstream.statusText
     );
 
-    // Получаем ответ целиком
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-
-    // Передаём необходимые заголовки
     const contentType =
       upstream.headers.get("content-type") ||
       "application/octet-stream";
 
+    const buffer = Buffer.from(
+      await upstream.arrayBuffer()
+    );
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
+
+    /*
+      ВАЖНО:
+      Если Nowcast вернул ошибку, не передаём её статус наружу.
+      Вместо этого показываем диагностическую информацию.
+    */
+    if (!upstream.ok) {
+      res.setHeader("Content-Type", "application/json");
+
+      return res.status(200).json({
+        ok: false,
+        proxy: true,
+        upstreamStatus: upstream.status,
+        upstreamStatusText: upstream.statusText,
+        upstreamContentType: contentType,
+        target: targetUrl,
+        message:
+          "Vercel proxy работает, но upstream Nowcast вернул ошибку."
+      });
+    }
 
     res.setHeader(
       "Cache-Control",
@@ -65,16 +83,17 @@ export default async function handler(req, res) {
 
     res.setHeader("Content-Type", contentType);
 
-    // Возвращаем тот же HTTP-статус Nowcast
-    return res.status(upstream.status).send(buffer);
+    return res.status(200).send(buffer);
 
   } catch (error) {
     console.error("OYA proxy error:", error);
 
-    return res.status(502).json({
+    return res.status(200).json({
       ok: false,
-      error: "OYA upstream request failed",
-      message: error?.message || "Unknown error"
+      proxy: true,
+      upstreamStatus: null,
+      error: error?.message || "Unknown error",
+      message: "Ошибка внутри Vercel proxy"
     });
   }
 }
