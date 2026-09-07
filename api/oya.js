@@ -1,104 +1,219 @@
-const TARGET = "https://www.nowcast.ru/baltrad_wsgi";
+const NOWCAST = "https://www.nowcast.ru";
+
+let cachedToken = null;
+let tokenExpires = 0;
+
+async function getToken() {
+  const now = Date.now();
+
+  if (cachedToken && now < tokenExpires) {
+    return cachedToken;
+  }
+
+  const response = await fetch(`${NOWCAST}/get_token`, {
+    method: "GET",
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "Accept": "application/json, */*",
+      "Referer": `${NOWCAST}/demo/demo.html`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nowcast token: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.token) {
+    throw new Error("Nowcast token отсутствует");
+  }
+
+  cachedToken = data.token;
+
+  // Токен обновляем раньше его фактического истечения
+  tokenExpires = now + 25000;
+
+  return cachedToken;
+}
+
+function cors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate"
+  );
+}
 
 export default async function handler(req, res) {
+  cors(res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   try {
-    if (req.method === "OPTIONS") {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "*");
-      return res.status(204).end();
-    }
-
-    const incoming = new URL(req.url, "https://gptrad.vercel.app");
-
-    const query = new URLSearchParams();
-
-    for (const [key, value] of incoming.searchParams.entries()) {
-      query.append(key, value);
-    }
-
-    // Если параметров нет — автоматически запрашиваем WMS GetCapabilities
-    if (query.toString() === "") {
-      query.set("SERVICE", "WMS");
-      query.set("VERSION", "1.1.1");
-      query.set("REQUEST", "GetCapabilities");
-    }
-
-    const targetUrl = `${TARGET}?${query.toString()}`;
-
-    console.log("OYA target:", targetUrl);
-
-    const upstream = await fetch(targetUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-          "AppleWebKit/537.36 (KHTML, like Gecko) " +
-          "Chrome/140.0.0.0 Safari/537.36",
-
-        "Accept":
-          "text/xml, application/xml, application/xhtml+xml, */*",
-
-        "Accept-Language":
-          "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-
-        "Referer":
-          "https://www.nowcast.ru/",
-
-        "Origin":
-          "https://www.nowcast.ru"
-      }
-    });
-
-    console.log(
-      "OYA upstream:",
-      upstream.status,
-      upstream.statusText
+    const incoming = new URL(
+      req.url,
+      "https://gptrad.vercel.app"
     );
 
-    const contentType =
-      upstream.headers.get("content-type") ||
-      "application/octet-stream";
+    const action =
+      incoming.searchParams.get("action") || "capabilities";
 
-    const buffer = Buffer.from(
-      await upstream.arrayBuffer()
-    );
+    const token = await getToken();
 
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "*");
+    /*
+      GETCAPABILITIES
+      /api/oya?action=capabilities
+    */
 
-    res.setHeader(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate"
-    );
+    if (action === "capabilities") {
+      const url = new URL(`${NOWCAST}/baltrad_wsgi`);
 
-    if (!upstream.ok) {
-      res.setHeader("Content-Type", "application/json");
+      url.searchParams.set("SERVICE", "WMS");
+      url.searchParams.set("VERSION", "1.1.1");
+      url.searchParams.set("REQUEST", "GetCapabilities");
+      url.searchParams.set("token", token);
 
-      return res.status(200).json({
-        ok: false,
-        proxy: true,
-        upstreamStatus: upstream.status,
-        upstreamStatusText: upstream.statusText,
-        upstreamContentType: contentType,
-        target: targetUrl
+      const upstream = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept":
+            "text/xml, application/xml, */*",
+          "Referer":
+            `${NOWCAST}/demo/demo.html`
+        }
       });
+
+      const text = await upstream.text();
+
+      if (!upstream.ok) {
+        return res.status(502).json({
+          ok: false,
+          error: "Nowcast GetCapabilities error",
+          upstreamStatus: upstream.status,
+          response: text
+        });
+      }
+
+      res.setHeader(
+        "Content-Type",
+        upstream.headers.get("content-type") ||
+          "text/xml; charset=utf-8"
+      );
+
+      return res.status(200).send(text);
     }
 
-    res.setHeader("Content-Type", contentType);
+    /*
+      WMS IMAGE
 
-    return res.status(200).send(buffer);
+      /api/oya?action=image&...
+    */
+
+    if (action === "image") {
+      const url = new URL(`${NOWCAST}/baltrad_wsgi`);
+
+      for (const [key, value] of incoming.searchParams.entries()) {
+        if (key === "action") continue;
+
+        url.searchParams.set(key, value);
+      }
+
+      url.searchParams.set("token", token);
+
+      const upstream = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept":
+            "image/png,image/*,*/*",
+          "Referer":
+            `${NOWCAST}/demo/demo.html`
+        }
+      });
+
+      const contentType =
+        upstream.headers.get("content-type") ||
+        "application/octet-stream";
+
+      const buffer = Buffer.from(
+        await upstream.arrayBuffer()
+      );
+
+      if (!upstream.ok) {
+        return res.status(502).json({
+          ok: false,
+          error: "Nowcast WMS image error",
+          upstreamStatus: upstream.status,
+          contentType,
+          body: buffer.toString("utf8").slice(0, 2000)
+        });
+      }
+
+      res.setHeader("Content-Type", contentType);
+
+      return res.status(200).send(buffer);
+    }
+
+    /*
+      VECTOR
+
+      Оставляем как отдельный прокси.
+      Сам слой ОЯ от него не зависит.
+    */
+
+    if (action === "vector") {
+      const url = new URL(`${NOWCAST}/vector_wsgi`);
+
+      for (const [key, value] of incoming.searchParams.entries()) {
+        if (key === "action") continue;
+
+        url.searchParams.set(key, value);
+      }
+
+      url.searchParams.set("token", token);
+
+      const upstream = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Accept":
+            "application/json,text/plain,*/*",
+          "Referer":
+            `${NOWCAST}/demo/demo.html`
+        }
+      });
+
+      const contentType =
+        upstream.headers.get("content-type") ||
+        "application/octet-stream";
+
+      const buffer = Buffer.from(
+        await upstream.arrayBuffer()
+      );
+
+      res.setHeader("Content-Type", contentType);
+
+      return res.status(200).send(buffer);
+    }
+
+    return res.status(400).json({
+      ok: false,
+      error: "Неизвестный action",
+      allowed: [
+        "capabilities",
+        "image",
+        "vector"
+      ]
+    });
 
   } catch (error) {
     console.error("OYA proxy error:", error);
 
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Content-Type", "application/json");
-
-    return res.status(200).json({
+    return res.status(502).json({
       ok: false,
-      proxy: true,
       error: error?.message || "Unknown error"
     });
   }
