@@ -372,21 +372,36 @@ margin-bottom:0;
 .frame-count-row{
 display:flex;
 align-items:center;
+justify-content:center;
 gap:6px;
 padding:3px 1px 2px;
 }
 
-#frameCountSlider{
-flex:1;
-min-width:0;
+#frameCountInput{
+width:76px;
+height:30px;
+flex:none;
+border:0;
+outline:0;
+border-radius:8px;
+background:#292929;
+color:white;
+text-align:center;
+font-size:14px;
+font-weight:700;
+padding:0 7px;
+appearance:textfield;
+-webkit-appearance:none;
 }
 
-#frameCountValue{
-min-width:34px;
-text-align:center;
-font-size:13px;
-font-weight:700;
-color:white;
+#frameCountInput::-webkit-inner-spin-button,
+#frameCountInput::-webkit-outer-spin-button{
+opacity:1;
+margin:0;
+}
+
+#frameCountInput:focus{
+box-shadow:0 0 0 2px rgba(69,201,239,.45);
 }
 
 .frame-count-arrow{
@@ -685,17 +700,14 @@ body.light .timeline-arrow,
 body.light #playBtn,
 body.light .theme-btn,
 body.light .settings-section-btn,
-body.light .frame-count-arrow{
+body.light .frame-count-arrow,
+body.light #frameCountInput{
 background:#eee;
 color:#111;
 }
 
 body.light .layer-item.active{
 background:#ddd;
-}
-
-body.light #frameCountValue{
-color:#111;
 }
 
 body.light #preloadBtn{
@@ -734,7 +746,8 @@ body.green .timeline-arrow,
 body.green #playBtn,
 body.green .theme-btn,
 body.green .settings-section-btn,
-body.green .frame-count-arrow{
+body.green .frame-count-arrow,
+body.green #frameCountInput{
 background:#123d29;
 color:white;
 }
@@ -912,13 +925,13 @@ left:8px;
 <button id="frameCountPrev"
 class="frame-count-arrow">◀</button>
 
-<input id="frameCountSlider"
-type="range"
+<input id="frameCountInput"
+type="number"
 min="1"
 max="1"
-value="1">
-
-<div id="frameCountValue">50</div>
+step="1"
+value="50"
+inputmode="numeric">
 
 <button id="frameCountNext"
 class="frame-count-arrow">▶</button>
@@ -1036,11 +1049,8 @@ document.getElementById("oyaLongProgress");
 const oyaLongProgressFill=
 document.getElementById("oyaLongProgressFill");
 
-const frameCountSlider=
-document.getElementById("frameCountSlider");
-
-const frameCountValue=
-document.getElementById("frameCountValue");
+const frameCountInput=
+document.getElementById("frameCountInput");
 
 const preloadBtn=
 document.getElementById("preloadBtn");
@@ -1816,15 +1826,12 @@ Math.min(
 oyaAllTimes.length
 );
 
-frameCountSlider.min=1;
+frameCountInput.min=1;
 
-frameCountSlider.max=
+frameCountInput.max=
 oyaAllTimes.length;
 
-frameCountSlider.value=
-oyaFrameCount;
-
-frameCountValue.textContent=
+frameCountInput.value=
 oyaFrameCount;
 
 applyOyaFrameCount(
@@ -1874,11 +1881,21 @@ oyaTimes[oyaFrameIndex]
 :
 null;
 
+let numeric=
+Number.parseInt(
+count,
+10
+);
+
+if(!Number.isFinite(numeric)){
+numeric=oyaFrameCount||50;
+}
+
 oyaFrameCount=
 Math.max(
 1,
 Math.min(
-Math.floor(Number(count)),
+numeric,
 oyaAllTimes.length
 )
 );
@@ -1907,15 +1924,12 @@ localStorage.setItem(
 String(oyaFrameCount)
 );
 
-frameCountSlider.min=1;
+frameCountInput.min=1;
 
-frameCountSlider.max=
+frameCountInput.max=
 oyaAllTimes.length;
 
-frameCountSlider.value=
-oyaFrameCount;
-
-frameCountValue.textContent=
+frameCountInput.value=
 oyaFrameCount;
 
 setOyaTimeline();
@@ -1943,14 +1957,6 @@ data.viewportKey
 /* =====================================================
    CLEAN OYA PNG
 ===================================================== */
-
-/*
- * Убираем именно серый фон,
- * который приходит внутри PNG ОЯ.
- *
- * Цветные/полупрозрачные области ОЯ
- * не удаляются.
- */
 
 function createCleanOyaBlobUrl(blobUrl){
 
@@ -2027,14 +2033,6 @@ const a=pixels[i+3];
 
 if(a===0)continue;
 
-
-/*
- * Определяем серый цвет.
- *
- * Чем меньше разница между RGB,
- * тем более серый пиксель.
- */
-
 const max=
 Math.max(r,g,b);
 
@@ -2043,15 +2041,6 @@ Math.min(r,g,b);
 
 const diff=
 max-min;
-
-
-/*
- * Фон ОЯ обычно светло-серый.
- *
- * Делаем прозрачными только
- * достаточно светлые нейтральные
- * серые пиксели.
- */
 
 if(
 diff<=22 &&
@@ -2124,6 +2113,103 @@ image.src=blobUrl;
 
 
 /* =====================================================
+   RETRY FETCH
+===================================================== */
+
+function wait(ms){
+
+return new Promise(
+resolve=>setTimeout(
+resolve,
+ms
+)
+);
+
+}
+
+
+/*
+ * Иногда WMS отвечает ошибкой/обрывом
+ * с первого запроса.
+ *
+ * Делаем несколько попыток,
+ * но не создаём несколько кадров
+ * одновременно.
+ */
+
+async function fetchOyaBlob(
+url,
+attempts=3
+){
+
+let lastError=null;
+
+for(
+let attempt=1;
+attempt<=attempts;
+attempt++
+){
+
+try{
+
+const response=
+await fetch(
+url,
+{
+cache:"force-cache"
+}
+);
+
+if(!response.ok){
+
+throw new Error(
+"OYA HTTP "+
+response.status
+);
+
+}
+
+const blob=
+await response.blob();
+
+if(!blob||blob.size===0){
+
+throw new Error(
+"OYA empty response"
+);
+
+}
+
+return blob;
+
+}catch(error){
+
+lastError=error;
+
+console.warn(
+`OYA request attempt ${attempt}/${attempts}:`,
+error
+);
+
+if(attempt<attempts){
+
+await wait(
+250*attempt
+);
+
+}
+
+}
+
+}
+
+throw lastError||
+new Error("OYA request failed");
+
+}
+
+
+/* =====================================================
    CREATE OYA IMAGE
 ===================================================== */
 
@@ -2170,6 +2256,134 @@ return layer;
 
 
 /* =====================================================
+   WAIT FOR OYA LAYER
+===================================================== */
+
+/*
+ * Главный фикс пропавших кадров.
+ *
+ * Раньше новый кадр мог быть добавлен
+ * на карту ещё до того, как OpenLayers
+ * реально закончил загрузку ImageStatic.
+ *
+ * Теперь сначала ждём imageloadend.
+ */
+
+function waitForOyaLayerReady(
+layer,
+timeout=15000
+){
+
+return new Promise(
+(resolve,reject)=>{
+
+const source=
+layer.getSource();
+
+let finished=false;
+
+let timer=null;
+
+const cleanup=()=>{
+
+source.un(
+"imageloadend",
+onLoadEnd
+);
+
+source.un(
+"imageloaderror",
+onLoadError
+);
+
+if(timer){
+
+clearTimeout(timer);
+timer=null;
+
+}
+
+};
+
+const finish=(
+error
+)=>{
+
+if(finished)return;
+
+finished=true;
+
+cleanup();
+
+if(error){
+
+reject(error);
+
+}else{
+
+resolve();
+
+}
+
+};
+
+const onLoadEnd=()=>{
+
+finish();
+
+};
+
+const onLoadError=()=>{
+
+finish(
+new Error(
+"OYA ImageStatic load error"
+)
+);
+
+};
+
+
+/*
+ * Слушатели ставятся ДО добавления
+ * слоя на карту.
+ */
+
+source.on(
+"imageloadend",
+onLoadEnd
+);
+
+source.on(
+"imageloaderror",
+onLoadError
+);
+
+timer=setTimeout(
+()=>{
+
+finish(
+new Error(
+"OYA image timeout"
+)
+);
+
+},
+timeout
+);
+
+map.addLayer(
+layer
+);
+
+map.renderSync();
+
+});
+
+}
+
+
+/* =====================================================
    SWAP OYA
 ===================================================== */
 
@@ -2185,18 +2399,6 @@ oyaImage=newLayer;
 oyaImageBlobUrl=
 newLayer.__oyaCleanUrl||
 null;
-
-
-/*
- * Сначала новый кадр становится
- * текущим, затем старый удаляется.
- *
- * Поэтому карта не мигает.
- */
-
-map.addLayer(
-newLayer
-);
 
 map.renderSync();
 
@@ -2286,6 +2488,8 @@ timeValue,
 requestData
 );
 
+let newLayer=null;
+
 try{
 
 let result=
@@ -2308,25 +2512,11 @@ if(!pending){
 
 pending=(async()=>{
 
-const response=
-await fetch(
-requestData.url,
-{
-cache:"force-cache"
-}
-);
-
-if(!response.ok){
-
-throw new Error(
-"OYA HTTP "+
-response.status
-);
-
-}
-
 const blob=
-await response.blob();
+await fetchOyaBlob(
+requestData.url,
+3
+);
 
 if(
 generation!==oyaCacheGeneration
@@ -2357,10 +2547,6 @@ cacheKey,
 value
 );
 
-oyaLoadedTimes.add(
-timeValue
-);
-
 return value;
 
 })();
@@ -2372,12 +2558,18 @@ pending
 
 }
 
+try{
+
 result=
 await pending;
+
+}finally{
 
 oyaPendingRequests.delete(
 cacheKey
 );
+
+}
 
 }
 
@@ -2396,19 +2588,21 @@ return;
 
 
 /*
- * ВАЖНО:
- *
- * createOyaImageLayer сначала
- * полностью обрабатывает PNG.
- *
- * Старый кадр при этом остаётся.
+ * Создаём очищенный PNG.
  */
 
-const newLayer=
+newLayer=
 await createOyaImageLayer(
 result.blobUrl,
 result.extent
 );
+
+
+/*
+ * Пока новый слой обрабатывается,
+ * старый кадр всё ещё находится
+ * на карте.
+ */
 
 if(
 requestId!==oyaFrameRequestId||
@@ -2433,6 +2627,98 @@ return;
 
 }
 
+
+/*
+ * КРИТИЧЕСКИЙ МОМЕНТ:
+ *
+ * Новый слой добавляется, но старый
+ * не удаляется до тех пор, пока
+ * OpenLayers не сообщит imageloadend.
+ */
+
+try{
+
+await waitForOyaLayerReady(
+newLayer,
+15000
+);
+
+}catch(error){
+
+console.error(
+"OYA layer load:",
+error
+);
+
+try{
+
+map.removeLayer(
+newLayer
+);
+
+}catch(e){}
+
+if(newLayer.__oyaCleanUrl){
+
+try{
+
+URL.revokeObjectURL(
+newLayer.__oyaCleanUrl
+);
+
+}catch(e){}
+
+}
+
+throw error;
+
+}
+
+
+/*
+ * Пока новый кадр загружался,
+ * пользователь мог выбрать другой.
+ *
+ * Поэтому ещё раз проверяем состояние.
+ */
+
+if(
+requestId!==oyaFrameRequestId||
+generation!==oyaCacheGeneration||
+activeLayer!=="oya"||
+oyaTimes[oyaFrameIndex]!==timeValue
+){
+
+try{
+
+map.removeLayer(
+newLayer
+);
+
+}catch(e){}
+
+if(newLayer.__oyaCleanUrl){
+
+try{
+
+URL.revokeObjectURL(
+newLayer.__oyaCleanUrl
+);
+
+}catch(e){}
+
+}
+
+return;
+
+}
+
+
+/*
+ * Только теперь новый кадр
+ * становится текущим.
+ */
+
 swapOyaLayer(
 newLayer
 );
@@ -2453,6 +2739,30 @@ oyaPendingRequests.delete(
 cacheKey
 );
 
+if(newLayer){
+
+try{
+
+map.removeLayer(
+newLayer
+);
+
+}catch(e){}
+
+if(newLayer.__oyaCleanUrl){
+
+try{
+
+URL.revokeObjectURL(
+newLayer.__oyaCleanUrl
+);
+
+}catch(e){}
+
+}
+
+}
+
 console.error(
 "OYA frame:",
 error
@@ -2463,7 +2773,7 @@ requestId===oyaFrameRequestId
 ){
 
 setStatus(
-"Ошибка ОЯ"
+"Кадр ОЯ не загрузился"
 );
 
 }
@@ -2523,25 +2833,11 @@ if(!pending){
 
 pending=(async()=>{
 
-const response=
-await fetch(
-data.url,
-{
-cache:"force-cache"
-}
-);
-
-if(!response.ok){
-
-throw new Error(
-"HTTP "+
-response.status
-);
-
-}
-
 const blob=
-await response.blob();
+await fetchOyaBlob(
+data.url,
+3
+);
 
 if(
 generation!==oyaPreloadGeneration||
@@ -2776,6 +3072,8 @@ oyaCacheGeneration++;
 
 oyaPreloadGeneration++;
 
+oyaFrameRequestId++;
+
 oyaPreloading=false;
 
 for(
@@ -2968,6 +3266,7 @@ oyaFrameIndex
 
 /* =====================================================
    RAINVIEWER
+   ЛОГИКА НЕ ТРОНУТА
 ===================================================== */
 
 async function loadRainViewer(){
@@ -3801,13 +4100,21 @@ oyaTimes=[];
 
 oyaFrameIndex=0;
 
-frameCountSlider.min=1;
 
-frameCountSlider.max=1;
+/*
+ * Не сбрасываем значение
+ * количества кадров.
+ *
+ * Оно берётся из localStorage
+ * после повторного GetCapabilities.
+ */
 
-frameCountSlider.value=1;
+frameCountInput.min=1;
 
-frameCountValue.textContent="50";
+frameCountInput.max=1;
+
+frameCountInput.value=
+oyaFrameCount||50;
 
 showOya();
 
@@ -3891,16 +4198,78 @@ await loadOyaCapabilities();
    FRAME COUNT
 ===================================================== */
 
+function commitOyaFrameCount(){
+
+if(!oyaAllTimes.length){
+
+frameCountInput.value=
+oyaFrameCount||50;
+
+return;
+
+}
+
+let count=
+Number.parseInt(
+frameCountInput.value,
+10
+);
+
+if(!Number.isFinite(count)){
+
+count=
+oyaFrameCount||
+Math.min(
+50,
+oyaAllTimes.length
+);
+
+}
+
+count=
+Math.max(
+1,
+Math.min(
+count,
+oyaAllTimes.length
+)
+);
+
+applyOyaFrameCount(
+count,
+true
+);
+
+if(activeLayer==="oya"){
+
+oyaFrameRequestId++;
+
+loadOyaFrame(
+oyaFrameIndex
+);
+
+}
+
+}
+
+
 function changeOyaFrameCount(delta){
 
 if(!oyaAllTimes.length)return;
 
 let count=
-Number(
-frameCountSlider.value
-)||
+Number.parseInt(
+frameCountInput.value,
+10
+);
+
+if(!Number.isFinite(count)){
+
+count=
 oyaFrameCount||
 50;
+
+}
 
 count=
 Math.max(
@@ -3929,26 +4298,30 @@ oyaFrameIndex
 }
 
 
-frameCountSlider.addEventListener(
-"input",
-()=>{
+/*
+ * Ввод числа не вызывает перезагрузку
+ * на каждую введённую цифру.
+ *
+ * Применяется после изменения поля
+ * или по Enter.
+ */
 
-if(!oyaAllTimes.length)return;
-
-applyOyaFrameCount(
-Number(
-frameCountSlider.value
-),
-true
+frameCountInput.addEventListener(
+"change",
+commitOyaFrameCount
 );
 
-if(activeLayer==="oya"){
+frameCountInput.addEventListener(
+"keydown",
+event=>{
 
-oyaFrameRequestId++;
+if(event.key==="Enter"){
 
-loadOyaFrame(
-oyaFrameIndex
-);
+event.preventDefault();
+
+commitOyaFrameCount();
+
+frameCountInput.blur();
 
 }
 
