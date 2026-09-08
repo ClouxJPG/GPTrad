@@ -592,18 +592,22 @@ opacity:.30;
 }
 
 /*
-Только стрелка.
-Без основания, квадрата и дополнительных
-графических элементов.
+Только ровная стрелка.
+
+Никакого основания,
+никакой второй линии,
+никаких дополнительных элементов.
 */
 
 .download-icon{
 position:relative;
 
 width:15px;
-height:17px;
+height:15px;
 
 display:block;
+
+transform:translateY(-1px);
 }
 
 .download-icon::before{
@@ -615,11 +619,11 @@ left:6px;
 top:0;
 
 width:3px;
-height:10px;
-
-border-radius:2px;
+height:9px;
 
 background:currentColor;
+
+border-radius:2px;
 }
 
 .download-icon::after{
@@ -627,31 +631,34 @@ content:"";
 
 position:absolute;
 
-left:2px;
+left:3px;
 top:6px;
 
-width:10px;
-height:10px;
+width:8px;
+height:8px;
 
 border-right:3px solid currentColor;
 border-bottom:3px solid currentColor;
 
 transform:rotate(45deg);
 
-border-radius:1px;
+border-radius:0 0 2px 0;
 }
 
 #preloadBtn.loading .download-icon{
-animation:downloadFloat .7s ease-in-out infinite;
+animation:downloadFloat .65s ease-in-out infinite;
 }
 
 @keyframes downloadFloat{
+
 0%,100%{
-transform:translateY(0);
+transform:translateY(-1px);
 }
+
 50%{
 transform:translateY(2px);
 }
+
 }
 
 #preloadBtn.done{
@@ -883,7 +890,9 @@ border:2px solid white;
 background:#fff;
 }
 
-/* LIGHT */
+/* =========================================================
+   LIGHT
+========================================================= */
 
 body.light .oya-segment{
 background:#c8c8c8;
@@ -900,71 +909,6 @@ background:#c8c8c8;
 body.light #oyaLongProgressFill{
 background:#49b9df;
 }
-
-/* GREEN */
-
-body.green .oya-segment{
-background:#315f45;
-}
-
-body.green .oya-segment.loaded{
-background:#69c98a;
-}
-
-body.green #oyaLongProgress{
-background:#315f45;
-}
-
-body.green #oyaLongProgressFill{
-background:#69c98a;
-}
-
-body.green .oya-segment.current{
-filter:brightness(1.1);
-}
-
-#timeLabel{
-width:100%;
-
-margin-top:5px;
-
-text-align:center;
-
-color:white;
-font-size:11px;
-opacity:.85;
-}
-
-/* =========================================================
-   LOADING
-========================================================= */
-
-#loading{
-position:absolute;
-
-left:50%;
-top:50%;
-
-transform:translate(-50%,-50%);
-
-z-index:2000;
-
-display:none;
-
-padding:9px 13px;
-
-border-radius:10px;
-
-background:rgba(20,20,20,.92);
-
-color:white;
-
-font-size:13px;
-}
-
-/* =========================================================
-   LIGHT
-========================================================= */
 
 body.light .top-panel,
 body.light #layerDrawer,
@@ -1004,6 +948,26 @@ color:#111;
    GREEN
 ========================================================= */
 
+body.green .oya-segment{
+background:#315f45;
+}
+
+body.green .oya-segment.loaded{
+background:#69c98a;
+}
+
+body.green #oyaLongProgress{
+background:#315f45;
+}
+
+body.green #oyaLongProgressFill{
+background:#69c98a;
+}
+
+body.green .oya-segment.current{
+filter:brightness(1.1);
+}
+
 body.green .top-panel,
 body.green #layerDrawer,
 body.green #settings,
@@ -1026,6 +990,49 @@ color:white;
 
 body.green .layer-item.active{
 background:#185538;
+}
+
+/* =========================================================
+   TIME LABEL
+========================================================= */
+
+#timeLabel{
+width:100%;
+
+margin-top:5px;
+
+text-align:center;
+
+color:white;
+font-size:11px;
+opacity:.85;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+#loading{
+position:absolute;
+
+left:50%;
+top:50%;
+
+transform:translate(-50%,-50%);
+
+z-index:2000;
+
+display:none;
+
+padding:9px 13px;
+
+border-radius:10px;
+
+background:rgba(20,20,20,.92);
+
+color:white;
+
+font-size:13px;
 }
 
 /* =========================================================
@@ -1297,10 +1304,13 @@ class="timeline-arrow">
 <div id="oyaTimelineSegments"></div>
 
 <div id="oyaLongProgress">
+
 <div id="oyaLongProgressFill"></div>
+
 </div>
 
-<input id="timeSlider"
+<input
+id="timeSlider"
 type="range"
 min="0"
 max="0"
@@ -1465,7 +1475,7 @@ document.getElementById("preloadBtn");
 
 
 /* =========================================================
-   STATE
+   GENERAL STATE
 ========================================================= */
 
 let activeLayer="radar";
@@ -1482,44 +1492,57 @@ let currentFrame=0;
 ========================================================= */
 
 let oyaAllTimes=[];
+
 let oyaTimes=[];
 
 
 /*
-По умолчанию теперь 50 кадров.
+По умолчанию 50 кадров.
 */
+
 let oyaFrameCount=50;
 
 let oyaFrameIndex=0;
 
 
 /*
-Текущий отображаемый OYA overlay.
+Текущий реально отображаемый overlay.
 */
+
 let oyaImage=null;
 
 
 /*
-Blob URL именно текущего отображаемого overlay.
+Blob URL текущего отображаемого overlay.
 */
+
 let oyaImageBlobUrl=null;
 
 
 /*
-Кадры, загруженные для текущего viewport.
+Кадры, готовые для текущего viewport.
 */
+
 const oyaLoadedTimes=new Set();
 
 
 /*
-Кэш кадров.
+Cache:
+
+cacheKey -> {
+    blobUrl,
+    timeValue,
+    viewportKey
+}
 */
+
 const oyaFrameCache=new Map();
 
 
 /*
-Активные сетевые запросы.
+cacheKey -> Promise
 */
+
 const oyaPendingRequests=new Map();
 
 
@@ -1529,37 +1552,43 @@ let oyaCapabilitiesLoading=false;
 
 /*
 Поколение viewport/cache.
+
+Любой старый запрос с предыдущим
+поколением больше не имеет права
+что-либо менять на карте.
 */
+
 let oyaCacheGeneration=0;
 
 
 /*
-Поколение массового preload.
+Поколение preload.
 */
+
 let oyaPreloadGeneration=0;
 
 let oyaPreloading=false;
 
 
 /*
-Ключ текущего viewport.
+Текущий viewport.
 */
+
 let oyaViewportKey="";
 
 
 /*
 Playback.
 */
+
 let playing=false;
 let playTimer=null;
 
 
 /*
-Request ID текущего отображаемого кадра.
-
-Каждое движение по таймлайну
-делает предыдущий display-request устаревшим.
+Последний display request.
 */
+
 let oyaFrameRequestId=0;
 
 let rainFrameRequestId=0;
@@ -1570,18 +1599,24 @@ let rainFrameRequestId=0;
 ========================================================= */
 
 function setStatus(text){
+
 status.textContent=text;
+
 }
 
 
 function showLoading(text){
+
 loading.textContent=text;
 loading.style.display="block";
+
 }
 
 
 function hideLoading(){
+
 loading.style.display="none";
+
 }
 
 
@@ -1603,19 +1638,25 @@ minute:"2-digit"
 
 
 /* =========================================================
-   VIEWPORT DATA
+   VIEWPORT
 ========================================================= */
 
 function getCurrentViewportData(){
 
-const bounds=map.getBounds();
+const bounds=
+map.getBounds();
 
-const sw=bounds.getSouthWest();
-const ne=bounds.getNorthEast();
+const sw=
+bounds.getSouthWest();
 
-const size=map.getSize();
+const ne=
+bounds.getNorthEast();
 
-const width=Math.max(
+const size=
+map.getSize();
+
+const width=
+Math.max(
 256,
 Math.min(
 1600,
@@ -1623,7 +1664,8 @@ Math.round(size.x)
 )
 );
 
-const height=Math.max(
+const height=
+Math.max(
 256,
 Math.min(
 1200,
@@ -1641,17 +1683,19 @@ height
 ].join("|");
 
 return{
+
 bounds,
 width,
 height,
 key
+
 };
 
 }
 
 
 /* =========================================================
-   CACHE URL
+   CACHE HELPERS
 ========================================================= */
 
 function cacheContainsBlobUrl(blobUrl){
@@ -1679,10 +1723,6 @@ return false;
 }
 
 
-/* =========================================================
-   SAFE REVOKE
-========================================================= */
-
 function revokeOyaBlobUrl(blobUrl){
 
 if(!blobUrl)
@@ -1690,8 +1730,8 @@ return;
 
 
 /*
-Никогда не освобождаем Blob URL
-текущего отображаемого кадра.
+Текущий overlay никогда
+не освобождаем здесь.
 */
 
 if(
@@ -1704,8 +1744,7 @@ return;
 
 
 /*
-Не освобождаем Blob URL,
-если он ещё находится в cache.
+Cache тоже защищает Blob URL.
 */
 
 if(
@@ -1719,7 +1758,9 @@ return;
 
 try{
 
-URL.revokeObjectURL(blobUrl);
+URL.revokeObjectURL(
+blobUrl
+);
 
 }catch(error){
 
@@ -1734,7 +1775,7 @@ error
 
 
 /* =========================================================
-   INVALIDATE OYA VIEWPORT
+   INVALIDATE VIEWPORT
 ========================================================= */
 
 function invalidateOyaViewport(){
@@ -1743,13 +1784,13 @@ if(activeLayer!=="oya")
 return;
 
 
-const data=
+const viewport=
 getCurrentViewportData();
 
 
 if(
 oyaViewportKey &&
-oyaViewportKey===data.key
+oyaViewportKey===viewport.key
 ){
 
 return;
@@ -1757,35 +1798,39 @@ return;
 }
 
 
-oyaViewportKey=data.key;
+oyaViewportKey=
+viewport.key;
 
 
 /*
-Старые запросы становятся устаревшими.
+Все старые запросы становятся
+логически устаревшими.
 */
 
 oyaCacheGeneration++;
+
 oyaPreloadGeneration++;
 
 oyaPreloading=false;
 
 
 /*
-ОЧЕНЬ ВАЖНО:
+ВАЖНО:
 
-текущий overlay НЕ удаляем.
+oyaImage НЕ удаляем.
 
-Он остаётся на карте до тех пор,
-пока новый overlay полностью
-не загрузится.
+Старый кадр остаётся на карте
+до готовности нового.
 */
 
 
 /*
-Освобождаем старый cache.
-
-Blob текущего кадра оставляем.
+Cache старого viewport
+больше не используется.
 */
+
+const oldUrls=new Set();
+
 
 for(
 const value of oyaFrameCache.values()
@@ -1797,13 +1842,9 @@ value.blobUrl &&
 value.blobUrl!==oyaImageBlobUrl
 ){
 
-try{
-
-URL.revokeObjectURL(
+oldUrls.add(
 value.blobUrl
 );
-
-}catch(error){}
 
 }
 
@@ -1813,20 +1854,32 @@ value.blobUrl
 oyaFrameCache.clear();
 
 
-/*
-Не отменяем физически fetch,
-потому что fetch может уже идти.
+for(
+const url of oldUrls
+){
 
-Но очищаем registry.
-Старые completion защищены
-oyaCacheGeneration.
+try{
+
+URL.revokeObjectURL(url);
+
+}catch(error){}
+
+}
+
+
+/*
+Pending registry очищаем.
+
+Сами fetch физически могут
+ещё выполняться, но generation
+защитит от их применения.
 */
 
 oyaPendingRequests.clear();
 
 
 /*
-Загруженные кадры относятся
+Все отметки загрузки относятся
 к старому viewport.
 */
 
@@ -1840,24 +1893,23 @@ updatePreloadButton();
 
 
 /* =========================================================
-   ISO → UNIX
+   TIME PARSING
 ========================================================= */
 
 function isoToUnix(value){
 
-const t=Date.parse(value);
+const t=
+Date.parse(value);
 
 if(Number.isNaN(t))
 return null;
 
-return Math.floor(t/1000);
+return Math.floor(
+t/1000
+);
 
 }
 
-
-/* =========================================================
-   PARSE OYA TIMES
-========================================================= */
 
 function parseOyaTimes(text){
 
@@ -1866,7 +1918,8 @@ return[];
 
 const result=[];
 
-const parts=text
+const parts=
+text
 .split(",")
 .map(x=>x.trim())
 .filter(Boolean);
@@ -1875,7 +1928,8 @@ for(
 const value of parts
 ){
 
-const unix=isoToUnix(value);
+const unix=
+isoToUnix(value);
 
 if(unix!==null){
 
@@ -1968,7 +2022,8 @@ return;
 
 
 /*
-65 и меньше — отдельные сегменты.
+65 и меньше:
+отдельные сегменты.
 */
 
 if(
@@ -1987,7 +2042,8 @@ i++
 const segment=
 document.createElement("div");
 
-segment.className="oya-segment";
+segment.className=
+"oya-segment";
 
 
 if(
@@ -1996,7 +2052,9 @@ oyaTimes[i]
 )
 ){
 
-segment.classList.add("loaded");
+segment.classList.add(
+"loaded"
+);
 
 }
 
@@ -2005,7 +2063,9 @@ if(
 i===oyaFrameIndex
 ){
 
-segment.classList.add("current");
+segment.classList.add(
+"current"
+);
 
 }
 
@@ -2025,7 +2085,8 @@ segment
 }else{
 
 /*
-66+ — только одна общая линия.
+66+:
+одна непрерывная линия.
 */
 
 oyaLongProgress.style.display="block";
@@ -2052,7 +2113,9 @@ loaded++;
 const percent=
 oyaTimes.length
 ?
-loaded/oyaTimes.length*100
+loaded/
+oyaTimes.length*
+100
 :0;
 
 
@@ -2078,14 +2141,16 @@ return;
 
 
 /*
-Массовая загрузка разрешена
-ТОЛЬКО для 1–51 кадров.
+Разрешено только 1–51 кадров.
+
+Кнопка НЕ зависит от количества
+уже загруженных кадров.
 */
 
 const enabled=
 activeLayer==="oya" &&
 oyaTimes.length>0 &&
-oyaTimes.length<52;
+oyaTimes.length<=51;
 
 
 if(!enabled){
@@ -2114,6 +2179,12 @@ return;
 }
 
 
+/*
+Единственная причина отключения
+во время нормальной работы —
+идёт preload.
+*/
+
 preloadBtn.disabled=
 oyaPreloading;
 
@@ -2136,7 +2207,8 @@ oyaLoadedTimes.has(time)
 
 preloadBtn.classList.toggle(
 "done",
-!oyaPreloading && allLoaded
+!oyaPreloading &&
+allLoaded
 );
 
 preloadBtn.classList.toggle(
@@ -2187,7 +2259,8 @@ currentFrame=0;
 }
 
 
-timeSlider.value=currentFrame;
+timeSlider.value=
+currentFrame;
 
 updateTimeLabel();
 
@@ -2247,6 +2320,7 @@ oyaFrameIndex;
 renderOyaTimeline();
 
 updateTimeLabel();
+
 updatePreloadButton();
 
 }
@@ -2305,8 +2379,8 @@ oyaViewportKey="";
 
 
 /*
-Текущий overlay уже должен быть
-удалён вызывающей функцией.
+Вызывающая функция должна
+сначала убрать overlay.
 */
 
 oyaImageBlobUrl=null;
@@ -2318,7 +2392,9 @@ const url of urls
 
 try{
 
-URL.revokeObjectURL(url);
+URL.revokeObjectURL(
+url
+);
 
 }catch(error){}
 
@@ -2342,8 +2418,11 @@ width,
 height
 ){
 
-const sw=bounds.getSouthWest();
-const ne=bounds.getNorthEast();
+const sw=
+bounds.getSouthWest();
+
+const ne=
+bounds.getNorthEast();
 
 return[
 timeValue,
@@ -2359,7 +2438,7 @@ height
 
 
 /* =========================================================
-   OYA REQUEST DATA
+   REQUEST DATA
 ========================================================= */
 
 function getOyaRequestData(timeValue){
@@ -2450,15 +2529,18 @@ viewport.key
 
 
 /* =========================================================
-   READY OYA OVERLAY
+   READY OVERLAY
 ========================================================= */
 
 /*
-Создаёт overlay и ждёт именно
-полной загрузки изображения.
+Создаём новый overlay,
+но старый не трогаем.
 
-Старый overlay при этом
-НЕ затрагивается.
+Новый overlay изначально
+прозрачный.
+
+После load он становится
+полностью готовым к показу.
 */
 
 function createReadyOyaOverlay(
@@ -2475,7 +2557,7 @@ blobUrl,
 bounds,
 {
 
-opacity:.75,
+opacity:0,
 
 interactive:false,
 
@@ -2512,7 +2594,42 @@ finished=true;
 
 cleanup();
 
+
+const image=
+overlay.getElement();
+
+
+if(image){
+
+image.style.display="block";
+
+image.style.visibility="visible";
+
+image.style.opacity="1";
+
+}
+
+
+overlay.setOpacity(.75);
+
+
+/*
+Двойной rAF даёт браузеру
+реально подготовить новый
+bitmap до удаления старого.
+*/
+
+requestAnimationFrame(
+()=>{
+
+requestAnimationFrame(
+()=>{
+
 resolve(overlay);
+
+});
+
+});
 
 }
 
@@ -2559,16 +2676,16 @@ onError
 
 
 /*
-Новый кадр добавляется
-ПОВЕРХ старого.
+Новый overlay появляется
+поверх старого.
 */
 
 overlay.addTo(map);
 
 
 /*
-Если browser уже успел
-декодировать Blob.
+Если Blob уже полностью
+декодирован браузером.
 */
 
 const image=
@@ -2590,21 +2707,11 @@ onLoad,
 
 }
 
-);
-
-
-/*
-Важно: overlay уже находится
-на карте до resolve.
-Это позволяет сделать
-настоящий double-buffer.
-*/
-
 }
 
 
 /* =========================================================
-   SWAP OYA OVERLAY
+   ATOMIC OYA SWAP
 ========================================================= */
 
 function swapOyaOverlay(
@@ -2620,10 +2727,10 @@ oyaImageBlobUrl;
 
 
 /*
-Новый overlay уже полностью
-готов.
+Новый кадр уже находится
+на карте и полностью готов.
 
-Сначала назначаем его текущим.
+Сразу делаем его текущим.
 */
 
 oyaImage=
@@ -2634,23 +2741,20 @@ newBlobUrl;
 
 
 /*
-Новый находится поверх старого.
+Удаляем старый ТОЛЬКО после
+того, как новый уже существует
+на карте.
 
-Удаляем старый только
-после того, как браузер получил
-возможность отрисовать новый.
+Никакого промежутка между
+remove(old) и add(new).
 */
-
-if(
-oldImage &&
-map.hasLayer(oldImage)
-){
 
 requestAnimationFrame(
 ()=>{
 
 if(
 oldImage &&
+oldImage!==newOverlay &&
 map.hasLayer(oldImage)
 ){
 
@@ -2660,16 +2764,10 @@ oldImage
 
 }
 
-}
-);
-
-}
-
 
 /*
-Blob старого кадра освобождаем
-только после того, как он перестал
-быть текущим и больше не нужен cache.
+Старый Blob можно освободить,
+если он больше не используется.
 */
 
 if(
@@ -2677,17 +2775,13 @@ oldBlobUrl &&
 oldBlobUrl!==newBlobUrl
 ){
 
-requestAnimationFrame(
-()=>{
-
 revokeOyaBlobUrl(
 oldBlobUrl
 );
 
 }
-);
 
-}
+});
 
 }
 
@@ -2729,7 +2823,7 @@ requestData.height
 
 
 /*
-Если уже загружено — готово.
+Cache hit.
 */
 
 const cached=
@@ -2761,8 +2855,7 @@ return true;
 
 
 /*
-Если этот запрос уже выполняется —
-ждём его.
+Уже идёт такой запрос.
 */
 
 if(
@@ -2813,8 +2906,6 @@ return false;
 const promise=
 (async()=>{
 
-let blobUrl=null;
-
 try{
 
 const response=
@@ -2829,7 +2920,8 @@ cache:"force-cache"
 if(!response.ok){
 
 throw new Error(
-"OYA preload "+response.status
+"OYA preload "+
+response.status
 );
 
 }
@@ -2840,8 +2932,8 @@ await response.blob();
 
 
 /*
-Обе генерации должны быть
-актуальны.
+Проверяем поколения
+до создания Blob URL.
 */
 
 if(
@@ -2855,7 +2947,7 @@ return null;
 }
 
 
-blobUrl=
+const blobUrl=
 URL.createObjectURL(
 blob
 );
@@ -2864,10 +2956,14 @@ blob
 oyaFrameCache.set(
 cacheKey,
 {
+
 blobUrl,
+
 timeValue,
+
 viewportKey:
 requestData.viewportKey
+
 }
 );
 
@@ -2890,14 +2986,6 @@ requestData.viewportKey
 };
 
 }catch(error){
-
-if(blobUrl){
-
-revokeOyaBlobUrl(
-blobUrl
-);
-
-}
 
 console.error(
 "OYA preload frame:",
@@ -2950,7 +3038,7 @@ async function preloadAllOyaFrames(){
 if(
 activeLayer!=="oya" ||
 !oyaTimes.length ||
-oyaTimes.length>=52 ||
+oyaTimes.length>51 ||
 oyaPreloading
 ){
 
@@ -2960,20 +3048,11 @@ return;
 
 
 /*
-Отдельное поколение preload.
+Создаём новую preload-сессию.
 */
 
 const preloadGeneration=
 ++oyaPreloadGeneration;
-
-
-/*
-И отдельно запоминаем
-поколение viewport/cache.
-
-Это была причина поломки
-предыдущей версии.
-*/
 
 const cacheGeneration=
 oyaCacheGeneration;
@@ -2990,22 +3069,16 @@ const times=
 oyaTimes.slice();
 
 
-let loadedCount=0;
+/*
+Считаем реально загруженные
+кадры, а не количество вызовов.
+*/
 
-
-for(
-const time of times
-){
-
-if(
+let loadedCount=
+times.filter(
+time=>
 oyaLoadedTimes.has(time)
-){
-
-loadedCount++;
-
-}
-
-}
+).length;
 
 
 setStatus(
@@ -3014,7 +3087,7 @@ setStatus(
 
 
 /*
-4 параллельных worker.
+До 4 параллельных worker.
 */
 
 let cursor=0;
@@ -3047,7 +3120,6 @@ const timeValue=
 times[index];
 
 
-const ok=
 await preloadOyaFrame(
 timeValue,
 preloadGeneration,
@@ -3055,21 +3127,26 @@ cacheGeneration
 );
 
 
-if(ok){
+/*
+Не увеличиваем счётчик
+вручную.
 
-loadedCount++;
+Считаем Set — это гарантированно
+правильное значение.
+*/
 
-}
+loadedCount=
+times.filter(
+time=>
+oyaLoadedTimes.has(time)
+).length;
 
 
 renderOyaTimeline();
 
 
 setStatus(
-`Загрузка кадров: ${Math.min(
-loadedCount,
-times.length
-)}/${times.length}`
+`Загрузка кадров: ${loadedCount}/${times.length}`
 );
 
 }
@@ -3112,7 +3189,7 @@ activeLayer==="oya"
 ){
 
 const allLoaded=
-oyaTimes.every(
+times.every(
 time=>
 oyaLoadedTimes.has(time)
 );
@@ -3127,7 +3204,7 @@ setStatus(
 }else{
 
 setStatus(
-"Загрузка ОЯ прервана"
+`Загружено ${loadedCount}/${times.length}`
 );
 
 }
@@ -3156,6 +3233,7 @@ oyaPreloading=false;
 }
 
 renderOyaTimeline();
+
 updatePreloadButton();
 
 }
@@ -3164,7 +3242,7 @@ updatePreloadButton();
 
 
 /* =========================================================
-   OYA CAPABILITIES
+   CAPABILITIES
 ========================================================= */
 
 async function loadOyaCapabilities(){
@@ -3181,7 +3259,9 @@ return true;
 
 if(oyaCapabilitiesLoading){
 
-while(oyaCapabilitiesLoading){
+while(
+oyaCapabilitiesLoading
+){
 
 await new Promise(
 resolve=>
@@ -3225,7 +3305,8 @@ cache:"no-store"
 if(!response.ok){
 
 throw new Error(
-"Capabilities "+response.status
+"Capabilities "+
+response.status
 );
 
 }
@@ -3237,7 +3318,6 @@ await response.text();
 
 const parser=
 new DOMParser();
-
 
 const xml=
 parser.parseFromString(
@@ -3508,16 +3588,18 @@ throw new Error(
 }
 
 
-oyaAllTimes=times;
+oyaAllTimes=
+times;
 
 oyaCapabilitiesLoaded=true;
 
 
 /*
-Сохраняем пользовательскую настройку,
-если она есть.
+Сохраняем пользовательскую
+настройку.
 
-Если её нет — 50.
+Если настройки нет —
+по умолчанию 50.
 */
 
 const savedCount=
@@ -3632,7 +3714,7 @@ oyaAllTimes.length
 
 
 /*
-Берём последние N кадров.
+Последние N кадров.
 */
 
 oyaTimes=
@@ -3698,6 +3780,28 @@ updatePreloadButton();
 
 
 /* =========================================================
+   DISPLAY VALIDATION
+========================================================= */
+
+function isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+){
+
+return(
+requestId===oyaFrameRequestId &&
+generation===oyaCacheGeneration &&
+activeLayer==="oya" &&
+oyaTimes[oyaFrameIndex]===timeValue &&
+oyaViewportKey===viewportKey
+);
+
+}
+
+
+/* =========================================================
    LOAD OYA FRAME
 ========================================================= */
 
@@ -3730,17 +3834,19 @@ return;
 
 
 /*
-Каждое действие на таймлайне
-создаёт новый request ID.
+Каждый переход создаёт
+новый display request.
 */
 
 const requestId=
 ++oyaFrameRequestId;
 
 
-oyaFrameIndex=index;
+oyaFrameIndex=
+index;
 
-timeSlider.value=index;
+timeSlider.value=
+index;
 
 updateTimeLabel();
 
@@ -3759,6 +3865,10 @@ const requestData=
 getOyaRequestData(
 timeValue
 );
+
+
+const viewportKey=
+requestData.viewportKey;
 
 
 const cacheKey=
@@ -3794,16 +3904,13 @@ requestData.bounds
 );
 
 
-/*
-Пользователь мог уже перейти
-на другой кадр.
-*/
-
 if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
+!isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+)
 ){
 
 if(
@@ -3820,10 +3927,6 @@ return;
 
 }
 
-
-/*
-Только сейчас swap.
-*/
 
 swapOyaOverlay(
 newOverlay,
@@ -3876,10 +3979,12 @@ return;
 
 
 if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
+!isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+)
 ){
 
 return;
@@ -3890,15 +3995,17 @@ return;
 const newOverlay=
 await createReadyOyaOverlay(
 result.blobUrl,
-requestData.bounds
+result.bounds
 );
 
 
 if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
+!isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+)
 ){
 
 if(
@@ -3958,8 +4065,6 @@ setStatus(
 const promise=
 (async()=>{
 
-let blobUrl=null;
-
 try{
 
 const response=
@@ -3974,7 +4079,8 @@ cache:"force-cache"
 if(!response.ok){
 
 throw new Error(
-"OYA image "+response.status
+"OYA image "+
+response.status
 );
 
 }
@@ -3985,8 +4091,8 @@ await response.blob();
 
 
 /*
-Viewport/cache generation
-должна оставаться актуальной.
+Проверяем viewport/cache
+до создания Blob URL.
 */
 
 if(
@@ -3999,7 +4105,7 @@ return null;
 }
 
 
-blobUrl=
+const blobUrl=
 URL.createObjectURL(
 blob
 );
@@ -4008,23 +4114,20 @@ blob
 oyaFrameCache.set(
 cacheKey,
 {
+
 blobUrl,
+
 timeValue,
-viewportKey:
-requestData.viewportKey
+
+viewportKey
+
 }
 );
 
-
-if(
-requestData.viewportKey===oyaViewportKey
-){
 
 oyaLoadedTimes.add(
 timeValue
 );
-
-}
 
 
 renderOyaTimeline();
@@ -4037,20 +4140,11 @@ blobUrl,
 bounds:
 requestData.bounds,
 
-viewportKey:
-requestData.viewportKey
+viewportKey
 
 };
 
 }catch(error){
-
-if(blobUrl){
-
-revokeOyaBlobUrl(
-blobUrl
-);
-
-}
 
 console.error(
 "OYA frame:",
@@ -4093,16 +4187,17 @@ return;
 
 
 /*
-Если пользователь ушёл
-на другой кадр — cache оставляем,
-overlay не меняем.
+Пользователь мог уже перейти
+на другой кадр или viewport.
 */
 
 if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
+!isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+)
 ){
 
 return;
@@ -4111,29 +4206,29 @@ return;
 
 
 /*
-Самое важное:
-
-создаём новый overlay,
-но старый НЕ трогаем.
+Новый overlay полностью
+готовится, пока старый
+остаётся на карте.
 */
 
 const newOverlay=
 await createReadyOyaOverlay(
 result.blobUrl,
-requestData.bounds
+result.bounds
 );
 
 
 /*
-Проверяем актуальность ещё раз
-после декодирования изображения.
+Финальная проверка.
 */
 
 if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
+!isOyaDisplayRequestCurrent(
+requestId,
+generation,
+timeValue,
+viewportKey
+)
 ){
 
 if(
@@ -4152,7 +4247,7 @@ return;
 
 
 /*
-Только здесь меняем отображаемый кадр.
+Атомарная замена.
 */
 
 swapOyaOverlay(
@@ -4173,7 +4268,9 @@ if(
 oyaPendingRequests.get(cacheKey)===promise
 ){
 
-oyaPendingRequests.delete(cacheKey);
+oyaPendingRequests.delete(
+cacheKey
+);
 
 }
 
@@ -4199,6 +4296,9 @@ setStatus(
 
 async function showOya(){
 
+stopPlayback();
+
+
 rainFrameRequestId++;
 
 oyaFrameRequestId++;
@@ -4209,7 +4309,7 @@ oyaPreloading=false;
 
 
 /*
-Останавливаем RainViewer.
+Убираем RainViewer.
 */
 
 if(
@@ -4227,10 +4327,9 @@ radarLayer=null;
 
 
 /*
-Старый OYA overlay относится
-к предыдущему входу в слой.
-
-Здесь его можно убрать сразу.
+При переходе на OYA
+старый OYA можно удалить,
+потому что это новый вход.
 */
 
 if(
@@ -4248,30 +4347,18 @@ oyaImage=null;
 
 
 /*
-Освобождаем текущий blob.
-*/
-
-oyaImageBlobUrl=null;
-
-
-/*
-Новый viewport.
-*/
-
-const viewport=
-getCurrentViewportData();
-
-oyaViewportKey=
-viewport.key;
-
-
-/*
-Старый cache уже не нужен
-при новом входе.
+Сбрасываем cache.
 */
 
 clearOyaCache();
 
+
+/*
+Текущий viewport.
+*/
+
+const viewport=
+getCurrentViewportData();
 
 oyaViewportKey=
 viewport.key;
@@ -4323,12 +4410,6 @@ map.on(
 if(activeLayer!=="oya")
 return;
 
-
-/*
-Инвалидируем старые cache entries.
-
-Текущий overlay остаётся.
-*/
 
 invalidateOyaViewport();
 
@@ -4384,7 +4465,7 @@ showLoading(
 
 try{
 
-const r=
+const response=
 await fetch(
 "https://api.rainviewer.com/public/weather-maps.json",
 {
@@ -4393,17 +4474,18 @@ cache:"no-store"
 );
 
 
-if(!r.ok){
+if(!response.ok){
 
 throw new Error(
-"RainViewer "+r.status
+"RainViewer "+
+response.status
 );
 
 }
 
 
 const data=
-await r.json();
+await response.json();
 
 
 rainFrames=
@@ -4445,11 +4527,11 @@ setStatus(
 "Радар RainViewer"
 );
 
-}catch(e){
+}catch(error){
 
 console.error(
 "RainViewer:",
-e
+error
 );
 
 setStatus(
@@ -4513,7 +4595,6 @@ function showRainFrame(index){
 if(!rainFrames[index])
 return;
 
-
 if(activeLayer!=="radar")
 return;
 
@@ -4546,7 +4627,9 @@ if(
 map.hasLayer(newLayer)
 ){
 
-map.removeLayer(newLayer);
+map.removeLayer(
+newLayer
+);
 
 }
 
@@ -4567,7 +4650,9 @@ oldLayer &&
 map.hasLayer(oldLayer)
 ){
 
-map.removeLayer(oldLayer);
+map.removeLayer(
+oldLayer
+);
 
 }
 
@@ -4593,7 +4678,9 @@ if(
 map.hasLayer(newLayer)
 ){
 
-map.removeLayer(newLayer);
+map.removeLayer(
+newLayer
+);
 
 }
 
@@ -4653,7 +4740,7 @@ oyaImage=null;
 
 
 /*
-Очищаем cache.
+Полностью очищаем OYA.
 */
 
 clearOyaCache();
@@ -5192,7 +5279,7 @@ oyaImage=null;
 
 
 /*
-Полностью очищаем cache.
+Полный reset.
 */
 
 clearOyaCache();
@@ -5208,27 +5295,30 @@ oyaFrameIndex=0;
 
 
 /*
-50 остаётся default,
-если пользователь не сохранял
-своё значение.
+Если пользователь не сохранял
+значение — 50.
 */
 
-oyaFrameCount=
+const saved=
 Number(
 localStorage.getItem(
 "gptrad-oya-frame-count"
 )
-) || 50;
+);
+
+
+oyaFrameCount=
+Number.isFinite(saved) &&
+saved>=1
+?
+saved
+:50;
 
 
 frameCountSlider.min=1;
 frameCountSlider.max=1;
 
-frameCountSlider.value=
-Math.min(
-oyaFrameCount,
-1
-);
+frameCountSlider.value=1;
 
 frameCountValue.textContent="—";
 
@@ -5358,11 +5448,14 @@ count
 );
 
 
-frameCountSlider.value=count;
+frameCountSlider.value=
+count;
 
-frameCountValue.textContent=count;
+frameCountValue.textContent=
+count;
 
-oyaFrameCount=count;
+oyaFrameCount=
+count;
 
 
 localStorage.setItem(
@@ -5411,9 +5504,11 @@ frameCountSlider.value
 );
 
 
-oyaFrameCount=count;
+oyaFrameCount=
+count;
 
-frameCountValue.textContent=count;
+frameCountValue.textContent=
+count;
 
 
 localStorage.setItem(
