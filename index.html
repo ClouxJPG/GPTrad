@@ -9,7 +9,7 @@ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GPTrad</title>
 
 <link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/ol.css">
 
 <style>
 
@@ -32,6 +32,58 @@ background:#111;
 position:absolute;
 inset:0;
 z-index:1;
+background:#d8d8d8;
+}
+
+/* OPENLAYERS CONTROLS */
+
+.ol-zoom{
+position:absolute;
+top:82px;
+left:12px;
+}
+
+.ol-control{
+background:transparent !important;
+padding:0 !important;
+}
+
+.ol-zoom button{
+display:block;
+
+width:38px;
+height:38px;
+
+margin:3px;
+
+border:0;
+border-radius:10px;
+
+background:rgba(28,28,28,.90) !important;
+color:white !important;
+
+font-size:22px;
+line-height:36px;
+
+cursor:pointer;
+}
+
+.ol-attribution{
+right:8px !important;
+bottom:4px !important;
+}
+
+.ol-attribution button{
+background:rgba(28,28,28,.8) !important;
+color:white !important;
+border-radius:7px;
+}
+
+.ol-attribution ul{
+background:rgba(28,28,28,.8);
+color:white;
+border-radius:7px;
+padding:4px 8px;
 }
 
 /* =========================================================
@@ -554,7 +606,7 @@ transform:scale(.92);
 }
 
 /* =========================================================
-   PRELOAD BUTTON
+   PRELOAD
 ========================================================= */
 
 #preloadBtn{
@@ -625,15 +677,12 @@ animation:downloadFloat .7s ease-in-out infinite;
 }
 
 @keyframes downloadFloat{
-
 0%,100%{
 transform:translateY(0);
 }
-
 50%{
 transform:translateY(2px);
 }
-
 }
 
 #preloadBtn.done{
@@ -707,10 +756,6 @@ display:flex;
 align-items:center;
 }
 
-/* =========================================================
-   OYA TIMELINE
-========================================================= */
-
 #oyaTimelineSegments{
 position:absolute;
 
@@ -758,10 +803,6 @@ background:#45c9ef;
 transform:scaleY(1.08);
 filter:brightness(1.15);
 }
-
-/* =========================================================
-   LONG OYA PROGRESS
-========================================================= */
 
 #oyaLongProgress{
 position:absolute;
@@ -858,7 +899,7 @@ background:#fff;
 }
 
 /* =========================================================
-   LIGHT
+   THEMES
 ========================================================= */
 
 body.light .oya-segment{
@@ -911,10 +952,6 @@ body.light #frameCountValue{
 color:#111;
 }
 
-/* =========================================================
-   GREEN
-========================================================= */
-
 body.green .oya-segment{
 background:#315f45;
 }
@@ -955,10 +992,6 @@ body.green .layer-item.active{
 background:#185538;
 }
 
-body.green .oya-segment.current{
-filter:brightness(1.1);
-}
-
 #timeLabel{
 width:100%;
 margin-top:5px;
@@ -967,10 +1000,6 @@ color:white;
 font-size:11px;
 opacity:.85;
 }
-
-/* =========================================================
-   LOADING
-========================================================= */
 
 #loading{
 position:absolute;
@@ -994,10 +1023,6 @@ color:white;
 
 font-size:13px;
 }
-
-/* =========================================================
-   MOBILE
-========================================================= */
 
 @media(max-width:600px){
 
@@ -1055,6 +1080,11 @@ font-size:10px;
 
 .timeline-arrow{
 width:35px;
+}
+
+.ol-zoom{
+top:68px;
+left:8px;
 }
 
 }
@@ -1138,36 +1168,24 @@ data-layer="oya">
 Настройки
 </div>
 
-<div class="settings-section"
-id="appearanceSection">
+<div class="settings-section" id="appearanceSection">
 
-<button class="settings-section-btn"
-id="appearanceToggle">
-
-<span>
-Оформление
-</span>
-
-<span class="settings-section-arrow">
-▾
-</span>
-
+<button class="settings-section-btn" id="appearanceToggle">
+<span>Оформление</span>
+<span class="settings-section-arrow">▾</span>
 </button>
 
 <div class="settings-subpanel">
 
-<button class="theme-btn"
-data-theme="dark">
+<button class="theme-btn" data-theme="dark">
 Тёмная
 </button>
 
-<button class="theme-btn"
-data-theme="light">
+<button class="theme-btn" data-theme="light">
 Светлая
 </button>
 
-<button class="theme-btn"
-data-theme="green">
+<button class="theme-btn" data-theme="green">
 Зелёная
 </button>
 
@@ -1175,34 +1193,23 @@ data-theme="green">
 
 </div>
 
-<div class="settings-section"
-id="frameCountSection">
+<div class="settings-section" id="frameCountSection">
 
-<button class="settings-section-btn"
-id="frameCountToggle">
-
-<span>
-Кол. кадров
-</span>
-
-<span class="settings-section-arrow">
-▾
-</span>
-
+<button class="settings-section-btn" id="frameCountToggle">
+<span>Кол. кадров</span>
+<span class="settings-section-arrow">▾</span>
 </button>
 
 <div class="settings-subpanel">
 
 <div class="frame-count-row">
 
-<button
-id="frameCountPrev"
+<button id="frameCountPrev"
 class="frame-count-arrow">
 ◀
 </button>
 
-<input
-id="frameCountSlider"
+<input id="frameCountSlider"
 type="range"
 min="1"
 max="1"
@@ -1212,8 +1219,7 @@ value="50">
 50
 </div>
 
-<button
-id="frameCountNext"
+<button id="frameCountNext"
 class="frame-count-arrow">
 ▶
 </button>
@@ -1257,7 +1263,9 @@ class="timeline-arrow">
 <div id="oyaTimelineSegments"></div>
 
 <div id="oyaLongProgress">
+
 <div id="oyaLongProgressFill"></div>
+
 </div>
 
 <input id="timeSlider"
@@ -1285,139 +1293,48 @@ class="timeline-arrow">
 Загрузка…
 </div>
 
-<!-- =====================================================
-     LEAFLET
-===================================================== -->
-
-<script
-src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
-</script>
-
-<script>
+<script type="module">
 
 /* =========================================================
-   LEAFLET CHECK
+   OPENLAYERS
 ========================================================= */
 
-if(typeof L==="undefined"){
+import Map from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/Map.js";
 
-document.getElementById("status").textContent=
-"Ошибка загрузки карты";
+import View from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/View.js";
 
-document.getElementById("loading").textContent=
-"Leaflet не загрузился";
+import TileLayer from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/layer/Tile.js";
 
-document.getElementById("loading").style.display=
-"block";
+import ImageLayer from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/layer/Image.js";
 
-throw new Error(
-"GPTrad: Leaflet не загрузился"
-);
+import XYZ from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/source/XYZ.js";
 
-}
+import ImageStatic from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/source/ImageStatic.js";
 
-console.log(
-"GPTrad: Leaflet",
-L.version,
-"loaded"
-);
+import {fromLonLat,transformExtent}
+from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/proj.js";
 
-/* =========================================================
-   MAP
-========================================================= */
+import {defaults as defaultControls}
+from
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/10.6.1/control.js";
 
-const map=L.map("map",{
-
-zoomControl:true,
-attributionControl:true,
-
-zoomSnap:0,
-zoomDelta:.5,
-
-zoomAnimation:false,
-fadeAnimation:false,
-markerZoomAnimation:false,
-zoomAnimationThreshold:0,
-
-touchZoom:true,
-scrollWheelZoom:true,
-
-wheelDebounceTime:20,
-wheelPxPerZoomLevel:80,
-
-doubleClickZoom:true,
-
-dragging:true,
-inertia:true,
-inertiaDeceleration:3000,
-easeLinearity:.2,
-
-minZoom:2,
-maxZoom:19
-
-}).setView(
-[55.75,37.61],
-5
-);
-
-/* =========================================================
-   OSM
-========================================================= */
-
-const osmLayer=L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-
-minZoom:2,
-maxZoom:19,
-
-tileSize:256,
-
-updateWhenIdle:true,
-updateWhenZooming:false,
-
-keepBuffer:3,
-
-attribution:"© OpenStreetMap"
-
-}
-).addTo(map);
-
-/* =========================================================
-   MAP SIZE
-========================================================= */
-
-function fixMapSize(){
-
-map.invalidateSize(true);
-
-}
-
-requestAnimationFrame(fixMapSize);
-
-setTimeout(
-fixMapSize,
-100
-);
-
-setTimeout(
-fixMapSize,
-500
-);
-
-window.addEventListener(
-"load",
-fixMapSize
-);
-
-window.addEventListener(
-"resize",
-fixMapSize
-);
 
 /* =========================================================
    ELEMENTS
 ========================================================= */
+
+const status=
+document.getElementById("status");
+
+const loading=
+document.getElementById("loading");
 
 const selectedLayer=
 document.getElementById("selectedLayer");
@@ -1428,14 +1345,14 @@ document.getElementById("selectedLayerName");
 const layerDrawer=
 document.getElementById("layerDrawer");
 
-const status=
-document.getElementById("status");
-
-const loading=
-document.getElementById("loading");
+const settings=
+document.getElementById("settings");
 
 const timeSlider=
 document.getElementById("timeSlider");
+
+const timeLabel=
+document.getElementById("timeLabel");
 
 const oyaTimelineSegments=
 document.getElementById("oyaTimelineSegments");
@@ -1446,41 +1363,164 @@ document.getElementById("oyaLongProgress");
 const oyaLongProgressFill=
 document.getElementById("oyaLongProgressFill");
 
-const timeLabel=
-document.getElementById("timeLabel");
-
-const settings=
-document.getElementById("settings");
-
-const appearanceSection=
-document.getElementById("appearanceSection");
-
-const appearanceToggle=
-document.getElementById("appearanceToggle");
-
-const frameCountSection=
-document.getElementById("frameCountSection");
-
-const frameCountToggle=
-document.getElementById("frameCountToggle");
-
 const frameCountSlider=
 document.getElementById("frameCountSlider");
 
 const frameCountValue=
 document.getElementById("frameCountValue");
 
-const frameCountPrev=
-document.getElementById("frameCountPrev");
-
-const frameCountNext=
-document.getElementById("frameCountNext");
+const preloadBtn=
+document.getElementById("preloadBtn");
 
 const playBtn=
 document.getElementById("playBtn");
 
-const preloadBtn=
-document.getElementById("preloadBtn");
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function setStatus(text){
+status.textContent=text;
+}
+
+function showLoading(text){
+loading.textContent=text;
+loading.style.display="block";
+}
+
+function hideLoading(){
+loading.style.display="none";
+}
+
+function formatTime(ts){
+
+if(!ts)return"—";
+
+return new Date(ts*1000)
+.toLocaleTimeString(
+"ru-RU",
+{
+hour:"2-digit",
+minute:"2-digit"
+}
+);
+
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+const osmSource=
+new XYZ({
+
+url:
+"https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
+maxZoom:19,
+
+crossOrigin:"anonymous",
+
+attributions:
+"© OpenStreetMap contributors"
+
+});
+
+const osmLayer=
+new TileLayer({
+
+source:osmSource,
+
+zIndex:0
+
+});
+
+
+const view=
+new View({
+
+center:
+fromLonLat([
+37.61,
+55.75
+]),
+
+zoom:5,
+
+minZoom:2,
+
+maxZoom:19,
+
+constrainResolution:false,
+
+enableRotation:false
+
+});
+
+
+const map=
+new Map({
+
+target:"map",
+
+layers:[
+osmLayer
+],
+
+view,
+
+controls:
+defaultControls({
+
+zoom:true,
+rotate:false,
+attribution:true
+
+})
+
+});
+
+
+/* =========================================================
+   MAP RESIZE
+========================================================= */
+
+function resizeMap(){
+
+map.updateSize();
+
+}
+
+window.addEventListener(
+"resize",
+resizeMap
+);
+
+window.addEventListener(
+"orientationchange",
+()=>setTimeout(
+resizeMap,
+200
+)
+);
+
+setTimeout(
+resizeMap,
+100
+);
+
+setTimeout(
+resizeMap,
+500
+);
+
+setTimeout(
+resizeMap,
+1000
+);
+
 
 /* =========================================================
    STATE
@@ -1496,11 +1536,10 @@ let currentFrame=0;
 
 let rainFrameRequestId=0;
 
-let oyaFrameRequestId=0;
-
 let playing=false;
 
 let playTimer=null;
+
 
 /* =========================================================
    OYA STATE
@@ -1538,44 +1577,20 @@ let oyaViewportKey="";
 
 let viewportTimer=null;
 
+let oyaFrameRequestId=0;
+
+
 /* =========================================================
-   HELPERS
+   OYA PROXY
 ========================================================= */
 
-function setStatus(text){
+const OYA_PROXY="/api/oya";
 
-status.textContent=text;
+const OYA_LAYER=
+"bufr_phenomena,"+
+"bufr_novosib_phenomena,"+
+"bufr_vlad_phenomena";
 
-}
-
-function showLoading(text){
-
-loading.textContent=text;
-loading.style.display="block";
-
-}
-
-function hideLoading(){
-
-loading.style.display="none";
-
-}
-
-function formatTime(ts){
-
-if(!ts)
-return"—";
-
-return new Date(ts*1000)
-.toLocaleTimeString(
-"ru-RU",
-{
-hour:"2-digit",
-minute:"2-digit"
-}
-);
-
-}
 
 /* =========================================================
    VIEWPORT
@@ -1583,24 +1598,25 @@ minute:"2-digit"
 
 function getCurrentViewportData(){
 
-const bounds=
-map.getBounds();
-
-const sw=
-bounds.getSouthWest();
-
-const ne=
-bounds.getNorthEast();
-
 const size=
 map.getSize();
+
+const extent=
+view.calculateExtent(size);
+
+const geoExtent=
+transformExtent(
+extent,
+"EPSG:3857",
+"EPSG:4326"
+);
 
 const width=
 Math.max(
 256,
 Math.min(
 1600,
-Math.round(size.x)
+Math.round(size[0])
 )
 );
 
@@ -1609,21 +1625,22 @@ Math.max(
 256,
 Math.min(
 1200,
-Math.round(size.y)
+Math.round(size[1])
 )
 );
 
 const key=[
-sw.lat.toFixed(5),
-sw.lng.toFixed(5),
-ne.lat.toFixed(5),
-ne.lng.toFixed(5),
+geoExtent[0].toFixed(5),
+geoExtent[1].toFixed(5),
+geoExtent[2].toFixed(5),
+geoExtent[3].toFixed(5),
 width,
 height
 ].join("|");
 
 return{
-bounds,
+extent,
+geoExtent,
 width,
 height,
 key
@@ -1631,162 +1648,77 @@ key
 
 }
 
-/* =========================================================
-   CACHE HELPERS
-========================================================= */
-
-function cacheContainsBlobUrl(blobUrl){
-
-if(!blobUrl)
-return false;
-
-for(
-const value of
-oyaFrameCache.values()
-){
-
-if(
-value &&
-value.blobUrl===blobUrl
-){
-
-return true;
-
-}
-
-}
-
-return false;
-
-}
-
-function revokeOyaBlobUrl(blobUrl){
-
-if(!blobUrl)
-return;
-
-if(
-blobUrl===oyaImageBlobUrl
-){
-
-return;
-
-}
-
-if(
-cacheContainsBlobUrl(blobUrl)
-){
-
-return;
-
-}
-
-try{
-
-URL.revokeObjectURL(
-blobUrl
-);
-
-}catch(error){}
-
-}
 
 /* =========================================================
-   MERCATOR
+   OYA REQUEST
 ========================================================= */
 
-function lonToMercator(lon){
+function getOyaRequestData(timeValue){
 
-return lon*
-20037508.34/
-180;
+const viewport=
+getCurrentViewportData();
 
-}
+const bbox=
+viewport.extent.join(",");
 
-function latToMercator(lat){
+const params=
+new URLSearchParams({
 
-lat=Math.max(
--85.05112878,
-Math.min(
-85.05112878,
-lat
-)
-);
+action:"image",
 
-return 6378137*
-Math.log(
-Math.tan(
-Math.PI/4+
-lat*Math.PI/360
-)
-);
+SERVICE:"WMS",
 
-}
+VERSION:"1.1.1",
 
-/* =========================================================
-   ISO TIME
-========================================================= */
+REQUEST:"GetMap",
 
-function isoToUnix(value){
+LAYERS:OYA_LAYER,
 
-const t=
-Date.parse(value);
+STYLES:"",
 
-if(
-Number.isNaN(t)
-){
+SRS:"EPSG:3857",
 
-return null;
+BBOX:bbox,
 
-}
+WIDTH:String(viewport.width),
 
-return Math.floor(
-t/1000
-);
+HEIGHT:String(viewport.height),
 
-}
+FORMAT:"image/png",
 
-/* =========================================================
-   PARSE TIMES
-========================================================= */
+TRANSPARENT:"true",
 
-function parseOyaTimes(text){
+EXCEPTIONS:
+"application/vnd.ogc.se_inimage",
 
-if(!text)
-return[];
+TIME:
+new Date(timeValue*1000).toISOString()
 
-const result=[];
+});
 
-const parts=
-text
-.split(",")
-.map(
-x=>x.trim()
-)
-.filter(Boolean);
+return{
 
-for(
-const value of parts
-){
+url:
+OYA_PROXY+
+"?"+
+params.toString(),
 
-const unix=
-isoToUnix(value);
+extent:
+viewport.extent,
 
-if(unix!==null){
+width:
+viewport.width,
 
-result.push(unix);
+height:
+viewport.height,
+
+viewportKey:
+viewport.key
+
+};
 
 }
 
-}
-
-return[
-...new Set(result)
-].sort(
-(a,b)=>a-b
-);
-
-}
 
 /* =========================================================
    OYA TIMELINE
@@ -1815,8 +1747,7 @@ if(
 oyaTimes.length<=65
 ){
 
-oyaTimelineSegments.style.display=
-"flex";
+oyaTimelineSegments.style.display="flex";
 
 for(
 let i=0;
@@ -1827,8 +1758,7 @@ i++
 const segment=
 document.createElement("div");
 
-segment.className=
-"oya-segment";
+segment.className="oya-segment";
 
 if(
 oyaLoadedTimes.has(
@@ -1836,9 +1766,7 @@ oyaTimes[i]
 )
 ){
 
-segment.classList.add(
-"loaded"
-);
+segment.classList.add("loaded");
 
 }
 
@@ -1846,9 +1774,7 @@ if(
 i===oyaFrameIndex
 ){
 
-segment.classList.add(
-"current"
-);
+segment.classList.add("current");
 
 }
 
@@ -1865,8 +1791,7 @@ segment
 
 }else{
 
-oyaLongProgress.style.display=
-"block";
+oyaLongProgress.style.display="block";
 
 let loaded=0;
 
@@ -1884,29 +1809,21 @@ loaded++;
 
 }
 
-const percent=
-oyaTimes.length
-?
-loaded/
-oyaTimes.length*
-100
-:0;
-
 oyaLongProgressFill.style.width=
-percent+"%";
+(
+loaded/oyaTimes.length*100
+)+"%";
 
 }
 
 }
+
 
 /* =========================================================
    PRELOAD BUTTON
 ========================================================= */
 
 function updatePreloadButton(){
-
-if(!preloadBtn)
-return;
 
 const enabled=
 activeLayer==="oya" &&
@@ -1917,62 +1834,27 @@ if(!enabled){
 
 preloadBtn.disabled=true;
 
-preloadBtn.setAttribute(
-"disabled",
-""
-);
-
 preloadBtn.classList.remove(
 "loading",
 "done"
 );
 
-if(activeLayer==="oya"){
-
-preloadBtn.title=
-"Загрузка всех кадров доступна только до 51 кадра";
-
-}else{
-
-preloadBtn.title=
-"Загрузка всех кадров доступна только для ОЯ";
-
-}
-
 return;
 
 }
 
-if(oyaPreloading){
-
-preloadBtn.disabled=true;
-
-preloadBtn.setAttribute(
-"disabled",
-""
-);
-
-preloadBtn.title=
-"Загрузка кадров…";
-
-}else{
-
-preloadBtn.disabled=false;
-
-preloadBtn.removeAttribute(
-"disabled"
-);
-
-preloadBtn.title=
-"Загрузить все кадры";
-
-}
+preloadBtn.disabled=
+oyaPreloading;
 
 const allLoaded=
 oyaTimes.length>0 &&
 oyaTimes.every(
-time=>
-oyaLoadedTimes.has(time)
+t=>oyaLoadedTimes.has(t)
+);
+
+preloadBtn.classList.toggle(
+"loading",
+oyaPreloading
 );
 
 preloadBtn.classList.toggle(
@@ -1981,15 +1863,11 @@ preloadBtn.classList.toggle(
 allLoaded
 );
 
-preloadBtn.classList.toggle(
-"loading",
-oyaPreloading
-);
-
 }
 
+
 /* =========================================================
-   TIME LABEL
+   TIME
 ========================================================= */
 
 function updateTimeLabel(){
@@ -1998,47 +1876,28 @@ if(
 activeLayer==="radar"
 ){
 
-if(
-rainFrames[currentFrame]
-){
-
 timeLabel.textContent=
+rainFrames[currentFrame]
+?
 formatTime(
 rainFrames[currentFrame].time
-);
-
-}else{
-
-timeLabel.textContent="—";
-
-}
+)
+:"—";
 
 return;
 
 }
 
-if(
-activeLayer==="oya"
-){
-
-if(
-oyaTimes[oyaFrameIndex]
-){
-
 timeLabel.textContent=
+oyaTimes[oyaFrameIndex]
+?
 formatTime(
 oyaTimes[oyaFrameIndex]
-);
-
-}else{
-
-timeLabel.textContent="—";
+)
+:"—";
 
 }
 
-}
-
-}
 
 /* =========================================================
    RADAR TIMELINE
@@ -2048,14 +1907,9 @@ function setRadarTimeline(){
 
 oyaTimelineSegments.innerHTML="";
 
-oyaTimelineSegments.style.display=
-"none";
+oyaTimelineSegments.style.display="none";
 
-oyaLongProgress.style.display=
-"none";
-
-oyaLongProgressFill.style.width=
-"0%";
+oyaLongProgress.style.display="none";
 
 timeSlider.min=0;
 
@@ -2083,35 +1937,12 @@ updatePreloadButton();
 
 }
 
+
 /* =========================================================
    OYA TIMELINE
 ========================================================= */
 
 function setOyaTimeline(){
-
-if(!oyaTimes.length){
-
-timeSlider.min=0;
-
-timeSlider.max=0;
-
-timeSlider.value=0;
-
-oyaTimelineSegments.innerHTML="";
-
-oyaTimelineSegments.style.display=
-"none";
-
-oyaLongProgress.style.display=
-"none";
-
-updateTimeLabel();
-
-updatePreloadButton();
-
-return;
-
-}
 
 timeSlider.min=0;
 
@@ -2141,427 +1972,59 @@ updatePreloadButton();
 
 }
 
+
 /* =========================================================
-   CLEAR OYA CACHE
+   ISO
 ========================================================= */
 
-function clearOyaCache(){
+function isoToUnix(value){
 
-const urls=
-new Set();
+const t=Date.parse(value);
+
+return Number.isNaN(t)
+?
+null
+:
+Math.floor(t/1000);
+
+}
+
+
+/* =========================================================
+   OYA TIMES
+========================================================= */
+
+function parseOyaTimes(text){
+
+if(!text)return[];
+
+const result=[];
 
 for(
 const value of
-oyaFrameCache.values()
+text
+.split(",")
+.map(x=>x.trim())
+.filter(Boolean)
 ){
 
-if(
-value &&
-value.blobUrl
-){
+const unix=
+isoToUnix(value);
 
-urls.add(
-value.blobUrl
-);
+if(unix!==null)
+result.push(unix);
 
 }
-
-}
-
-oyaFrameCache.clear();
-
-oyaPendingRequests.clear();
-
-oyaLoadedTimes.clear();
-
-oyaCacheGeneration++;
-
-oyaPreloadGeneration++;
-
-oyaPreloading=false;
-
-oyaViewportKey="";
-
-for(
-const url of urls
-){
-
-if(
-url!==oyaImageBlobUrl
-){
-
-try{
-
-URL.revokeObjectURL(
-url
-);
-
-}catch(error){}
-
-}
-
-}
-
-renderOyaTimeline();
-
-updatePreloadButton();
-
-}
-
-/* =========================================================
-   OYA CACHE KEY
-========================================================= */
-
-function makeOyaCacheKey(
-timeValue,
-bounds,
-width,
-height
-){
-
-const sw=
-bounds.getSouthWest();
-
-const ne=
-bounds.getNorthEast();
 
 return[
-timeValue,
-sw.lat.toFixed(5),
-sw.lng.toFixed(5),
-ne.lat.toFixed(5),
-ne.lng.toFixed(5),
-width,
-height
-].join("|");
+...new Set(result)
+];
 
 }
+
 
 /* =========================================================
-   OYA REQUEST
-========================================================= */
-
-const OYA_PROXY="/api/oya";
-
-const OYA_LAYER=
-"bufr_phenomena,"+
-"bufr_novosib_phenomena,"+
-"bufr_vlad_phenomena";
-
-function getOyaRequestData(
-timeValue
-){
-
-const viewport=
-getCurrentViewportData();
-
-const bounds=
-viewport.bounds;
-
-const sw=
-bounds.getSouthWest();
-
-const ne=
-bounds.getNorthEast();
-
-const width=
-viewport.width;
-
-const height=
-viewport.height;
-
-const bbox=[
-
-lonToMercator(
-sw.lng
-),
-
-latToMercator(
-sw.lat
-),
-
-lonToMercator(
-ne.lng
-),
-
-latToMercator(
-ne.lat
-)
-
-].join(",");
-
-const params=
-new URLSearchParams({
-
-action:"image",
-
-SERVICE:"WMS",
-
-VERSION:"1.1.1",
-
-REQUEST:"GetMap",
-
-LAYERS:OYA_LAYER,
-
-STYLES:"",
-
-SRS:"EPSG:3857",
-
-BBOX:bbox,
-
-WIDTH:String(width),
-
-HEIGHT:String(height),
-
-FORMAT:"image/png",
-
-TRANSPARENT:"true",
-
-EXCEPTIONS:
-"application/vnd.ogc.se_inimage",
-
-TIME:new Date(
-timeValue*1000
-).toISOString()
-
-});
-
-return{
-
-url:
-OYA_PROXY+
-"?"+
-params.toString(),
-
-bounds,
-
-width,
-
-height,
-
-viewportKey:
-viewport.key
-
-};
-
-}
-
-/* =========================================================
-   OYA OVERLAY READY
-========================================================= */
-
-function createReadyOyaOverlay(
-blobUrl,
-bounds
-){
-
-return new Promise(
-(resolve,reject)=>{
-
-const overlay=
-L.imageOverlay(
-blobUrl,
-bounds,
-{
-
-opacity:.75,
-
-interactive:false,
-
-zIndex:60
-
-}
-);
-
-let finished=false;
-
-function cleanup(){
-
-overlay.off(
-"load",
-onLoad
-);
-
-overlay.off(
-"error",
-onError
-);
-
-}
-
-function onLoad(){
-
-if(finished)
-return;
-
-finished=true;
-
-cleanup();
-
-resolve(overlay);
-
-}
-
-function onError(){
-
-if(finished)
-return;
-
-finished=true;
-
-cleanup();
-
-if(
-map.hasLayer(overlay)
-){
-
-map.removeLayer(
-overlay
-);
-
-}
-
-reject(
-new Error(
-"Ошибка отображения OYA"
-)
-);
-
-}
-
-overlay.once(
-"load",
-onLoad
-);
-
-overlay.once(
-"error",
-onError
-);
-
-overlay.addTo(map);
-
-const image=
-overlay.getElement();
-
-if(
-image &&
-image.complete &&
-image.naturalWidth>0
-){
-
-setTimeout(
-onLoad,
-0
-);
-
-}
-
-}
-
-);
-
-}
-
-/* =========================================================
-   DOUBLE BUFFER
-========================================================= */
-
-function swapOyaOverlay(
-newOverlay,
-newBlobUrl
-){
-
-const oldImage=
-oyaImage;
-
-const oldBlobUrl=
-oyaImageBlobUrl;
-
-oyaImage=
-newOverlay;
-
-oyaImageBlobUrl=
-newBlobUrl;
-
-if(
-!oldImage ||
-!map.hasLayer(oldImage)
-){
-
-if(
-oldBlobUrl &&
-oldBlobUrl!==newBlobUrl
-){
-
-setTimeout(
-()=>{
-
-if(
-oldBlobUrl!==oyaImageBlobUrl
-){
-
-revokeOyaBlobUrl(
-oldBlobUrl
-);
-
-}
-
-},
-100
-);
-
-}
-
-return;
-
-}
-
-requestAnimationFrame(
-()=>{
-
-requestAnimationFrame(
-()=>{
-
-setTimeout(
-()=>{
-
-if(
-oldImage &&
-oldImage!==oyaImage &&
-map.hasLayer(oldImage)
-){
-
-map.removeLayer(
-oldImage
-);
-
-}
-
-if(
-oldBlobUrl &&
-oldBlobUrl!==oyaImageBlobUrl
-){
-
-revokeOyaBlobUrl(
-oldBlobUrl
-);
-
-}
-
-},
-50
-);
-
-}
-);
-
-}
-
-}
-
-/* =========================================================
-   LOAD OYA CAPABILITIES
+   CAPABILITIES
 ========================================================= */
 
 async function loadOyaCapabilities(){
@@ -2577,23 +2040,17 @@ return true;
 
 if(oyaCapabilitiesLoading){
 
-while(
-oyaCapabilitiesLoading
-){
+while(oyaCapabilitiesLoading){
 
 await new Promise(
-resolve=>
-setTimeout(
-resolve,
-50
-)
+r=>setTimeout(r,50)
 );
 
 }
 
 return(
 oyaCapabilitiesLoaded &&
-oyaAllTimes.length>0
+oyaAllTimes.length
 );
 
 }
@@ -2624,39 +2081,31 @@ response.status
 
 }
 
-const xmlText=
+const text=
 await response.text();
 
-const parser=
-new DOMParser();
-
 const xml=
-parser.parseFromString(
-xmlText,
+new DOMParser()
+.parseFromString(
+text,
 "text/xml"
 );
 
 if(
-xml.querySelector(
-"parsererror"
-)
+xml.querySelector("parsererror")
 ){
 
-throw new Error(
-"Ошибка XML"
-);
+throw new Error("Ошибка XML");
 
 }
 
 let times=[];
 
-const nodes=
+for(
+const node of
 Array.from(
 xml.getElementsByTagName("*")
-);
-
-for(
-const node of nodes
+)
 ){
 
 if(
@@ -2669,9 +2118,7 @@ continue;
 }
 
 const name=
-node.getAttribute(
-"name"
-);
+node.getAttribute("name");
 
 if(
 name &&
@@ -2682,23 +2129,15 @@ continue;
 
 }
 
-const text=
+const value=
 (node.textContent||"").trim();
 
-if(!text)
+if(!value)
 continue;
 
-if(
-text.includes("/")
-)
-{
+if(value.includes("/")){
 
-const parts=
-text.split("/");
-
-if(
-parts.length>=2
-){
+const parts=value.split("/");
 
 const start=
 isoToUnix(parts[0]);
@@ -2744,33 +2183,29 @@ times.push(t);
 
 }
 
-}
-
 }else{
 
 times.push(
-...parseOyaTimes(text)
+...parseOyaTimes(value)
 );
 
 }
 
 }
 
-times=[
+oyaAllTimes=[
 ...new Set(times)
 ].sort(
 (a,b)=>a-b
 );
 
-if(!times.length){
+if(!oyaAllTimes.length){
 
 throw new Error(
 "В GetCapabilities нет времени"
 );
 
 }
-
-oyaAllTimes=times;
 
 oyaCapabilitiesLoaded=true;
 
@@ -2781,26 +2216,19 @@ localStorage.getItem(
 )
 );
 
-if(
+oyaFrameCount=
 Number.isFinite(saved) &&
 saved>=1
-){
-
-oyaFrameCount=
+?
 Math.min(
 Math.floor(saved),
 oyaAllTimes.length
-);
-
-}else{
-
-oyaFrameCount=
+)
+:
 Math.min(
 50,
 oyaAllTimes.length
 );
-
-}
 
 frameCountSlider.min=1;
 
@@ -2822,14 +2250,12 @@ setStatus(
 "Опасные явления"
 );
 
-updatePreloadButton();
-
 return true;
 
 }catch(error){
 
 console.error(
-"OYA capabilities:",
+"OYA capabilities",
 error
 );
 
@@ -2847,25 +2273,26 @@ oyaCapabilitiesLoading=false;
 
 }
 
+
 /* =========================================================
    APPLY FRAME COUNT
 ========================================================= */
 
 function applyOyaFrameCount(
 count,
-preserveCurrent=true
+preserve=true
 ){
 
 if(!oyaAllTimes.length)
 return;
 
 const oldTime=
-preserveCurrent &&
-oyaTimes.length &&
-oyaTimes[oyaFrameIndex]
+preserve &&
+oyaTimes.length
 ?
 oyaTimes[oyaFrameIndex]
-:null;
+:
+null;
 
 oyaFrameCount=
 Math.max(
@@ -2881,26 +2308,18 @@ oyaAllTimes.slice(
 -oyaFrameCount
 );
 
-let newIndex=
+oyaFrameIndex=
 oyaTimes.length-1;
 
 if(oldTime!==null){
 
-const found=
-oyaTimes.indexOf(
-oldTime
-);
+const index=
+oyaTimes.indexOf(oldTime);
 
-if(found!==-1){
-
-newIndex=found;
+if(index!==-1)
+oyaFrameIndex=index;
 
 }
-
-}
-
-oyaFrameIndex=
-newIndex;
 
 localStorage.setItem(
 "gptrad-oya-frame-count",
@@ -2922,9 +2341,196 @@ oyaFrameCount;
 
 setOyaTimeline();
 
-updatePreloadButton();
+}
+
+
+/* =========================================================
+   OYA CACHE KEY
+========================================================= */
+
+function makeOyaCacheKey(
+time,
+data
+){
+
+return[
+time,
+data.viewportKey
+].join("|");
 
 }
+
+
+/* =========================================================
+   OYA IMAGE LAYER
+========================================================= */
+
+function createOyaImageLayer(
+blobUrl,
+extent
+){
+
+return new Promise(
+(resolve,reject)=>{
+
+const source=
+new ImageStatic({
+
+url:blobUrl,
+
+imageExtent:extent,
+
+projection:"EPSG:3857",
+
+interpolate:false
+
+});
+
+const layer=
+new ImageLayer({
+
+source,
+
+opacity:.75,
+
+zIndex:60
+
+});
+
+let done=false;
+
+const finish=()=>{
+
+if(done)return;
+
+done=true;
+
+resolve(layer);
+
+};
+
+const fail=()=>{
+
+if(done)return;
+
+done=true;
+
+reject(
+new Error(
+"OYA image load error"
+)
+);
+
+};
+
+source.on(
+"imageloadend",
+finish
+);
+
+source.on(
+"imageloaderror",
+fail
+);
+
+map.addLayer(layer);
+
+setTimeout(
+()=>{
+
+if(!done){
+
+const image=
+source.getImage();
+
+if(
+image &&
+image.getImageState &&
+image.getImageState()===2
+){
+
+finish();
+
+}
+
+}
+
+},
+50
+);
+
+setTimeout(
+()=>{
+
+if(!done){
+
+finish();
+
+}
+
+},
+8000
+);
+
+}
+
+);
+
+
+/* =========================================================
+   OYA SWAP
+========================================================= */
+
+function swapOyaLayer(
+newLayer,
+newBlobUrl
+){
+
+const oldLayer=oyaImage;
+
+const oldUrl=oyaImageBlobUrl;
+
+oyaImage=newLayer;
+
+oyaImageBlobUrl=newBlobUrl;
+
+if(
+oldLayer &&
+oldLayer!==newLayer
+){
+
+setTimeout(
+()=>{
+
+if(
+oldLayer!==oyaImage
+){
+
+map.removeLayer(
+oldLayer
+);
+
+}
+
+if(
+oldUrl &&
+oldUrl!==oyaImageBlobUrl
+){
+
+try{
+URL.revokeObjectURL(oldUrl);
+}catch(e){}
+
+}
+
+},
+80
+);
+
+}
+
+}
+
 
 /* =========================================================
    LOAD OYA FRAME
@@ -2935,14 +2541,12 @@ async function loadOyaFrame(index){
 if(activeLayer!=="oya")
 return;
 
-if(!oyaTimes.length){
-
-const ready=
-await loadOyaCapabilities();
+if(
+!oyaTimes.length
+){
 
 if(
-!ready ||
-!oyaTimes.length
+!(await loadOyaCapabilities())
 ){
 
 return;
@@ -2968,8 +2572,7 @@ oyaCacheGeneration;
 
 oyaFrameIndex=index;
 
-timeSlider.value=
-index;
+timeSlider.value=index;
 
 updateTimeLabel();
 
@@ -2986,168 +2589,31 @@ timeValue
 const cacheKey=
 makeOyaCacheKey(
 timeValue,
-requestData.bounds,
-requestData.width,
-requestData.height
+requestData
 );
 
-const cached=
+try{
+
+let result=
 oyaFrameCache.get(
 cacheKey
 );
 
-if(
-cached &&
-cached.blobUrl
-){
-
-try{
-
-const newOverlay=
-await createReadyOyaOverlay(
-cached.blobUrl,
-requestData.bounds
-);
-
-if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
-){
-
-if(
-map.hasLayer(newOverlay)
-){
-
-map.removeLayer(
-newOverlay
-);
-
-}
-
-return;
-
-}
-
-swapOyaOverlay(
-newOverlay,
-cached.blobUrl
-);
-
-oyaLoadedTimes.add(
-timeValue
-);
-
-renderOyaTimeline();
-
-setStatus(
-"Опасные явления"
-);
-
-}catch(error){
-
-console.error(
-"OYA cache:",
-error
-);
-
-}
-
-return;
-
-}
-
-if(
-oyaPendingRequests.has(cacheKey)
-){
-
-try{
-
-const result=
-await oyaPendingRequests.get(
-cacheKey
-);
-
-if(!result)
-return;
-
-if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
-){
-
-return;
-
-}
-
-const newOverlay=
-await createReadyOyaOverlay(
-result.blobUrl,
-requestData.bounds
-);
-
-if(
-requestId!==oyaFrameRequestId ||
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya" ||
-oyaTimes[oyaFrameIndex]!==timeValue
-){
-
-if(
-map.hasLayer(newOverlay)
-){
-
-map.removeLayer(
-newOverlay
-);
-
-}
-
-return;
-
-}
-
-swapOyaOverlay(
-newOverlay,
-result.blobUrl
-);
-
-oyaLoadedTimes.add(
-timeValue
-);
-
-renderOyaTimeline();
-
-setStatus(
-"Опасные явления"
-);
-
-}catch(error){
-
-console.error(
-"OYA pending:",
-error
-);
-
-}
-
-return;
-
-}
+if(!result){
 
 setStatus(
 "Загрузка ОЯ…"
 );
 
-const promise=
+let pending=
+oyaPendingRequests.get(
+cacheKey
+);
+
+if(!pending){
+
+pending=
 (async()=>{
-
-let blobUrl=null;
-
-try{
 
 const response=
 await fetch(
@@ -3170,88 +2636,50 @@ const blob=
 await response.blob();
 
 if(
-generation!==oyaCacheGeneration ||
-activeLayer!=="oya"
+generation!==oyaCacheGeneration
 ){
 
 return null;
 
 }
 
-blobUrl=
+const blobUrl=
 URL.createObjectURL(
 blob
 );
 
+const value={
+blobUrl,
+extent:requestData.extent,
+timeValue
+};
+
 oyaFrameCache.set(
 cacheKey,
-{
-blobUrl,
-timeValue,
-viewportKey:
-requestData.viewportKey
-}
+value
 );
 
 oyaLoadedTimes.add(
 timeValue
 );
 
-renderOyaTimeline();
-
-return{
-
-blobUrl,
-
-bounds:
-requestData.bounds,
-
-viewportKey:
-requestData.viewportKey
-
-};
-
-}catch(error){
-
-if(blobUrl){
-
-try{
-
-URL.revokeObjectURL(
-blobUrl
-);
-
-}catch(e){}
-
-}
-
-console.error(
-"OYA frame:",
-timeValue,
-error
-);
-
-return null;
-
-}
+return value;
 
 })();
 
 oyaPendingRequests.set(
 cacheKey,
-promise
+pending
 );
 
-try{
+}
 
-const result=
-await promise;
+result=
+await pending;
 
-if(
-oyaPendingRequests.get(cacheKey)===promise
-){
-
-oyaPendingRequests.delete(cacheKey);
+oyaPendingRequests.delete(
+cacheKey
+);
 
 }
 
@@ -3269,10 +2697,10 @@ return;
 
 }
 
-const newOverlay=
-await createReadyOyaOverlay(
+const newLayer=
+await createOyaImageLayer(
 result.blobUrl,
-result.bounds
+result.extent
 );
 
 if(
@@ -3282,23 +2710,19 @@ activeLayer!=="oya" ||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
 
-if(
-map.hasLayer(newOverlay)
-){
-
-map.removeLayer(
-newOverlay
-);
-
-}
+map.removeLayer(newLayer);
 
 return;
 
 }
 
-swapOyaOverlay(
-newOverlay,
+swapOyaLayer(
+newLayer,
 result.blobUrl
+);
+
+oyaLoadedTimes.add(
+timeValue
 );
 
 renderOyaTimeline();
@@ -3309,13 +2733,14 @@ setStatus(
 
 }catch(error){
 
-if(
-oyaPendingRequests.get(cacheKey)===promise
-){
+oyaPendingRequests.delete(
+cacheKey
+);
 
-oyaPendingRequests.delete(cacheKey);
-
-}
+console.error(
+"OYA frame",
+error
+);
 
 if(
 requestId===oyaFrameRequestId
@@ -3331,18 +2756,19 @@ setStatus(
 
 }
 
+
 /* =========================================================
-   PRELOAD SINGLE
+   PRELOAD
 ========================================================= */
 
 async function preloadOyaFrame(
 timeValue,
-preloadGeneration,
+generation,
 cacheGeneration
 ){
 
 if(
-preloadGeneration!==oyaPreloadGeneration ||
+generation!==oyaPreloadGeneration ||
 cacheGeneration!==oyaCacheGeneration ||
 activeLayer!=="oya"
 ){
@@ -3351,28 +2777,75 @@ return false;
 
 }
 
-const requestData=
+const data=
 getOyaRequestData(
 timeValue
 );
 
-const cacheKey=
+const key=
 makeOyaCacheKey(
 timeValue,
-requestData.bounds,
-requestData.width,
-requestData.height
-);
-
-const cached=
-oyaFrameCache.get(
-cacheKey
+data
 );
 
 if(
-cached &&
-cached.blobUrl
+oyaFrameCache.has(key)
 ){
+
+oyaLoadedTimes.add(timeValue);
+
+return true;
+
+}
+
+let pending=
+oyaPendingRequests.get(key);
+
+if(!pending){
+
+pending=
+(async()=>{
+
+const response=
+await fetch(
+data.url,
+{
+cache:"force-cache"
+}
+);
+
+if(!response.ok)
+throw new Error(
+"HTTP "+
+response.status
+);
+
+const blob=
+await response.blob();
+
+if(
+generation!==oyaPreloadGeneration ||
+cacheGeneration!==oyaCacheGeneration ||
+activeLayer!=="oya"
+){
+
+return null;
+
+}
+
+const blobUrl=
+URL.createObjectURL(
+blob
+);
+
+oyaFrameCache.set(
+key,
+{
+blobUrl,
+extent:data.extent,
+timeValue
+}
+);
 
 oyaLoadedTimes.add(
 timeValue
@@ -3380,141 +2853,38 @@ timeValue
 
 return true;
 
-}
-
-if(
-oyaPendingRequests.has(cacheKey)
-){
-
-try{
-
-const result=
-await oyaPendingRequests.get(
-cacheKey
-);
-
-return !!result;
-
-}catch(error){
-
-return false;
-
-}
-
-}
-
-const promise=
-(async()=>{
-
-let blobUrl=null;
-
-try{
-
-const response=
-await fetch(
-requestData.url,
-{
-cache:"force-cache"
-}
-);
-
-if(!response.ok){
-
-throw new Error(
-"HTTP "+
-response.status
-);
-
-}
-
-const blob=
-await response.blob();
-
-if(
-preloadGeneration!==oyaPreloadGeneration ||
-cacheGeneration!==oyaCacheGeneration ||
-activeLayer!=="oya"
-){
-
-return null;
-
-}
-
-blobUrl=
-URL.createObjectURL(
-blob
-);
-
-oyaFrameCache.set(
-cacheKey,
-{
-blobUrl,
-timeValue,
-viewportKey:
-requestData.viewportKey
-}
-);
-
-oyaLoadedTimes.add(
-timeValue
-);
-
-renderOyaTimeline();
-
-return{
-blobUrl
-};
-
-}catch(error){
-
-if(blobUrl){
-
-try{
-
-URL.revokeObjectURL(
-blobUrl
-);
-
-}catch(e){}
-
-}
-
-console.error(
-"Preload:",
-timeValue,
-error
-);
-
-return null;
-
-}
-
 })();
 
 oyaPendingRequests.set(
-cacheKey,
-promise
+key,
+pending
 );
+
+}
 
 try{
 
 return !!(
-await promise
+await pending
 );
+
+}catch(error){
+
+console.error(
+"Preload",
+error
+);
+
+return false;
 
 }finally{
 
-if(
-oyaPendingRequests.get(cacheKey)===promise
-){
-
-oyaPendingRequests.delete(cacheKey);
+oyaPendingRequests.delete(key);
 
 }
 
 }
 
-}
 
 /* =========================================================
    PRELOAD ALL
@@ -3524,7 +2894,7 @@ async function preloadAllOyaFrames(){
 
 if(
 activeLayer!=="oya" ||
-!oyaTimes.length ||
+oyaTimes.length<1 ||
 oyaTimes.length>=52 ||
 oyaPreloading
 ){
@@ -3535,7 +2905,7 @@ return;
 
 oyaPreloading=true;
 
-const preloadGeneration=
+const generation=
 ++oyaPreloadGeneration;
 
 const cacheGeneration=
@@ -3543,16 +2913,37 @@ oyaCacheGeneration;
 
 updatePreloadButton();
 
-try{
-
 const times=
 oyaTimes.slice();
 
 let cursor=0;
 
-function loadedCount(){
+async function worker(){
 
-let count=0;
+while(true){
+
+if(
+generation!==oyaPreloadGeneration ||
+cacheGeneration!==oyaCacheGeneration ||
+activeLayer!=="oya"
+){
+
+return;
+
+}
+
+const index=cursor++;
+
+if(index>=times.length)
+return;
+
+await preloadOyaFrame(
+times[index],
+generation,
+cacheGeneration
+);
+
+let loaded=0;
 
 for(
 const time of times
@@ -3562,49 +2953,11 @@ if(
 oyaLoadedTimes.has(time)
 ){
 
-count++;
+loaded++;
 
 }
 
 }
-
-return count;
-
-}
-
-async function worker(){
-
-while(true){
-
-if(
-preloadGeneration!==oyaPreloadGeneration ||
-cacheGeneration!==oyaCacheGeneration ||
-activeLayer!=="oya"
-){
-
-return;
-
-}
-
-const index=
-cursor++;
-
-if(
-index>=times.length
-){
-
-return;
-
-}
-
-await preloadOyaFrame(
-times[index],
-preloadGeneration,
-cacheGeneration
-);
-
-const loaded=
-loadedCount();
 
 setStatus(
 `Загрузка кадров: ${loaded}/${times.length}`
@@ -3612,50 +2965,33 @@ setStatus(
 
 renderOyaTimeline();
 
-updatePreloadButton();
-
 }
 
 }
 
-const workers=[];
-
-const workerCount=
-Math.min(
-4,
-times.length
-);
-
-for(
-let i=0;
-i<workerCount;
-i++
-){
-
-workers.push(
-worker()
-);
-
-}
+try{
 
 await Promise.all(
-workers
+Array.from(
+{
+length:Math.min(4,times.length)
+},
+()=>worker()
+)
 );
 
 if(
-preloadGeneration===oyaPreloadGeneration &&
-cacheGeneration===oyaCacheGeneration &&
+generation===oyaPreloadGeneration &&
 activeLayer==="oya"
 ){
 
-const allLoaded=
+const complete=
 times.every(
-time=>
-oyaLoadedTimes.has(time)
+t=>oyaLoadedTimes.has(t)
 );
 
 setStatus(
-allLoaded
+complete
 ?
 "Все кадры ОЯ загружены"
 :
@@ -3666,10 +3002,7 @@ allLoaded
 
 }catch(error){
 
-console.error(
-"OYA preload:",
-error
-);
+console.error(error);
 
 setStatus(
 "Ошибка загрузки ОЯ"
@@ -3678,7 +3011,7 @@ setStatus(
 }finally{
 
 if(
-preloadGeneration===oyaPreloadGeneration
+generation===oyaPreloadGeneration
 ){
 
 oyaPreloading=false;
@@ -3693,8 +3026,9 @@ updatePreloadButton();
 
 }
 
+
 /* =========================================================
-   OYA VIEWPORT INVALIDATION
+   VIEWPORT INVALIDATION
 ========================================================= */
 
 function invalidateOyaViewport(){
@@ -3723,9 +3057,8 @@ oyaPreloadGeneration++;
 
 oyaPreloading=false;
 
-/*
-Старый отображаемый кадр не удаляем.
-*/
+const oldUrl=
+oyaImageBlobUrl;
 
 for(
 const value of
@@ -3733,18 +3066,15 @@ oyaFrameCache.values()
 ){
 
 if(
-value &&
 value.blobUrl &&
-value.blobUrl!==oyaImageBlobUrl
+value.blobUrl!==oldUrl
 ){
 
 try{
-
 URL.revokeObjectURL(
 value.blobUrl
 );
-
-}catch(error){}
+}catch(e){}
 
 }
 
@@ -3762,8 +3092,9 @@ updatePreloadButton();
 
 }
 
+
 /* =========================================================
-   VIEWPORT EVENT
+   MAP MOVEMENT
 ========================================================= */
 
 function scheduleOyaViewportReload(){
@@ -3771,9 +3102,7 @@ function scheduleOyaViewportReload(){
 if(activeLayer!=="oya")
 return;
 
-clearTimeout(
-viewportTimer
-);
+clearTimeout(viewportTimer);
 
 viewportTimer=
 setTimeout(
@@ -3781,9 +3110,7 @@ setTimeout(
 
 invalidateOyaViewport();
 
-if(
-oyaTimes.length
-){
+if(oyaTimes.length){
 
 loadOyaFrame(
 oyaFrameIndex
@@ -3802,10 +3129,6 @@ map.on(
 scheduleOyaViewportReload
 );
 
-map.on(
-"zoomend",
-scheduleOyaViewportReload
-);
 
 /* =========================================================
    SHOW OYA
@@ -3823,35 +3146,35 @@ oyaPreloadGeneration++;
 
 oyaPreloading=false;
 
-if(
-radarLayer &&
-map.hasLayer(radarLayer)
-){
+if(radarLayer){
 
 map.removeLayer(
 radarLayer
 );
 
-}
-
 radarLayer=null;
 
-if(
-oyaImage &&
-map.hasLayer(oyaImage)
-){
+}
+
+if(oyaImage){
 
 map.removeLayer(
 oyaImage
 );
 
-}
-
 oyaImage=null;
+
+}
 
 oyaImageBlobUrl=null;
 
-clearOyaCache();
+oyaFrameCache.clear();
+
+oyaPendingRequests.clear();
+
+oyaLoadedTimes.clear();
+
+oyaCacheGeneration++;
 
 const viewport=
 getCurrentViewportData();
@@ -3865,16 +3188,10 @@ await loadOyaCapabilities();
 if(!ready)
 return;
 
-if(!oyaTimes.length)
-return;
-
 setOyaTimeline();
 
 oyaFrameIndex=
-Math.max(
-0,
-oyaTimes.length-1
-);
+oyaTimes.length-1;
 
 timeSlider.value=
 oyaFrameIndex;
@@ -3889,9 +3206,8 @@ loadOyaFrame(
 oyaFrameIndex
 );
 
-updatePreloadButton();
-
 }
+
 
 /* =========================================================
    RAINVIEWER
@@ -3937,7 +3253,7 @@ rainFrames.sort(
 if(!rainFrames.length){
 
 throw new Error(
-"RainViewer не вернул кадры"
+"Нет кадров"
 );
 
 }
@@ -3958,7 +3274,7 @@ setStatus(
 }catch(error){
 
 console.error(
-"RainViewer:",
+"RainViewer",
 error
 );
 
@@ -3974,59 +3290,50 @@ hideLoading();
 
 }
 
+
 /* =========================================================
    RAIN LAYER
 ========================================================= */
 
 function makeRainLayer(frame){
 
-return L.tileLayer(
+const source=
+new XYZ({
 
+url:
 "https://tilecache.rainviewer.com"+
 frame.path+
 "/256/{z}/{x}/{y}/2/1_1.png",
 
-{
+maxZoom:19,
 
-tileSize:256,
+crossOrigin:"anonymous",
+
+transition:0
+
+});
+
+return new TileLayer({
+
+source,
 
 opacity:1,
 
-minZoom:2,
+zIndex:10
 
-maxZoom:7,
-
-zIndex:10,
-
-updateWhenIdle:true,
-
-updateWhenZooming:false,
-
-keepBuffer:3,
-
-noWrap:false
+});
 
 }
 
-);
-
-}
 
 /* =========================================================
-   SHOW RAIN FRAME
+   SHOW RAIN
 ========================================================= */
 
 function showRainFrame(index){
 
 if(
-activeLayer!=="radar"
-){
-
-return;
-
-}
-
-if(
+activeLayer!=="radar" ||
 !rainFrames[index]
 ){
 
@@ -4043,30 +3350,36 @@ const requestId=
 const newLayer=
 makeRainLayer(frame);
 
-newLayer.addTo(map);
+const source=
+newLayer.getSource();
 
-let loaded=false;
+let ready=false;
 
-newLayer.once(
-"load",
-()=>{
+const onReady=()=>{
 
-loaded=true;
+if(ready)
+return;
+
+ready=true;
+
+source.un(
+"tileloadend",
+onReady
+);
+
+source.un(
+"tileloaderror",
+onError
+);
 
 if(
 requestId!==rainFrameRequestId ||
 activeLayer!=="radar"
 ){
 
-if(
-map.hasLayer(newLayer)
-){
-
 map.removeLayer(
 newLayer
 );
-
-}
 
 return;
 
@@ -4078,10 +3391,7 @@ radarLayer;
 radarLayer=
 newLayer;
 
-if(
-oldLayer &&
-map.hasLayer(oldLayer)
-){
+if(oldLayer){
 
 map.removeLayer(
 oldLayer
@@ -4089,50 +3399,59 @@ oldLayer
 
 }
 
-});
+};
+
+const onError=()=>{
+
+if(ready)
+return;
+
+if(
+requestId===rainFrameRequestId
+){
+
+setStatus(
+"Ошибка кадра радара"
+);
+
+}
+
+};
+
+source.on(
+"tileloadend",
+onReady
+);
+
+source.on(
+"tileloaderror",
+onError
+);
+
+map.addLayer(
+newLayer
+);
 
 setTimeout(
 ()=>{
 
 if(
-loaded ||
-requestId!==rainFrameRequestId
+!ready &&
+requestId===rainFrameRequestId
 ){
 
-return;
-
-}
-
-if(
-radarLayer!==newLayer
-){
-
-const oldLayer=
-radarLayer;
-
-radarLayer=
-newLayer;
-
-if(
-oldLayer &&
-map.hasLayer(oldLayer)
-){
-
-map.removeLayer(
-oldLayer
-);
-
-}
+onReady();
 
 }
 
 },
-1200
+1500
 );
 
 updateTimeLabel();
 
 }
+
 
 /* =========================================================
    SHOW RADAR
@@ -4148,24 +3467,17 @@ oyaPreloadGeneration++;
 
 oyaPreloading=false;
 
-if(
-oyaImage &&
-map.hasLayer(oyaImage)
-){
+if(oyaImage){
 
 map.removeLayer(
 oyaImage
 );
 
-}
-
 oyaImage=null;
 
-clearOyaCache();
+}
 
-if(
-rainFrames.length
-){
+if(rainFrames.length){
 
 setRadarTimeline();
 
@@ -4184,6 +3496,7 @@ loadRainViewer();
 }
 
 }
+
 
 /* =========================================================
    SLIDER
@@ -4205,56 +3518,33 @@ activeLayer==="radar"
 if(!rainFrames.length)
 return;
 
-currentFrame=
-Math.max(
-0,
-Math.min(
-rainFrames.length-1,
-index
-)
-);
+currentFrame=index;
 
 updateTimeLabel();
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(index);
 
-return;
-
-}
-
-if(
-activeLayer==="oya"
-){
+}else{
 
 if(!oyaTimes.length)
 return;
 
-oyaFrameIndex=
-Math.max(
-0,
-Math.min(
-oyaTimes.length-1,
-index
-)
-);
+oyaFrameIndex=index;
 
 updateTimeLabel();
 
 renderOyaTimeline();
 
-loadOyaFrame(
-oyaFrameIndex
-);
+loadOyaFrame(index);
 
 }
 
 }
 );
+
 
 /* =========================================================
-   BACK
+   BACK/FORWARD
 ========================================================= */
 
 document
@@ -4263,9 +3553,7 @@ document
 "click",
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
 if(!rainFrames.length)
 return;
@@ -4279,19 +3567,11 @@ currentFrame-1
 timeSlider.value=
 currentFrame;
 
-updateTimeLabel();
-
 showRainFrame(
 currentFrame
 );
 
-return;
-
-}
-
-if(
-activeLayer==="oya"
-){
+}else{
 
 if(!oyaTimes.length)
 return;
@@ -4305,10 +3585,6 @@ oyaFrameIndex-1
 timeSlider.value=
 oyaFrameIndex;
 
-updateTimeLabel();
-
-renderOyaTimeline();
-
 loadOyaFrame(
 oyaFrameIndex
 );
@@ -4318,9 +3594,6 @@ oyaFrameIndex
 }
 );
 
-/* =========================================================
-   FORWARD
-========================================================= */
 
 document
 .getElementById("forwardBtn")
@@ -4328,9 +3601,7 @@ document
 "click",
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
 if(!rainFrames.length)
 return;
@@ -4344,19 +3615,11 @@ currentFrame+1
 timeSlider.value=
 currentFrame;
 
-updateTimeLabel();
-
 showRainFrame(
 currentFrame
 );
 
-return;
-
-}
-
-if(
-activeLayer==="oya"
-){
+}else{
 
 if(!oyaTimes.length)
 return;
@@ -4370,10 +3633,6 @@ oyaFrameIndex+1
 timeSlider.value=
 oyaFrameIndex;
 
-updateTimeLabel();
-
-renderOyaTimeline();
-
 loadOyaFrame(
 oyaFrameIndex
 );
@@ -4383,6 +3642,7 @@ oyaFrameIndex
 }
 );
 
+
 /* =========================================================
    PLAY
 ========================================================= */
@@ -4391,23 +3651,12 @@ playBtn.addEventListener(
 "click",
 ()=>{
 
-let total=0;
-
-if(
+const total=
 activeLayer==="radar"
-){
-
-total=
-rainFrames.length;
-
-}else if(
-activeLayer==="oya"
-){
-
-total=
+?
+rainFrames.length
+:
 oyaTimes.length;
-
-}
 
 if(!total)
 return;
@@ -4421,25 +3670,21 @@ playing
 :
 "▶";
 
-clearInterval(
-playTimer
-);
+clearInterval(playTimer);
 
-if(playing){
+if(!playing)
+return;
 
 playTimer=
 setInterval(
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
 currentFrame++;
 
 if(
-currentFrame>=
-rainFrames.length
+currentFrame>=rainFrames.length
 ){
 
 currentFrame=0;
@@ -4449,25 +3694,16 @@ currentFrame=0;
 timeSlider.value=
 currentFrame;
 
-updateTimeLabel();
-
 showRainFrame(
 currentFrame
 );
 
-return;
-
-}
-
-if(
-activeLayer==="oya"
-){
+}else{
 
 oyaFrameIndex++;
 
 if(
-oyaFrameIndex>=
-oyaTimes.length
+oyaFrameIndex>=oyaTimes.length
 ){
 
 oyaFrameIndex=0;
@@ -4476,10 +3712,6 @@ oyaFrameIndex=0;
 
 timeSlider.value=
 oyaFrameIndex;
-
-updateTimeLabel();
-
-renderOyaTimeline();
 
 loadOyaFrame(
 oyaFrameIndex
@@ -4491,28 +3723,21 @@ oyaFrameIndex
 600
 );
 
-}
+});
 
-}
-);
-
-/* =========================================================
-   STOP PLAY
-========================================================= */
 
 function stopPlayback(){
 
 playing=false;
 
-clearInterval(
-playTimer
-);
+clearInterval(playTimer);
 
 playTimer=null;
 
 playBtn.textContent="▶";
 
 }
+
 
 /* =========================================================
    PRELOAD
@@ -4523,17 +3748,15 @@ preloadBtn.addEventListener(
 ()=>{
 
 if(
-preloadBtn.disabled
+!preloadBtn.disabled
 ){
-
-return;
-
-}
 
 preloadAllOyaFrames();
 
 }
-);
+
+});
+
 
 /* =========================================================
    LOCATION
@@ -4565,23 +3788,23 @@ navigator.geolocation.getCurrentPosition(
 
 position=>{
 
-map.flyTo(
+view.animate({
 
-[
-position.coords.latitude,
-position.coords.longitude
-],
+center:
+fromLonLat([
+position.coords.longitude,
+position.coords.latitude
+]),
 
+zoom:
 Math.max(
-map.getZoom(),
+view.getZoom(),
 8
 ),
 
-{
-duration:.8
-}
+duration:800
 
-);
+});
 
 setStatus(
 "Ваше местоположение"
@@ -4609,8 +3832,8 @@ maximumAge:30000
 
 );
 
-}
-);
+});
+
 
 /* =========================================================
    RELOAD
@@ -4624,16 +3847,11 @@ document
 
 stopPlayback();
 
-if(
-activeLayer==="oya"
-){
+if(activeLayer==="oya"){
 
 oyaFrameRequestId++;
 
-if(
-oyaImage &&
-map.hasLayer(oyaImage)
-){
+if(oyaImage){
 
 map.removeLayer(
 oyaImage
@@ -4645,7 +3863,11 @@ oyaImage=null;
 
 oyaImageBlobUrl=null;
 
-clearOyaCache();
+oyaFrameCache.clear();
+
+oyaPendingRequests.clear();
+
+oyaLoadedTimes.clear();
 
 oyaCapabilitiesLoaded=false;
 
@@ -4657,21 +3879,11 @@ oyaTimes=[];
 
 oyaFrameIndex=0;
 
-oyaFrameCount=
-Number(
-localStorage.getItem(
-"gptrad-oya-frame-count"
-)
-) || 50;
-
-frameCountValue.textContent=
-"—";
-
 frameCountSlider.min=1;
 frameCountSlider.max=1;
 frameCountSlider.value=1;
 
-updatePreloadButton();
+frameCountValue.textContent="50";
 
 showOya();
 
@@ -4681,8 +3893,8 @@ loadRainViewer();
 
 }
 
-}
-);
+});
+
 
 /* =========================================================
    SETTINGS
@@ -4698,38 +3910,41 @@ settings.classList.toggle(
 "open"
 );
 
-}
-);
+});
 
-/* =========================================================
-   APPEARANCE
-========================================================= */
 
-appearanceToggle.addEventListener(
+document
+.getElementById("appearanceToggle")
+.addEventListener(
 "click",
 ()=>{
 
-appearanceSection.classList.toggle(
+document
+.getElementById("appearanceSection")
+.classList.toggle(
 "open"
 );
 
-}
-);
+});
 
-/* =========================================================
-   FRAME COUNT PANEL
-========================================================= */
 
-frameCountToggle.addEventListener(
+document
+.getElementById("frameCountToggle")
+.addEventListener(
 "click",
 async()=>{
 
+const section=
+document.getElementById(
+"frameCountSection"
+);
+
 const opening=
-!frameCountSection.classList.contains(
+!section.classList.contains(
 "open"
 );
 
-frameCountSection.classList.toggle(
+section.classList.toggle(
 "open"
 );
 
@@ -4745,11 +3960,11 @@ await loadOyaCapabilities();
 
 }
 
-}
-);
+});
+
 
 /* =========================================================
-   FRAME COUNT CHANGE
+   FRAME COUNT
 ========================================================= */
 
 function changeOyaFrameCount(delta){
@@ -4758,28 +3973,18 @@ if(!oyaAllTimes.length)
 return;
 
 let count=
-Number(
-frameCountSlider.value
-) ||
-oyaFrameCount ||
+Number(frameCountSlider.value)||
+oyaFrameCount||
 50;
-
-count+=delta;
 
 count=
 Math.max(
 1,
 Math.min(
 oyaAllTimes.length,
-count
+count+delta
 )
 );
-
-frameCountSlider.value=
-count;
-
-frameCountValue.textContent=
-count;
 
 applyOyaFrameCount(
 count,
@@ -4787,8 +3992,7 @@ true
 );
 
 if(
-activeLayer==="oya" &&
-oyaTimes.length
+activeLayer==="oya"
 ){
 
 oyaFrameRequestId++;
@@ -4801,9 +4005,6 @@ oyaFrameIndex
 
 }
 
-/* =========================================================
-   FRAME COUNT SLIDER
-========================================================= */
 
 frameCountSlider.addEventListener(
 "input",
@@ -4812,23 +4013,12 @@ frameCountSlider.addEventListener(
 if(!oyaAllTimes.length)
 return;
 
-const count=
-Number(
-frameCountSlider.value
-);
-
-frameCountValue.textContent=
-count;
-
 applyOyaFrameCount(
-count,
+Number(frameCountSlider.value),
 true
 );
 
-if(
-activeLayer==="oya" &&
-oyaTimes.length
-){
+if(activeLayer==="oya"){
 
 oyaFrameRequestId++;
 
@@ -4838,30 +4028,23 @@ oyaFrameIndex
 
 }
 
-}
-);
+});
 
-/* =========================================================
-   FRAME COUNT BUTTONS
-========================================================= */
 
-frameCountPrev.addEventListener(
+document
+.getElementById("frameCountPrev")
+.addEventListener(
 "click",
-()=>{
-
-changeOyaFrameCount(-1);
-
-}
+()=>changeOyaFrameCount(-1)
 );
 
-frameCountNext.addEventListener(
+document
+.getElementById("frameCountNext")
+.addEventListener(
 "click",
-()=>{
-
-changeOyaFrameCount(1);
-
-}
+()=>changeOyaFrameCount(1)
 );
+
 
 /* =========================================================
    THEMES
@@ -4884,9 +4067,7 @@ document.body.classList.remove(
 "green"
 );
 
-if(
-theme!=="dark"
-){
+if(theme!=="dark"){
 
 document.body.classList.add(
 theme
@@ -4901,17 +4082,13 @@ theme
 
 renderOyaTimeline();
 
-updatePreloadButton();
-
 }
+
 );
 
 }
 );
 
-/* =========================================================
-   RESTORE THEME
-========================================================= */
 
 const savedTheme=
 localStorage.getItem(
@@ -4920,14 +4097,7 @@ localStorage.getItem(
 
 if(savedTheme){
 
-document.body.classList.remove(
-"light",
-"green"
-);
-
-if(
-savedTheme!=="dark"
-){
+if(savedTheme!=="dark"){
 
 document.body.classList.add(
 savedTheme
@@ -4936,6 +4106,7 @@ savedTheme
 }
 
 }
+
 
 /* =========================================================
    LAYER SELECT
@@ -4955,12 +4126,8 @@ selectedLayer.classList.toggle(
 open
 );
 
-}
-);
+});
 
-/* =========================================================
-   LAYER BUTTONS
-========================================================= */
 
 document
 .querySelectorAll(".layer-item")
@@ -4975,9 +4142,7 @@ const type=
 button.dataset.layer;
 
 document
-.querySelectorAll(
-".layer-item"
-)
+.querySelectorAll(".layer-item")
 .forEach(
 x=>
 x.classList.remove(
@@ -4989,24 +4154,16 @@ button.classList.add(
 "active"
 );
 
-if(
-type==="oya"
-){
+activeLayer=type;
 
-activeLayer="oya";
+if(type==="oya"){
 
 selectedLayerName.textContent=
 "Опасные явления";
 
 showOya();
 
-}
-
-if(
-type==="radar"
-){
-
-activeLayer="radar";
+}else{
 
 selectedLayerName.textContent=
 "Радар (RainViewer)";
@@ -5024,29 +4181,12 @@ selectedLayer.classList.remove(
 );
 
 }
+
 );
 
 }
 );
 
-/* =========================================================
-   CLOSE DRAWER
-========================================================= */
-
-map.on(
-"click",
-()=>{
-
-layerDrawer.classList.remove(
-"open"
-);
-
-selectedLayer.classList.remove(
-"open"
-);
-
-}
-);
 
 /* =========================================================
    INITIAL
@@ -5058,11 +4198,6 @@ setStatus(
 
 loadRainViewer();
 
-/*
-Предварительно получаем OYA capabilities
-через 1.2 секунды.
-*/
-
 setTimeout(
 async()=>{
 
@@ -5073,7 +4208,7 @@ await loadOyaCapabilities();
 }catch(error){
 
 console.warn(
-"OYA background:",
+"OYA background",
 error
 );
 
@@ -5081,17 +4216,6 @@ error
 
 },
 1200
-);
-
-/* =========================================================
-   FINAL MAP SIZE
-========================================================= */
-
-setTimeout(
-()=>{
-map.invalidateSize(true);
-},
-1000
 );
 
 </script>
