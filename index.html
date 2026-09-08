@@ -1285,10 +1285,12 @@ class="timeline-arrow">
 Загрузка…
 </div>
 
-<!-- Leaflet: jsDelivr основной, unpkg запасной -->
+<!-- =====================================================
+     LEAFLET
+===================================================== -->
+
 <script
-src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-onerror="document.write('<script src=&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.js&quot;><\/script>')">
+src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
 <script>
@@ -1297,16 +1299,28 @@ onerror="document.write('<script src=&quot;https://unpkg.com/leaflet@1.9.4/dist/
    LEAFLET CHECK
 ========================================================= */
 
-if(!window.L){
+if(typeof L==="undefined"){
 
 document.getElementById("status").textContent=
 "Ошибка загрузки карты";
 
+document.getElementById("loading").textContent=
+"Leaflet не загрузился";
+
+document.getElementById("loading").style.display=
+"block";
+
 throw new Error(
-"Leaflet не загрузился"
+"GPTrad: Leaflet не загрузился"
 );
 
 }
+
+console.log(
+"GPTrad: Leaflet",
+L.version,
+"loaded"
+);
 
 /* =========================================================
    MAP
@@ -1370,26 +1384,35 @@ attribution:"© OpenStreetMap"
 ).addTo(map);
 
 /* =========================================================
-   MAP SIZE FIX
+   MAP SIZE
 ========================================================= */
 
-setTimeout(
-()=>{
+function fixMapSize(){
+
 map.invalidateSize(true);
-},
+
+}
+
+requestAnimationFrame(fixMapSize);
+
+setTimeout(
+fixMapSize,
 100
+);
+
+setTimeout(
+fixMapSize,
+500
 );
 
 window.addEventListener(
 "load",
-()=>{
-setTimeout(
-()=>{
-map.invalidateSize(true);
-},
-100
+fixMapSize
 );
-}
+
+window.addEventListener(
+"resize",
+fixMapSize
 );
 
 /* =========================================================
@@ -1788,14 +1811,6 @@ return;
 
 }
 
-/*
-<=65:
-отдельные сегменты.
-
->65:
-одна непрерывная линия.
-*/
-
 if(
 oyaTimes.length<=65
 ){
@@ -1892,18 +1907,6 @@ function updatePreloadButton(){
 
 if(!preloadBtn)
 return;
-
-/*
-ВАЖНО:
-
-Кнопка доступна сразу,
-если ОЯ имеет 1–51 кадров.
-
-Она НЕ ждёт полной загрузки
-таймлайна.
-
-При 52+ она отключена.
-*/
 
 const enabled=
 activeLayer==="oya" &&
@@ -2481,13 +2484,6 @@ newOverlay;
 oyaImageBlobUrl=
 newBlobUrl;
 
-/*
-Новый overlay уже на карте.
-
-Старый остаётся видимым ещё немного,
-чтобы никогда не было пустого места.
-*/
-
 if(
 !oldImage ||
 !map.hasLayer(oldImage)
@@ -2654,10 +2650,6 @@ throw new Error(
 
 let times=[];
 
-/*
-Ищем все временные Dimension/Extent.
-*/
-
 const nodes=
 Array.from(
 xml.getElementsByTagName("*")
@@ -2695,18 +2687,6 @@ const text=
 
 if(!text)
 continue;
-
-/*
-Формат:
-
-2026-...,
-2026-...,
-...
-
-или
-
-start/end/PT10M
-*/
 
 if(
 text.includes("/")
@@ -2793,12 +2773,6 @@ throw new Error(
 oyaAllTimes=times;
 
 oyaCapabilitiesLoaded=true;
-
-/*
-По умолчанию 50 кадров.
-
-Старое сохранённое значение сохраняем.
-*/
 
 const saved=
 Number(
@@ -3017,10 +2991,6 @@ requestData.width,
 requestData.height
 );
 
-/* =========================================================
-   CACHE
-========================================================= */
-
 const cached=
 oyaFrameCache.get(
 cacheKey
@@ -3087,10 +3057,6 @@ error
 return;
 
 }
-
-/* =========================================================
-   PENDING REQUEST
-========================================================= */
 
 if(
 oyaPendingRequests.has(cacheKey)
@@ -3171,10 +3137,6 @@ error
 return;
 
 }
-
-/* =========================================================
-   REQUEST
-========================================================= */
 
 setStatus(
 "Загрузка ОЯ…"
@@ -3289,9 +3251,7 @@ if(
 oyaPendingRequests.get(cacheKey)===promise
 ){
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 }
 
@@ -3308,12 +3268,6 @@ oyaTimes[oyaFrameIndex]!==timeValue
 return;
 
 }
-
-/*
-Ключевой момент:
-создаём и загружаем новый overlay
-до удаления старого.
-*/
 
 const newOverlay=
 await createReadyOyaOverlay(
@@ -3359,9 +3313,7 @@ if(
 oyaPendingRequests.get(cacheKey)===promise
 ){
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 }
 
@@ -3556,9 +3508,7 @@ if(
 oyaPendingRequests.get(cacheKey)===promise
 ){
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 }
 
@@ -3571,10 +3521,6 @@ cacheKey
 ========================================================= */
 
 async function preloadAllOyaFrames(){
-
-/*
-СТРОГО 1–51.
-*/
 
 if(
 activeLayer!=="oya" ||
@@ -3778,8 +3724,7 @@ oyaPreloadGeneration++;
 oyaPreloading=false;
 
 /*
-ВАЖНО:
-старый отображаемый кадр НЕ удаляем.
+Старый отображаемый кадр не удаляем.
 */
 
 for(
@@ -3891,11 +3836,6 @@ radarLayer
 
 radarLayer=null;
 
-/*
-Удаляем текущий OYA overlay
-только при переключении самого слоя.
-*/
-
 if(
 oyaImage &&
 map.hasLayer(oyaImage)
@@ -3948,10 +3888,6 @@ updatePreloadButton();
 loadOyaFrame(
 oyaFrameIndex
 );
-
-/*
-Кнопка становится доступна сразу.
-*/
 
 updatePreloadButton();
 
@@ -4166,12 +4102,6 @@ requestId!==rainFrameRequestId
 return;
 
 }
-
-/*
-Если тайлы не успели загрузиться,
-оставляем слой — RainViewer сам
-дозагрузит их.
-*/
 
 if(
 radarLayer!==newLayer
@@ -5131,13 +5061,6 @@ loadRainViewer();
 /*
 Предварительно получаем OYA capabilities
 через 1.2 секунды.
-
-Это НЕ включает ОЯ,
-а только заранее получает список
-временных кадров.
-
-Поэтому кнопка и таймлайн смогут
-появиться сразу после выбора ОЯ.
 */
 
 setTimeout(
@@ -5168,7 +5091,7 @@ setTimeout(
 ()=>{
 map.invalidateSize(true);
 },
-500
+1000
 );
 
 </script>
