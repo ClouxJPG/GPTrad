@@ -9,7 +9,8 @@ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GPTrad</title>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css">
+href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css"
+onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css';">
 
 <style>
 
@@ -1293,47 +1294,138 @@ class="timeline-arrow">
 Загрузка…
 </div>
 
+
 <script type="module">
 
 /* =========================================================
-   OPENLAYERS
+   OPENLAYERS LOADER
 ========================================================= */
 
-import Map from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/Map.js";
+const OL_CDNS = [
 
-import View from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/View.js";
+"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/",
 
-import TileLayer from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/layer/Tile.js";
+"https://cdn.jsdelivr.net/npm/ol@10.6.1/"
 
-import ImageLayer from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/layer/Image.js";
+];
 
-import XYZ from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/source/XYZ.js";
+let OL=null;
 
-import ImageStatic from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/source/ImageStatic.js";
+async function importOpenLayers(base){
 
-import {
-fromLonLat,
-transformExtent
+const modules=await Promise.all([
+
+import(base+"Map.js"),
+
+import(base+"View.js"),
+
+import(base+"layer/Tile.js"),
+
+import(base+"layer/Image.js"),
+
+import(base+"source/XYZ.js"),
+
+import(base+"source/ImageStatic.js"),
+
+import(base+"proj.js")
+
+]);
+
+return{
+
+Map:modules[0].default,
+
+View:modules[1].default,
+
+TileLayer:modules[2].default,
+
+ImageLayer:modules[3].default,
+
+XYZ:modules[4].default,
+
+ImageStatic:modules[5].default,
+
+fromLonLat:modules[6].fromLonLat,
+
+transformExtent:modules[6].transformExtent
+
+};
+
 }
-from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/proj.js";
 
-import {
-defaults as defaultControls
+async function loadOpenLayers(){
+
+let lastError=null;
+
+for(
+const cdn of OL_CDNS
+){
+
+try{
+
+return await importOpenLayers(cdn);
+
+}catch(error){
+
+console.warn(
+"OpenLayers CDN failed:",
+cdn,
+error
+);
+
+lastError=error;
+
 }
-from
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/control.js";
+
+}
+
+throw lastError ||
+new Error(
+"OpenLayers не загрузился"
+);
+
+}
+
+try{
+
+OL=await loadOpenLayers();
+
+}catch(error){
+
+console.error(
+"OPENLAYERS LOAD ERROR",
+error
+);
+
+const statusEl=
+document.getElementById("status");
+
+if(statusEl){
+
+statusEl.textContent=
+"Ошибка загрузки карты";
+
+}
+
+throw error;
+
+}
 
 
 /* =========================================================
    ELEMENTS
 ========================================================= */
+
+const {
+Map,
+View,
+TileLayer,
+ImageLayer,
+XYZ,
+ImageStatic,
+fromLonLat,
+transformExtent
+}=OL;
 
 const status=document.getElementById("status");
 const loading=document.getElementById("loading");
@@ -1461,28 +1553,19 @@ layers:[
 osmLayer
 ],
 
-view:view,
-
-controls:
-defaultControls({
-
-zoom:true,
-
-rotate:false,
-
-attribution:true
-
-})
+view:view
 
 });
 
 
 /* =========================================================
-   MAP RESIZE
+   MAP SIZE
 ========================================================= */
 
 function resizeMap(){
+
 map.updateSize();
+
 }
 
 window.addEventListener(
@@ -1492,15 +1575,29 @@ resizeMap
 
 window.addEventListener(
 "orientationchange",
-()=>setTimeout(
+()=>{
+
+setTimeout(
 resizeMap,
 200
-)
 );
 
-setTimeout(resizeMap,100);
-setTimeout(resizeMap,500);
-setTimeout(resizeMap,1000);
+});
+
+setTimeout(
+resizeMap,
+100
+);
+
+setTimeout(
+resizeMap,
+500
+);
+
+setTimeout(
+resizeMap,
+1000
+);
 
 
 /* =========================================================
@@ -1566,7 +1663,11 @@ const OYA_LAYER=
 function getCurrentViewportData(){
 
 const size=
-map.getSize();
+map.getSize() ||
+[
+window.innerWidth,
+window.innerHeight
+];
 
 const extent=
 view.calculateExtent(size);
@@ -1606,11 +1707,17 @@ height
 ].join("|");
 
 return{
+
 extent,
+
 geoExtent,
+
 width,
+
 height,
+
 key
+
 };
 
 }
@@ -1659,7 +1766,9 @@ EXCEPTIONS:
 "application/vnd.ogc.se_inimage",
 
 TIME:
-new Date(timeValue*1000).toISOString()
+new Date(
+timeValue*1000
+).toISOString()
 
 });
 
@@ -1705,7 +1814,9 @@ if(
 activeLayer!=="oya" ||
 !oyaTimes.length
 ){
+
 return;
+
 }
 
 if(
@@ -1730,13 +1841,21 @@ oyaLoadedTimes.has(
 oyaTimes[i]
 )
 ){
-segment.classList.add("loaded");
+
+segment.classList.add(
+"loaded"
+);
+
 }
 
 if(
 i===oyaFrameIndex
 ){
-segment.classList.add("current");
+
+segment.classList.add(
+"current"
+);
+
 }
 
 segment.title=
@@ -1752,7 +1871,8 @@ segment
 
 }else{
 
-oyaLongProgress.style.display="block";
+oyaLongProgress.style.display=
+"block";
 
 let loaded=0;
 
@@ -1763,15 +1883,20 @@ const time of oyaTimes
 if(
 oyaLoadedTimes.has(time)
 ){
+
 loaded++;
+
 }
 
 }
 
 oyaLongProgressFill.style.width=
 (
-loaded/oyaTimes.length*100
-)+"%";
+loaded/
+oyaTimes.length*
+100
+)+
+"%";
 
 }
 
@@ -1865,8 +1990,12 @@ oyaTimes[oyaFrameIndex]
 function setRadarTimeline(){
 
 oyaTimelineSegments.innerHTML="";
-oyaTimelineSegments.style.display="none";
-oyaLongProgress.style.display="none";
+
+oyaTimelineSegments.style.display=
+"none";
+
+oyaLongProgress.style.display=
+"none";
 
 timeSlider.min=0;
 
@@ -1885,7 +2014,8 @@ currentFrame
 )
 );
 
-timeSlider.value=currentFrame;
+timeSlider.value=
+currentFrame;
 
 updateTimeLabel();
 
@@ -1935,13 +2065,16 @@ updatePreloadButton();
 
 function isoToUnix(value){
 
-const t=Date.parse(value);
+const t=
+Date.parse(value);
 
 return Number.isNaN(t)
 ?
 null
 :
-Math.floor(t/1000);
+Math.floor(
+t/1000
+);
 
 }
 
@@ -1952,7 +2085,8 @@ Math.floor(t/1000);
 
 function parseOyaTimes(text){
 
-if(!text)return[];
+if(!text)
+return[];
 
 const result=[];
 
@@ -1960,7 +2094,9 @@ for(
 const value of
 text
 .split(",")
-.map(x=>x.trim())
+.map(
+x=>x.trim()
+)
 .filter(Boolean)
 ){
 
@@ -1989,15 +2125,24 @@ if(
 oyaCapabilitiesLoaded &&
 oyaAllTimes.length
 ){
+
 return true;
+
 }
 
-if(oyaCapabilitiesLoading){
+if(
+oyaCapabilitiesLoading
+){
 
-while(oyaCapabilitiesLoading){
+while(
+oyaCapabilitiesLoading
+){
 
 await new Promise(
-r=>setTimeout(r,50)
+r=>setTimeout(
+r,
+50
+)
 );
 
 }
@@ -2046,7 +2191,9 @@ text,
 );
 
 if(
-xml.querySelector("parsererror")
+xml.querySelector(
+"parsererror"
+)
 ){
 
 throw new Error(
@@ -2068,28 +2215,38 @@ if(
 node.localName!=="Extent" &&
 node.localName!=="Dimension"
 ){
+
 continue;
+
 }
 
 const name=
-node.getAttribute("name");
+node.getAttribute(
+"name"
+);
 
 if(
 name &&
 name.toLowerCase()!=="time"
 ){
+
 continue;
+
 }
 
 const value=
-(node.textContent||"").trim();
+(node.textContent||"")
+.trim();
 
 if(!value)
 continue;
 
-if(value.includes("/")){
+if(
+value.includes("/")
+){
 
-const parts=value.split("/");
+const parts=
+value.split("/");
 
 const start=
 isoToUnix(parts[0]);
@@ -2147,11 +2304,14 @@ times.push(
 
 oyaAllTimes=[
 ...new Set(times)
-].sort(
+]
+.sort(
 (a,b)=>a-b
 );
 
-if(!oyaAllTimes.length){
+if(
+!oyaAllTimes.length
+){
 
 throw new Error(
 "В GetCapabilities нет времени"
@@ -2266,7 +2426,9 @@ oyaTimes.length-1;
 if(oldTime!==null){
 
 const index=
-oyaTimes.indexOf(oldTime);
+oyaTimes.indexOf(
+oldTime
+);
 
 if(index!==-1)
 oyaFrameIndex=index;
@@ -2325,6 +2487,18 @@ extent
 return new Promise(
 (resolve,reject)=>{
 
+const testImage=
+new Image();
+
+let finished=false;
+
+const finish=()=>{
+
+if(finished)
+return;
+
+finished=true;
+
 const source=
 new ImageStatic({
 
@@ -2349,13 +2523,9 @@ zIndex:60
 
 });
 
-let done=false;
-
-const finish=()=>{
-
-if(done)return;
-
-done=true;
+map.addLayer(
+layer
+);
 
 resolve(layer);
 
@@ -2363,9 +2533,10 @@ resolve(layer);
 
 const fail=()=>{
 
-if(done)return;
+if(finished)
+return;
 
-done=true;
+finished=true;
 
 reject(
 new Error(
@@ -2375,52 +2546,11 @@ new Error(
 
 };
 
-source.on(
-"imageloadend",
-finish
-);
+testImage.onload=finish;
 
-source.on(
-"imageloaderror",
-fail
-);
+testImage.onerror=fail;
 
-map.addLayer(layer);
-
-setTimeout(
-()=>{
-
-if(!done){
-
-const image=
-source.getImage();
-
-if(
-image &&
-image.getImageState &&
-image.getImageState()===2
-){
-
-finish();
-
-}
-
-}
-
-},
-50
-);
-
-setTimeout(
-()=>{
-
-if(!done){
-finish();
-}
-
-},
-8000
-);
+testImage.src=blobUrl;
 
 }
 
@@ -2436,21 +2566,23 @@ newLayer,
 newBlobUrl
 ){
 
-const oldLayer=oyaImage;
-const oldUrl=oyaImageBlobUrl;
+const oldLayer=
+oyaImage;
 
-oyaImage=newLayer;
-oyaImageBlobUrl=newBlobUrl;
+const oldUrl=
+oyaImageBlobUrl;
 
-if(
-oldLayer &&
-oldLayer!==newLayer
-){
+oyaImage=
+newLayer;
 
-setTimeout(
+oyaImageBlobUrl=
+newBlobUrl;
+
+requestAnimationFrame(
 ()=>{
 
 if(
+oldLayer &&
 oldLayer!==oyaImage
 ){
 
@@ -2466,16 +2598,16 @@ oldUrl!==oyaImageBlobUrl
 ){
 
 try{
-URL.revokeObjectURL(oldUrl);
+
+URL.revokeObjectURL(
+oldUrl
+);
+
 }catch(e){}
 
 }
 
-},
-80
-);
-
-}
+});
 
 }
 
@@ -2486,7 +2618,9 @@ URL.revokeObjectURL(oldUrl);
 
 async function loadOyaFrame(index){
 
-if(activeLayer!=="oya")
+if(
+activeLayer!=="oya"
+)
 return;
 
 if(
@@ -2496,7 +2630,9 @@ if(
 if(
 !(await loadOyaCapabilities())
 ){
+
 return;
+
 }
 
 }
@@ -2505,7 +2641,9 @@ if(
 index<0 ||
 index>=oyaTimes.length
 ){
+
 return;
+
 }
 
 const requestId=
@@ -2582,7 +2720,9 @@ await response.blob();
 if(
 generation!==oyaCacheGeneration
 ){
+
 return null;
+
 }
 
 const blobUrl=
@@ -2591,9 +2731,14 @@ blob
 );
 
 const value={
+
 blobUrl,
-extent:requestData.extent,
+
+extent:
+requestData.extent,
+
 timeValue
+
 };
 
 oyaFrameCache.set(
@@ -2634,7 +2779,9 @@ generation!==oyaCacheGeneration ||
 activeLayer!=="oya" ||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
+
 return;
+
 }
 
 const newLayer=
@@ -2650,7 +2797,9 @@ activeLayer!=="oya" ||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
 
-map.removeLayer(newLayer);
+map.removeLayer(
+newLayer
+);
 
 return;
 
@@ -2698,7 +2847,7 @@ setStatus(
 
 
 /* =========================================================
-   PRELOAD
+   PRELOAD FRAME
 ========================================================= */
 
 async function preloadOyaFrame(
@@ -2732,14 +2881,18 @@ if(
 oyaFrameCache.has(key)
 ){
 
-oyaLoadedTimes.add(timeValue);
+oyaLoadedTimes.add(
+timeValue
+);
 
 return true;
 
 }
 
 let pending=
-oyaPendingRequests.get(key);
+oyaPendingRequests.get(
+key
+);
 
 if(!pending){
 
@@ -2754,11 +2907,14 @@ cache:"force-cache"
 }
 );
 
-if(!response.ok)
+if(!response.ok){
+
 throw new Error(
 "HTTP "+
 response.status
 );
+
+}
 
 const blob=
 await response.blob();
@@ -2781,9 +2937,13 @@ blob
 oyaFrameCache.set(
 key,
 {
+
 blobUrl,
+
 extent:data.extent,
+
 timeValue
+
 }
 );
 
@@ -2819,7 +2979,9 @@ return false;
 
 }finally{
 
-oyaPendingRequests.delete(key);
+oyaPendingRequests.delete(
+key
+);
 
 }
 
@@ -2872,10 +3034,16 @@ return;
 
 }
 
-const index=cursor++;
+const index=
+cursor++;
 
-if(index>=times.length)
+if(
+index>=times.length
+){
+
 return;
+
+}
 
 await preloadOyaFrame(
 times[index],
@@ -2892,7 +3060,9 @@ const time of times
 if(
 oyaLoadedTimes.has(time)
 ){
+
 loaded++;
+
 }
 
 }
@@ -2912,7 +3082,13 @@ try{
 await Promise.all(
 Array.from(
 {
-length:Math.min(4,times.length)
+
+length:
+Math.min(
+4,
+times.length
+)
+
 },
 ()=>worker()
 )
@@ -2957,6 +3133,7 @@ oyaPreloading=false;
 }
 
 renderOyaTimeline();
+
 updatePreloadButton();
 
 }
@@ -2970,7 +3147,9 @@ updatePreloadButton();
 
 function invalidateOyaViewport(){
 
-if(activeLayer!=="oya")
+if(
+activeLayer!=="oya"
+)
 return;
 
 const viewport=
@@ -2980,13 +3159,16 @@ if(
 oyaViewportKey===
 viewport.key
 ){
+
 return;
+
 }
 
 oyaViewportKey=
 viewport.key;
 
 oyaCacheGeneration++;
+
 oyaPreloadGeneration++;
 
 oyaPreloading=false;
@@ -3005,9 +3187,11 @@ value.blobUrl!==oldUrl
 ){
 
 try{
+
 URL.revokeObjectURL(
 value.blobUrl
 );
+
 }catch(e){}
 
 }
@@ -3015,10 +3199,13 @@ value.blobUrl
 }
 
 oyaFrameCache.clear();
+
 oyaPendingRequests.clear();
+
 oyaLoadedTimes.clear();
 
 renderOyaTimeline();
+
 updatePreloadButton();
 
 }
@@ -3030,10 +3217,14 @@ updatePreloadButton();
 
 function scheduleOyaViewportReload(){
 
-if(activeLayer!=="oya")
+if(
+activeLayer!=="oya"
+)
 return;
 
-clearTimeout(viewportTimer);
+clearTimeout(
+viewportTimer
+);
 
 viewportTimer=
 setTimeout(
@@ -3041,7 +3232,9 @@ setTimeout(
 
 invalidateOyaViewport();
 
-if(oyaTimes.length){
+if(
+oyaTimes.length
+){
 
 loadOyaFrame(
 oyaFrameIndex
@@ -3100,7 +3293,9 @@ oyaImage=null;
 oyaImageBlobUrl=null;
 
 oyaFrameCache.clear();
+
 oyaPendingRequests.clear();
+
 oyaLoadedTimes.clear();
 
 oyaCacheGeneration++;
@@ -3128,6 +3323,7 @@ oyaFrameIndex;
 updateTimeLabel();
 
 renderOyaTimeline();
+
 updatePreloadButton();
 
 loadOyaFrame(
@@ -3178,7 +3374,9 @@ rainFrames.sort(
 (a,b)=>a.time-b.time
 );
 
-if(!rainFrames.length){
+if(
+!rainFrames.length
+){
 
 throw new Error(
 "Нет кадров"
@@ -3264,7 +3462,9 @@ if(
 activeLayer!=="radar" ||
 !rainFrames[index]
 ){
+
 return;
+
 }
 
 const frame=
@@ -3388,7 +3588,9 @@ function showRadar(){
 stopPlayback();
 
 oyaFrameRequestId++;
+
 oyaPreloadGeneration++;
+
 oyaPreloading=false;
 
 if(oyaImage){
@@ -3401,7 +3603,9 @@ oyaImage=null;
 
 }
 
-if(rainFrames.length){
+if(
+rainFrames.length
+){
 
 setRadarTimeline();
 
@@ -3439,18 +3643,24 @@ if(
 activeLayer==="radar"
 ){
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 currentFrame=index;
 
 updateTimeLabel();
 
-showRainFrame(index);
+showRainFrame(
+index
+);
 
 }else{
 
-if(!oyaTimes.length)
+if(
+!oyaTimes.length
+)
 return;
 
 oyaFrameIndex=index;
@@ -3459,7 +3669,9 @@ updateTimeLabel();
 
 renderOyaTimeline();
 
-loadOyaFrame(index);
+loadOyaFrame(
+index
+);
 
 }
 
@@ -3468,7 +3680,7 @@ loadOyaFrame(index);
 
 
 /* =========================================================
-   BACK/FORWARD
+   BACK
 ========================================================= */
 
 document
@@ -3477,9 +3689,13 @@ document
 "click",
 ()=>{
 
-if(activeLayer==="radar"){
+if(
+activeLayer==="radar"
+){
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 currentFrame=
@@ -3497,7 +3713,9 @@ currentFrame
 
 }else{
 
-if(!oyaTimes.length)
+if(
+!oyaTimes.length
+)
 return;
 
 oyaFrameIndex=
@@ -3519,15 +3737,23 @@ oyaFrameIndex
 );
 
 
+/* =========================================================
+   FORWARD
+========================================================= */
+
 document
 .getElementById("forwardBtn")
 .addEventListener(
 "click",
 ()=>{
 
-if(activeLayer==="radar"){
+if(
+activeLayer==="radar"
+){
 
-if(!rainFrames.length)
+if(
+!rainFrames.length
+)
 return;
 
 currentFrame=
@@ -3545,7 +3771,9 @@ currentFrame
 
 }else{
 
-if(!oyaTimes.length)
+if(
+!oyaTimes.length
+)
 return;
 
 oyaFrameIndex=
@@ -3594,7 +3822,9 @@ playing
 :
 "▶";
 
-clearInterval(playTimer);
+clearInterval(
+playTimer
+);
 
 if(!playing)
 return;
@@ -3603,7 +3833,9 @@ playTimer=
 setInterval(
 ()=>{
 
-if(activeLayer==="radar"){
+if(
+activeLayer==="radar"
+){
 
 currentFrame++;
 
@@ -3654,11 +3886,14 @@ function stopPlayback(){
 
 playing=false;
 
-clearInterval(playTimer);
+clearInterval(
+playTimer
+);
 
 playTimer=null;
 
-playBtn.textContent="▶";
+playBtn.textContent=
+"▶";
 
 }
 
@@ -3771,7 +4006,9 @@ document
 
 stopPlayback();
 
-if(activeLayer==="oya"){
+if(
+activeLayer==="oya"
+){
 
 oyaFrameRequestId++;
 
@@ -3784,21 +4021,29 @@ oyaImage
 }
 
 oyaImage=null;
+
 oyaImageBlobUrl=null;
 
 oyaFrameCache.clear();
+
 oyaPendingRequests.clear();
+
 oyaLoadedTimes.clear();
 
 oyaCapabilitiesLoaded=false;
+
 oyaCapabilitiesLoading=false;
 
 oyaAllTimes=[];
+
 oyaTimes=[];
+
 oyaFrameIndex=0;
 
 frameCountSlider.min=1;
+
 frameCountSlider.max=1;
+
 frameCountSlider.value=1;
 
 frameCountValue.textContent="50";
@@ -3887,11 +4132,15 @@ await loadOyaCapabilities();
 
 function changeOyaFrameCount(delta){
 
-if(!oyaAllTimes.length)
+if(
+!oyaAllTimes.length
+)
 return;
 
 let count=
-Number(frameCountSlider.value)||
+Number(
+frameCountSlider.value
+)||
 oyaFrameCount||
 50;
 
@@ -3928,15 +4177,21 @@ frameCountSlider.addEventListener(
 "input",
 ()=>{
 
-if(!oyaAllTimes.length)
+if(
+!oyaAllTimes.length
+)
 return;
 
 applyOyaFrameCount(
-Number(frameCountSlider.value),
+Number(
+frameCountSlider.value
+),
 true
 );
 
-if(activeLayer==="oya"){
+if(
+activeLayer==="oya"
+){
 
 oyaFrameRequestId++;
 
@@ -3985,7 +4240,9 @@ document.body.classList.remove(
 "green"
 );
 
-if(theme!=="dark"){
+if(
+theme!=="dark"
+){
 
 document.body.classList.add(
 theme
@@ -4015,7 +4272,9 @@ localStorage.getItem(
 
 if(savedTheme){
 
-if(savedTheme!=="dark"){
+if(
+savedTheme!=="dark"
+){
 
 document.body.classList.add(
 savedTheme
@@ -4074,7 +4333,9 @@ button.classList.add(
 
 activeLayer=type;
 
-if(type==="oya"){
+if(
+type==="oya"
+){
 
 selectedLayerName.textContent=
 "Опасные явления";
@@ -4111,10 +4372,23 @@ selectedLayer.classList.remove(
 ========================================================= */
 
 setStatus(
+"Загрузка карты…"
+);
+
+requestAnimationFrame(
+()=>{
+
+resizeMap();
+
+setStatus(
 "Загрузка радара…"
 );
 
 loadRainViewer();
+
+}
+);
+
 
 setTimeout(
 async()=>{
