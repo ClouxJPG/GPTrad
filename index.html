@@ -519,6 +519,9 @@ width:100%;
 
 display:flex;
 justify-content:center;
+align-items:center;
+
+gap:7px;
 
 margin-bottom:6px;
 }
@@ -549,6 +552,154 @@ background .15s ease;
 #playBtn:active{
 transform:scale(.92);
 }
+
+/* =========================================================
+   CUSTOM PRELOAD BUTTON
+========================================================= */
+
+#preloadBtn{
+width:34px;
+height:34px;
+
+flex:none;
+
+border:0;
+outline:0;
+
+border-radius:7px;
+
+background:#292929;
+color:white;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+padding:0;
+
+position:relative;
+
+transition:
+transform .15s ease,
+background .18s ease,
+opacity .2s ease;
+}
+
+#preloadBtn:active{
+transform:scale(.91);
+}
+
+#preloadBtn:disabled{
+opacity:.32;
+}
+
+/*
+Кастомная иконка.
+Не emoji, не SVG, не системный символ.
+*/
+
+.download-icon{
+position:relative;
+
+width:18px;
+height:18px;
+
+display:block;
+}
+
+.download-icon::before{
+content:"";
+
+position:absolute;
+
+left:8px;
+top:1px;
+
+width:2px;
+height:10px;
+
+border-radius:2px;
+
+background:currentColor;
+}
+
+.download-icon::after{
+content:"";
+
+position:absolute;
+
+left:4px;
+top:7px;
+
+width:8px;
+height:8px;
+
+border-left:2px solid currentColor;
+border-bottom:2px solid currentColor;
+
+transform:rotate(-45deg);
+
+border-radius:1px;
+}
+
+.download-tray{
+position:absolute;
+
+left:2px;
+right:2px;
+bottom:1px;
+
+height:4px;
+
+border:2px solid currentColor;
+
+border-top:0;
+
+border-radius:0 0 3px 3px;
+}
+
+#preloadBtn.loading
+.download-icon{
+animation:downloadMove .75s ease-in-out infinite;
+}
+
+@keyframes downloadMove{
+
+0%,100%{
+transform:translateY(0);
+}
+
+50%{
+transform:translateY(2px);
+}
+
+}
+
+#preloadBtn.done{
+background:#315f45;
+}
+
+body.light #preloadBtn{
+background:#eeeeee;
+color:#111;
+}
+
+body.light #preloadBtn.done{
+background:#d9eee1;
+}
+
+body.green #preloadBtn{
+background:#123d29;
+color:white;
+}
+
+body.green #preloadBtn.done{
+background:#185538;
+}
+
+/* =========================================================
+   TIMELINE CONTROLS
+========================================================= */
 
 .timeline-controls{
 display:flex;
@@ -1101,6 +1252,17 @@ class="frame-count-arrow">
 ▶
 </button>
 
+<button
+id="preloadBtn"
+title="Загрузить все кадры"
+aria-label="Загрузить все кадры">
+
+<span class="download-icon">
+<span class="download-tray"></span>
+</span>
+
+</button>
+
 </div>
 
 
@@ -1283,6 +1445,9 @@ document.getElementById("frameCountNext");
 const playBtn=
 document.getElementById("playBtn");
 
+const preloadBtn=
+document.getElementById("preloadBtn");
+
 
 /* =========================================================
    STATE
@@ -1303,15 +1468,10 @@ let currentFrame=0;
 
 
 /*
-ОЯ — полный список времени.
+ОЯ
 */
 
 let oyaAllTimes=[];
-
-
-/*
-ОЯ — выбранная часть времени.
-*/
 
 let oyaTimes=[];
 
@@ -1321,14 +1481,14 @@ let oyaFrameCount=0;
 
 
 /*
-ОЯ текущий overlay.
+Текущий OЯ overlay.
 */
 
 let oyaImage=null;
 
 
 /*
-ОЯ — реально загруженные кадры.
+Реально загруженные timestamps.
 */
 
 const oyaLoadedTimes=
@@ -1336,7 +1496,10 @@ new Set();
 
 
 /*
-Кэш ОЯ.
+Кэш OЯ.
+
+key:
+timestamp + bbox + dimensions
 */
 
 const oyaFrameCache=
@@ -1344,7 +1507,7 @@ new Map();
 
 
 /*
-Запросы, которые сейчас идут.
+Текущие запросы.
 */
 
 const oyaPendingRequests=
@@ -1363,6 +1526,15 @@ let oyaRefreshTimer=null;
 */
 
 let oyaCacheGeneration=0;
+
+
+/*
+Массовая загрузка.
+*/
+
+let oyaPreloading=false;
+
+let oyaPreloadGeneration=0;
 
 
 /*
@@ -1449,9 +1621,7 @@ t/1000
 
 function parseOyaTimes(text){
 
-if(
-!text
-)
+if(!text)
 return[];
 
 const result=[];
@@ -1489,7 +1659,7 @@ return[
 
 
 /* =========================================================
-   OЯ LAYER
+   OЯ
 ========================================================= */
 
 const OYA_PROXY=
@@ -1600,6 +1770,83 @@ segment
 
 }
 
+updatePreloadButton();
+
+}
+
+
+/* =========================================================
+   PRELOAD BUTTON STATE
+========================================================= */
+
+function updatePreloadButton(){
+
+if(
+!preloadBtn
+)
+return;
+
+
+/*
+Кнопка доступна строго
+при ОЯ и количестве кадров < 52.
+*/
+
+const enabled=
+activeLayer==="oya" &&
+oyaTimes.length>0 &&
+oyaTimes.length<52;
+
+
+/*
+Если недоступна.
+*/
+
+if(
+!enabled
+){
+
+preloadBtn.disabled=true;
+
+preloadBtn.classList.remove(
+"loading",
+"done"
+);
+
+return;
+
+}
+
+
+/*
+Во время загрузки.
+*/
+
+preloadBtn.disabled=
+oyaPreloading;
+
+
+/*
+Все кадры уже загружены.
+*/
+
+const allLoaded=
+oyaTimes.every(
+time=>
+oyaLoadedTimes.has(time)
+);
+
+
+preloadBtn.classList.toggle(
+"done",
+!oyaPreloading && allLoaded
+);
+
+preloadBtn.classList.toggle(
+"loading",
+oyaPreloading
+);
+
 }
 
 
@@ -1643,6 +1890,8 @@ currentFrame;
 
 updateTimeLabel();
 
+updatePreloadButton();
+
 }
 
 
@@ -1665,6 +1914,8 @@ timeSlider.value=0;
 oyaTimelineSegments.innerHTML="";
 
 updateTimeLabel();
+
+updatePreloadButton();
 
 return;
 
@@ -1693,6 +1944,8 @@ oyaFrameIndex;
 renderOyaTimeline();
 
 updateTimeLabel();
+
+updatePreloadButton();
 
 }
 
@@ -1729,7 +1982,13 @@ oyaLoadedTimes.clear();
 
 oyaCacheGeneration++;
 
+oyaPreloadGeneration++;
+
+oyaPreloading=false;
+
 renderOyaTimeline();
+
+updatePreloadButton();
 
 }
 
@@ -1880,14 +2139,366 @@ height
 
 
 /* =========================================================
+   OЯ MASS PRELOAD — ONE FRAME
+========================================================= */
+
+async function preloadOyaFrame(
+timeValue,
+generation
+){
+
+if(
+generation!==oyaPreloadGeneration
+)
+return false;
+
+if(
+activeLayer!=="oya"
+)
+return false;
+
+
+const requestData=
+getOyaRequestData(
+timeValue
+);
+
+const cacheKey=
+makeOyaCacheKey(
+timeValue,
+requestData.bounds,
+requestData.width,
+requestData.height
+);
+
+
+/*
+Уже есть.
+*/
+
+const cached=
+oyaFrameCache.get(
+cacheKey
+);
+
+if(
+cached &&
+cached.blobUrl
+){
+
+oyaLoadedTimes.add(
+timeValue
+);
+
+return true;
+
+}
+
+
+/*
+Такой запрос уже идёт.
+*/
+
+if(
+oyaPendingRequests.has(
+cacheKey
+)
+){
+
+try{
+
+const result=
+await oyaPendingRequests.get(
+cacheKey
+);
+
+if(
+result
+){
+
+oyaLoadedTimes.add(
+timeValue
+);
+
+return true;
+
+}
+
+}catch(error){
+
+console.error(
+"OЯ pending preload:",
+error
+);
+
+}
+
+return false;
+
+}
+
+
+/*
+Создаём запрос.
+*/
+
+const promise=
+(async()=>{
+
+try{
+
+const response=
+await fetch(
+requestData.url,
+{
+cache:"force-cache"
+}
+);
+
+if(
+!response.ok
+){
+
+throw new Error(
+"OЯ preload "+response.status
+);
+
+}
+
+const blob=
+await response.blob();
+
+
+if(
+generation!==oyaPreloadGeneration ||
+generation!==oyaCacheGeneration ||
+activeLayer!=="oya"
+){
+
+return null;
+
+}
+
+
+const blobUrl=
+URL.createObjectURL(
+blob
+);
+
+
+oyaFrameCache.set(
+cacheKey,
+{
+blobUrl,
+timeValue
+}
+);
+
+
+oyaLoadedTimes.add(
+timeValue
+);
+
+
+return{
+blobUrl
+};
+
+}catch(error){
+
+console.error(
+"OЯ preload frame:",
+timeValue,
+error
+);
+
+return null;
+
+}
+
+})();
+
+
+oyaPendingRequests.set(
+cacheKey,
+promise
+);
+
+
+try{
+
+return await promise;
+
+}finally{
+
+oyaPendingRequests.delete(
+cacheKey
+);
+
+}
+
+}
+
+
+/* =========================================================
+   OЯ MASS PRELOAD — ALL
+========================================================= */
+
+async function preloadAllOyaFrames(){
+
+if(
+activeLayer!=="oya" ||
+!oyaTimes.length ||
+oyaTimes.length>=52 ||
+oyaPreloading
+){
+
+return;
+
+}
+
+
+oyaPreloading=true;
+
+const generation=
+++oyaPreloadGeneration;
+
+
+updatePreloadButton();
+
+setStatus(
+"Загрузка всех кадров ОЯ…"
+);
+
+
+try{
+
+const times=
+oyaTimes.slice();
+
+
+/*
+Четыре параллельных
+запроса максимум.
+*/
+
+const concurrency=4;
+
+
+for(
+let i=0;
+i<times.length;
+i+=concurrency
+){
+
+if(
+generation!==oyaPreloadGeneration ||
+activeLayer!=="oya"
+){
+
+break;
+
+}
+
+
+const batch=
+times.slice(
+i,
+i+concurrency
+);
+
+
+await Promise.all(
+batch.map(
+time=>
+preloadOyaFrame(
+time,
+generation
+)
+)
+);
+
+
+renderOyaTimeline();
+
+setStatus(
+`Загрузка ОЯ: ${Math.min(
+i+concurrency,
+times.length
+)}/${times.length}`
+);
+
+}
+
+
+if(
+generation===oyaPreloadGeneration &&
+activeLayer==="oya"
+){
+
+const allLoaded=
+oyaTimes.every(
+time=>
+oyaLoadedTimes.has(time)
+);
+
+
+if(
+allLoaded
+){
+
+setStatus(
+"Все кадры ОЯ загружены"
+);
+
+}else{
+
+setStatus(
+"Загрузка ОЯ прервана"
+);
+
+}
+
+}
+
+}catch(error){
+
+console.error(
+"OЯ preload all:",
+error
+);
+
+setStatus(
+"Ошибка загрузки ОЯ"
+);
+
+}finally{
+
+if(
+generation===oyaPreloadGeneration
+){
+
+oyaPreloading=false;
+
+}
+
+updatePreloadButton();
+
+renderOyaTimeline();
+
+}
+
+}
+
+
+/* =========================================================
    OЯ CAPABILITIES
 ========================================================= */
 
 async function loadOyaCapabilities(){
 
 if(
-oyaCapabilitiesLoaded
-&&
+oyaCapabilitiesLoaded &&
 oyaAllTimes.length
 ){
 
@@ -2028,10 +2639,6 @@ continue;
 }
 
 
-/*
-Extent / Dimension.
-*/
-
 const extentNodes=
 Array.from(
 layer.children
@@ -2064,7 +2671,10 @@ node.textContent.trim();
 
 
 const parsed=
-parseOyaTimes(text);
+parseOyaTimes(
+text
+);
+
 
 if(
 parsed.length
@@ -2078,10 +2688,6 @@ times.push(
 
 }
 
-
-/*
-Ищем глубже.
-*/
 
 const descendants=
 Array.from(
@@ -2117,6 +2723,7 @@ parseOyaTimes(
 node.textContent.trim()
 );
 
+
 if(
 parsed.length
 ){
@@ -2133,7 +2740,7 @@ times.push(
 
 
 /*
-Убираем дубликаты.
+Дубликаты.
 */
 
 times=[
@@ -2281,10 +2888,6 @@ oyaAllTimes=times;
 oyaCapabilitiesLoaded=true;
 
 
-/*
-Сохраняем количество кадров.
-*/
-
 const savedCount=
 Number(
 localStorage.getItem(
@@ -2312,10 +2915,6 @@ oyaAllTimes.length;
 }
 
 
-/*
-Настраиваем настройки.
-*/
-
 frameCountSlider.min=1;
 
 frameCountSlider.max=
@@ -2328,13 +2927,6 @@ frameCountValue.textContent=
 oyaFrameCount;
 
 
-/*
-Формируем выбранный список.
-
-Главный таймлайн меняем
-только если сейчас активен ОЯ.
-*/
-
 applyOyaFrameCount(
 oyaFrameCount,
 false
@@ -2344,6 +2936,8 @@ false
 setStatus(
 "Опасные явления"
 );
+
+updatePreloadButton();
 
 return true;
 
@@ -2404,7 +2998,7 @@ oyaAllTimes.length
 
 
 /*
-Берём последние N кадров.
+Берём последние N.
 */
 
 oyaTimes=
@@ -2412,11 +3006,6 @@ oyaAllTimes.slice(
 -oyaFrameCount
 );
 
-
-/*
-Пытаемся сохранить
-текущий момент времени.
-*/
 
 let newIndex=
 oyaTimes.length-1;
@@ -2442,23 +3031,15 @@ newIndex=found;
 }
 
 
-oyaFrameIndex=newIndex;
+oyaFrameIndex=
+newIndex;
 
-
-/*
-Сохраняем настройку.
-*/
 
 localStorage.setItem(
 "gptrad-oya-frame-count",
 String(oyaFrameCount)
 );
 
-
-/*
-Обновляем маленький
-ползунок настроек.
-*/
 
 frameCountSlider.min=1;
 
@@ -2472,16 +3053,15 @@ frameCountValue.textContent=
 oyaFrameCount;
 
 
-/*
-Основной таймлайн меняем
-только если активен ОЯ.
-*/
-
 if(
 activeLayer==="oya"
 ){
 
 setOyaTimeline();
+
+}else{
+
+updatePreloadButton();
 
 }
 
@@ -2561,10 +3141,6 @@ return;
 }
 
 
-/*
-Защита индекса.
-*/
-
 if(
 index<0 ||
 index>=oyaTimes.length
@@ -2584,10 +3160,12 @@ renderOyaTimeline();
 const timeValue=
 oyaTimes[index];
 
+
 const requestData=
 getOyaRequestData(
 timeValue
 );
+
 
 const cacheKey=
 makeOyaCacheKey(
@@ -2599,7 +3177,7 @@ requestData.height
 
 
 /* =====================================================
-   КАДР УЖЕ В КЭШЕ
+   CACHE
 ===================================================== */
 
 const cached=
@@ -2619,14 +3197,25 @@ activeLayer!=="oya"
 return;
 
 
+/*
+ВАЖНО:
+сначала добавляем новый overlay,
+потом удаляем старый.
+*/
+
 const oldImage=
 oyaImage;
+
 
 const newOverlay=
 createOyaOverlay(
 cached.blobUrl,
 requestData.bounds
 );
+
+
+oyaImage=
+newOverlay;
 
 
 if(
@@ -2642,15 +3231,6 @@ oldImage
 
 }
 
-
-oyaImage=
-newOverlay;
-
-
-/*
-Этот timestamp уже действительно
-был загружен.
-*/
 
 oyaLoadedTimes.add(
 timeValue
@@ -2668,7 +3248,7 @@ return;
 
 
 /* =====================================================
-   ТАКОЙ ЗАПРОС УЖЕ ИДЁТ
+   PENDING
 ===================================================== */
 
 if(
@@ -2702,14 +3282,23 @@ oyaTimes[oyaFrameIndex]!==timeValue
 return;
 
 
+/*
+Сначала новый.
+*/
+
 const oldImage=
 oyaImage;
+
 
 const newOverlay=
 createOyaOverlay(
 result.blobUrl,
 requestData.bounds
 );
+
+
+oyaImage=
+newOverlay;
 
 
 if(
@@ -2725,9 +3314,6 @@ oldImage
 
 }
 
-
-oyaImage=
-newOverlay;
 
 oyaLoadedTimes.add(
 timeValue
@@ -2754,7 +3340,7 @@ return;
 
 
 /* =====================================================
-   НОВЫЙ ЗАПРОС
+   НОВЫЙ REQUEST
 ===================================================== */
 
 const requestId=
@@ -2822,10 +3408,6 @@ timeValue
 );
 
 
-/*
-Кадр реально загружен.
-*/
-
 oyaLoadedTimes.add(
 timeValue
 );
@@ -2863,10 +3445,6 @@ const result=
 await promise;
 
 
-/*
-Удаляем promise.
-*/
-
 oyaPendingRequests.delete(
 cacheKey
 );
@@ -2884,8 +3462,7 @@ activeLayer!=="oya"
 ){
 
 /*
-Кадр всё равно остался
-в кэше.
+Оставляем в кэше.
 */
 
 return;
@@ -2902,6 +3479,12 @@ return;
 }
 
 
+/*
+КЛЮЧЕВОЕ ИЗМЕНЕНИЕ:
+старый кадр остаётся на карте,
+пока новый полностью не готов.
+*/
+
 const oldImage=
 oyaImage;
 
@@ -2911,6 +3494,10 @@ createOyaOverlay(
 result.blobUrl,
 requestData.bounds
 );
+
+
+oyaImage=
+newOverlay;
 
 
 if(
@@ -2925,10 +3512,6 @@ oldImage
 );
 
 }
-
-
-oyaImage=
-newOverlay;
 
 
 renderOyaTimeline();
@@ -2966,6 +3549,18 @@ async function showOya(){
 
 rainFrameRequestId++;
 
+oyaFrameRequestId++;
+
+
+/*
+Останавливаем старую массовую
+загрузку.
+*/
+
+oyaPreloadGeneration++;
+
+oyaPreloading=false;
+
 
 /*
 Удаляем RainViewer.
@@ -2987,10 +3582,6 @@ radarLayer
 radarLayer=null;
 
 
-/*
-Получаем времена.
-*/
-
 const ready=
 await loadOyaCapabilities();
 
@@ -3006,17 +3597,8 @@ if(
 return;
 
 
-/*
-Настраиваем основной таймлайн
-под выбранное количество.
-*/
-
 setOyaTimeline();
 
-
-/*
-Последний доступный кадр.
-*/
 
 oyaFrameIndex=
 oyaTimes.length-1;
@@ -3027,6 +3609,9 @@ oyaFrameIndex;
 updateTimeLabel();
 
 renderOyaTimeline();
+
+updatePreloadButton();
+
 
 loadOyaFrame(
 oyaFrameIndex
@@ -3115,12 +3700,14 @@ throw new Error(
 const data=
 await r.json();
 
+
 rainFrames=
 Array.isArray(
 data.radar?.past
 )
 ?data.radar.past
 :[];
+
 
 if(
 !rainFrames.length
@@ -3145,6 +3732,7 @@ setRadarTimeline();
 showRainFrame(
 currentFrame
 );
+
 
 setStatus(
 "Радар RainViewer"
@@ -3230,6 +3818,7 @@ return;
 const frame=
 rainFrames[index];
 
+
 const requestId=
 ++rainFrameRequestId;
 
@@ -3238,6 +3827,12 @@ const newLayer=
 makeRainLayer(
 frame
 );
+
+
+/*
+Сразу добавляем новый слой.
+Старый остаётся.
+*/
 
 newLayer.addTo(map);
 
@@ -3271,9 +3866,15 @@ return;
 const oldLayer=
 radarLayer;
 
+
 radarLayer=
 newLayer;
 
+
+/*
+Только после загрузки
+удаляем старый.
+*/
 
 if(
 oldLayer &&
@@ -3300,6 +3901,7 @@ if(
 requestId!==rainFrameRequestId
 )
 return;
+
 
 if(
 radarLayer!==newLayer
@@ -3353,6 +3955,10 @@ function showRadar(){
 
 oyaFrameRequestId++;
 
+oyaPreloadGeneration++;
+
+oyaPreloading=false;
+
 
 /*
 Удаляем текущий OЯ overlay.
@@ -3375,7 +3981,7 @@ oyaImage=null;
 
 
 /*
-Очищаем кэш ОЯ.
+Очищаем OЯ.
 */
 
 clearOyaCache();
@@ -3707,6 +4313,7 @@ playBtn.addEventListener(
 
 let total=0;
 
+
 if(
 activeLayer==="radar"
 ){
@@ -3768,6 +4375,7 @@ currentFrame=0;
 
 }
 
+
 timeSlider.value=
 currentFrame;
 
@@ -3797,6 +4405,7 @@ oyaFrameIndex=0;
 
 }
 
+
 timeSlider.value=
 oyaFrameIndex;
 
@@ -3815,6 +4424,20 @@ oyaFrameIndex
 );
 
 }
+
+}
+);
+
+
+/* =========================================================
+   PRELOAD ALL BUTTON
+========================================================= */
+
+preloadBtn.addEventListener(
+"click",
+()=>{
+
+preloadAllOyaFrames();
 
 }
 );
@@ -3966,9 +4589,14 @@ oyaTimes=[];
 oyaFrameIndex=0;
 
 frameCountSlider.min=1;
+
 frameCountSlider.max=1;
+
 frameCountSlider.value=1;
+
 frameCountValue.textContent="—";
+
+updatePreloadButton();
 
 showOya();
 
@@ -4031,16 +4659,11 @@ const opening=
 "open"
 );
 
+
 frameCountSection.classList.toggle(
 "open"
 );
 
-
-/*
-Если время ОЯ ещё не получено,
-получаем его даже находясь
-на RainViewer.
-*/
 
 if(
 opening &&
@@ -4053,12 +4676,6 @@ oyaAllTimes.length
 const ready=
 await loadOyaCapabilities();
 
-
-/*
-Если после получения
-активен RainViewer — возвращаем
-его таймлайн.
-*/
 
 if(
 ready &&
@@ -4081,11 +4698,6 @@ setRadarTimeline();
 
 function changeOyaFrameCount(delta){
 
-/*
-Если capabilities ещё не получены,
-делать изменение пока нечего.
-*/
-
 if(
 !oyaAllTimes.length
 )
@@ -4095,10 +4707,13 @@ return;
 let count=
 Number(
 frameCountSlider.value
-) || oyaFrameCount || 1;
+) ||
+oyaFrameCount ||
+1;
 
 
 count+=delta;
+
 
 count=
 Math.max(
@@ -4116,7 +4731,8 @@ count;
 frameCountValue.textContent=
 count;
 
-oyaFrameCount=count;
+oyaFrameCount=
+count;
 
 
 localStorage.setItem(
@@ -4130,11 +4746,6 @@ count,
 true
 );
 
-
-/*
-Если ОЯ активен —
-показываем текущий выбранный кадр.
-*/
 
 if(
 activeLayer==="oya" &&
@@ -4173,7 +4784,8 @@ frameCountSlider.value
 );
 
 
-oyaFrameCount=count;
+oyaFrameCount=
+count;
 
 frameCountValue.textContent=
 count;
@@ -4271,7 +4883,10 @@ localStorage.setItem(
 theme
 );
 
+
 renderOyaTimeline();
+
+updatePreloadButton();
 
 }
 );
