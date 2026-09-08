@@ -9,8 +9,7 @@ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GPTrad</title>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css"
-onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css';">
+href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css">
 
 <style>
 
@@ -36,7 +35,7 @@ z-index:1;
 background:#d8d8d8;
 }
 
-/* OPENLAYERS CONTROLS */
+/* OPENLAYERS */
 
 .ol-zoom{
 position:absolute;
@@ -51,21 +50,15 @@ padding:0 !important;
 
 .ol-zoom button{
 display:block;
-
 width:38px;
 height:38px;
-
 margin:3px;
-
 border:0;
 border-radius:10px;
-
 background:rgba(28,28,28,.90) !important;
 color:white !important;
-
 font-size:22px;
 line-height:36px;
-
 cursor:pointer;
 }
 
@@ -87,9 +80,7 @@ border-radius:7px;
 padding:4px 8px;
 }
 
-/* =========================================================
-   TOP
-========================================================= */
+/* TOP */
 
 .top-panel{
 position:absolute;
@@ -125,25 +116,18 @@ margin-right:8px;
 flex:1;
 min-width:0;
 height:42px;
-
 border:0;
 outline:0;
 border-radius:12px;
-
 background:#292929;
 color:white;
-
 padding:0 14px;
-
 font-size:17px;
 font-weight:650;
-
 text-align:left;
-
 display:flex;
 align-items:center;
 justify-content:space-between;
-
 gap:8px;
 }
 
@@ -166,23 +150,17 @@ transform:rotate(180deg);
 
 .icon-btn{
 flex:none;
-
 width:42px;
 height:42px;
-
 border:0;
 outline:0;
 border-radius:12px;
-
 background:#292929;
 color:white;
-
 font-size:21px;
-
 display:flex;
 align-items:center;
 justify-content:center;
-
 transition:transform .15s ease;
 }
 
@@ -190,19 +168,14 @@ transition:transform .15s ease;
 transform:scale(.94);
 }
 
-/* =========================================================
-   DRAWER
-========================================================= */
+/* DRAWER */
 
 #layerDrawer{
 position:absolute;
-
 top:72px;
 left:50%;
-
 width:calc(100% - 24px);
 max-width:520px;
-
 z-index:1100;
 
 transform:translate(-50%,-18px) scale(.98);
@@ -210,11 +183,9 @@ opacity:0;
 pointer-events:none;
 
 padding:10px;
-
 border-radius:15px;
 
 background:rgba(25,25,25,.96);
-
 backdrop-filter:blur(16px);
 -webkit-backdrop-filter:blur(16px);
 
@@ -241,11 +212,9 @@ padding:4px 7px 9px;
 .layer-item{
 width:100%;
 min-height:48px;
-
 border:0;
 outline:0;
 border-radius:11px;
-
 background:#303030;
 color:white;
 
@@ -289,15 +258,12 @@ background:#36d67a;
 box-shadow:0 0 8px rgba(54,214,122,.55);
 }
 
-/* =========================================================
-   STATUS
-========================================================= */
+/* STATUS */
 
 #status{
 position:absolute;
 left:14px;
 top:74px;
-
 z-index:900;
 
 padding:6px 10px;
@@ -313,22 +279,16 @@ pointer-events:none;
 opacity:.9;
 }
 
-/* =========================================================
-   SETTINGS
-========================================================= */
+/* SETTINGS */
 
 #settings{
 position:absolute;
-
 left:12px;
 top:74px;
-
 width:240px;
-
 z-index:1200;
 
 padding:12px;
-
 border-radius:14px;
 
 background:rgba(20,20,20,.96);
@@ -384,12 +344,9 @@ margin-bottom:0;
 
 .settings-section-btn{
 width:100%;
-
 height:40px;
-
 border:0;
 outline:0;
-
 border-radius:10px;
 
 background:#292929;
@@ -403,10 +360,6 @@ align-items:center;
 justify-content:space-between;
 
 padding:0 11px;
-
-transition:
-background .15s ease,
-transform .15s ease;
 }
 
 .settings-section-btn:active{
@@ -416,22 +369,17 @@ transform:scale(.98);
 .settings-section-arrow{
 font-size:12px;
 opacity:.65;
-
-transition:
-transform .25s ease;
+transition:transform .25s ease;
 }
 
-.settings-section.open
-.settings-section-arrow{
+.settings-section.open .settings-section-arrow{
 transform:rotate(180deg);
 }
 
 .settings-subpanel{
 max-height:0;
 opacity:0;
-
 overflow:hidden;
-
 transform:translateY(-4px);
 
 transition:
@@ -442,25 +390,20 @@ transform .25s ease;
 padding:0 2px;
 }
 
-.settings-section.open
-.settings-subpanel{
+.settings-section.open .settings-subpanel{
 max-height:180px;
 opacity:1;
-
 transform:translateY(0);
-
 padding-top:7px;
 padding-bottom:2px;
 }
 
 .theme-btn{
 width:100%;
-
 border:0;
 outline:0;
 
 padding:9px 10px;
-
 margin-bottom:6px;
 
 border-radius:9px;
@@ -469,7 +412,6 @@ background:#292929;
 color:white;
 
 text-align:left;
-
 font-size:13px;
 }
 
@@ -477,15 +419,12 @@ font-size:13px;
 margin-bottom:0;
 }
 
-/* =========================================================
-   FRAME COUNT
-========================================================= */
+/* FRAME COUNT */
 
 .frame-count-row{
 display:flex;
 align-items:center;
 gap:6px;
-
 padding:3px 1px 2px;
 }
 
@@ -496,9 +435,7 @@ min-width:0;
 
 #frameCountValue{
 min-width:34px;
-
 text-align:center;
-
 font-size:13px;
 font-weight:700;
 color:white;
@@ -507,12 +444,10 @@ color:white;
 .frame-count-arrow{
 width:26px;
 height:26px;
-
 flex:none;
 
 border:0;
 outline:0;
-
 border-radius:7px;
 
 background:#292929;
@@ -523,32 +458,19 @@ font-size:11px;
 display:flex;
 align-items:center;
 justify-content:center;
-
 padding:0;
-
-transition:
-transform .15s ease,
-background .15s ease;
-}
-
-.frame-count-arrow:active{
-transform:scale(.9);
 }
 
 .frame-count-arrow:disabled{
 opacity:.35;
 }
 
-/* =========================================================
-   TIMELINE
-========================================================= */
+/* TIMELINE */
 
 .timeline{
 position:absolute;
-
 left:50%;
 bottom:14px;
-
 transform:translateX(-50%);
 
 width:min(680px,calc(100vw - 28px));
@@ -569,13 +491,10 @@ box-shadow:0 5px 25px rgba(0,0,0,.3);
 
 .timeline-play{
 width:100%;
-
 display:flex;
 justify-content:center;
 align-items:center;
-
 gap:7px;
-
 margin-bottom:6px;
 }
 
@@ -585,7 +504,6 @@ height:30px;
 
 border:0;
 outline:0;
-
 border-radius:8px;
 
 background:#292929;
@@ -596,29 +514,21 @@ font-size:14px;
 display:flex;
 align-items:center;
 justify-content:center;
-
-transition:
-transform .15s ease,
-background .15s ease;
 }
 
 #playBtn:active{
 transform:scale(.92);
 }
 
-/* =========================================================
-   PRELOAD
-========================================================= */
+/* PRELOAD */
 
 #preloadBtn{
 width:34px;
 height:30px;
-
 flex:none;
 
 border:0;
 outline:0;
-
 border-radius:8px;
 
 background:#292929;
@@ -629,11 +539,6 @@ align-items:center;
 justify-content:center;
 
 padding:0;
-
-transition:
-transform .15s ease,
-background .18s ease,
-opacity .2s ease;
 }
 
 #preloadBtn:active{
@@ -647,7 +552,6 @@ opacity:.30;
 .download-icon{
 width:15px;
 height:18px;
-
 display:block;
 
 background:currentColor;
@@ -678,39 +582,15 @@ animation:downloadFloat .7s ease-in-out infinite;
 }
 
 @keyframes downloadFloat{
-0%,100%{
-transform:translateY(0);
-}
-50%{
-transform:translateY(2px);
-}
+0%,100%{transform:translateY(0);}
+50%{transform:translateY(2px);}
 }
 
 #preloadBtn.done{
 background:#315f45;
 }
 
-body.light #preloadBtn{
-background:#eeeeee;
-color:#111;
-}
-
-body.light #preloadBtn.done{
-background:#d9eee1;
-}
-
-body.green #preloadBtn{
-background:#123d29;
-color:white;
-}
-
-body.green #preloadBtn.done{
-background:#185538;
-}
-
-/* =========================================================
-   TIMELINE CONTROLS
-========================================================= */
+/* TIMELINE CONTROLS */
 
 .timeline-controls{
 display:flex;
@@ -721,12 +601,10 @@ gap:7px;
 .timeline-arrow{
 width:36px;
 height:32px;
-
 flex:none;
 
 border:0;
 outline:0;
-
 border-radius:8px;
 
 background:#292929;
@@ -737,8 +615,6 @@ font-size:15px;
 display:flex;
 align-items:center;
 justify-content:center;
-
-transition:transform .15s ease;
 }
 
 .timeline-arrow:active{
@@ -747,10 +623,8 @@ transform:scale(.92);
 
 .timeline-slider-wrap{
 position:relative;
-
 flex:1;
 min-width:0;
-
 height:18px;
 
 display:flex;
@@ -759,7 +633,6 @@ align-items:center;
 
 #oyaTimelineSegments{
 position:absolute;
-
 left:0;
 right:0;
 top:2px;
@@ -772,7 +645,6 @@ align-items:center;
 gap:2px;
 
 pointer-events:none;
-
 overflow:hidden;
 
 z-index:1;
@@ -781,13 +653,11 @@ z-index:1;
 .oya-segment{
 flex:1;
 min-width:0;
-
 height:14px;
 
 border-radius:3px;
 
 background:#666;
-
 opacity:.95;
 
 transition:
@@ -807,7 +677,6 @@ filter:brightness(1.15);
 
 #oyaLongProgress{
 position:absolute;
-
 left:0;
 right:0;
 top:5px;
@@ -829,7 +698,6 @@ display:none;
 
 #oyaLongProgressFill{
 position:absolute;
-
 left:0;
 top:0;
 bottom:0;
@@ -839,13 +707,10 @@ width:0%;
 background:#45c9ef;
 
 border-radius:999px;
-
-transition:width .12s linear;
 }
 
 #timeSlider{
 position:relative;
-
 z-index:3;
 
 width:100%;
@@ -899,9 +764,7 @@ border:2px solid white;
 background:#fff;
 }
 
-/* =========================================================
-   THEMES
-========================================================= */
+/* THEMES */
 
 body.light .oya-segment{
 background:#c8c8c8;
@@ -953,6 +816,11 @@ body.light #frameCountValue{
 color:#111;
 }
 
+body.light #preloadBtn{
+background:#eeeeee;
+color:#111;
+}
+
 body.green .oya-segment{
 background:#315f45;
 }
@@ -993,6 +861,15 @@ body.green .layer-item.active{
 background:#185538;
 }
 
+body.green #preloadBtn{
+background:#123d29;
+color:white;
+}
+
+body.green #preloadBtn.done{
+background:#185538;
+}
+
 #timeLabel{
 width:100%;
 margin-top:5px;
@@ -1004,7 +881,6 @@ opacity:.85;
 
 #loading{
 position:absolute;
-
 left:50%;
 top:50%;
 
@@ -1019,7 +895,6 @@ padding:9px 13px;
 border-radius:10px;
 
 background:rgba(20,20,20,.92);
-
 color:white;
 
 font-size:13px;
@@ -1099,9 +974,7 @@ left:8px;
 
 <div class="top-panel">
 
-<div class="logo">
-GPTrad
-</div>
+<div class="logo">GPTrad</div>
 
 <button id="selectedLayer">
 
@@ -1109,65 +982,45 @@ GPTrad
 Радар (RainViewer)
 </span>
 
-<span id="selectedLayerArrow">
-▾
-</span>
+<span id="selectedLayerArrow">▾</span>
 
 </button>
 
-<button id="locateBtn" class="icon-btn">
-⌖
-</button>
+<button id="locateBtn" class="icon-btn">⌖</button>
 
-<button id="reloadBtn" class="icon-btn">
-↻
-</button>
+<button id="reloadBtn" class="icon-btn">↻</button>
 
-<button id="settingsBtn" class="icon-btn">
-⚙
-</button>
+<button id="settingsBtn" class="icon-btn">⚙</button>
 
 </div>
 
 <div id="layerDrawer">
 
-<div class="drawer-header">
-Слои
-</div>
+<div class="drawer-header">Слои</div>
 
-<button class="layer-item active"
-data-layer="radar">
+<button class="layer-item active" data-layer="radar">
 
 <span class="layer-dot"></span>
 
-<span>
-Радар (RainViewer)
-</span>
+<span>Радар (RainViewer)</span>
 
 </button>
 
-<button class="layer-item"
-data-layer="oya">
+<button class="layer-item" data-layer="oya">
 
 <span class="layer-dot"></span>
 
-<span>
-Опасные явления
-</span>
+<span>Опасные явления</span>
 
 </button>
 
 </div>
 
-<div id="status">
-Загрузка…
-</div>
+<div id="status">Загрузка…</div>
 
 <div id="settings">
 
-<div class="settings-title">
-Настройки
-</div>
+<div class="settings-title">Настройки</div>
 
 <div class="settings-section" id="appearanceSection">
 
@@ -1178,17 +1031,9 @@ data-layer="oya">
 
 <div class="settings-subpanel">
 
-<button class="theme-btn" data-theme="dark">
-Тёмная
-</button>
-
-<button class="theme-btn" data-theme="light">
-Светлая
-</button>
-
-<button class="theme-btn" data-theme="green">
-Зелёная
-</button>
+<button class="theme-btn" data-theme="dark">Тёмная</button>
+<button class="theme-btn" data-theme="light">Светлая</button>
+<button class="theme-btn" data-theme="green">Зелёная</button>
 
 </div>
 
@@ -1197,8 +1042,11 @@ data-layer="oya">
 <div class="settings-section" id="frameCountSection">
 
 <button class="settings-section-btn" id="frameCountToggle">
+
 <span>Кол. кадров</span>
+
 <span class="settings-section-arrow">▾</span>
+
 </button>
 
 <div class="settings-subpanel">
@@ -1206,24 +1054,18 @@ data-layer="oya">
 <div class="frame-count-row">
 
 <button id="frameCountPrev"
-class="frame-count-arrow">
-◀
-</button>
+class="frame-count-arrow">◀</button>
 
 <input id="frameCountSlider"
 type="range"
 min="1"
 max="1"
-value="50">
+value="1">
 
-<div id="frameCountValue">
-50
-</div>
+<div id="frameCountValue">50</div>
 
 <button id="frameCountNext"
-class="frame-count-arrow">
-▶
-</button>
+class="frame-count-arrow">▶</button>
 
 </div>
 
@@ -1237,9 +1079,7 @@ class="frame-count-arrow">
 
 <div class="timeline-play">
 
-<button id="playBtn">
-▶
-</button>
+<button id="playBtn">▶</button>
 
 <button
 id="preloadBtn"
@@ -1254,10 +1094,7 @@ aria-label="Загрузить все кадры">
 
 <div class="timeline-controls">
 
-<button id="backBtn"
-class="timeline-arrow">
-◀
-</button>
+<button id="backBtn" class="timeline-arrow">◀</button>
 
 <div class="timeline-slider-wrap">
 
@@ -1278,136 +1115,38 @@ value="0">
 </div>
 
 <button id="forwardBtn"
-class="timeline-arrow">
-▶
-</button>
+class="timeline-arrow">▶</button>
 
 </div>
 
-<div id="timeLabel">
-—
-</div>
+<div id="timeLabel">—</div>
 
 </div>
 
-<div id="loading">
-Загрузка…
-</div>
+<div id="loading">Загрузка…</div>
 
 
-<script type="module">
+<!-- =====================================================
+     OPENLAYERS — ОБЫЧНЫЙ SCRIPT, НЕ MODULE
+===================================================== -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/dist/ol.js"></script>
+
+<script>
 
 /* =========================================================
-   OPENLAYERS LOADER
+   CHECK OPENLAYERS
 ========================================================= */
 
-const OL_CDNS = [
+if(!window.ol){
 
-"https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/",
-
-"https://cdn.jsdelivr.net/npm/ol@10.6.1/"
-
-];
-
-let OL=null;
-
-async function importOpenLayers(base){
-
-const modules=await Promise.all([
-
-import(base+"Map.js"),
-
-import(base+"View.js"),
-
-import(base+"layer/Tile.js"),
-
-import(base+"layer/Image.js"),
-
-import(base+"source/XYZ.js"),
-
-import(base+"source/ImageStatic.js"),
-
-import(base+"proj.js")
-
-]);
-
-return{
-
-Map:modules[0].default,
-
-View:modules[1].default,
-
-TileLayer:modules[2].default,
-
-ImageLayer:modules[3].default,
-
-XYZ:modules[4].default,
-
-ImageStatic:modules[5].default,
-
-fromLonLat:modules[6].fromLonLat,
-
-transformExtent:modules[6].transformExtent
-
-};
-
-}
-
-async function loadOpenLayers(){
-
-let lastError=null;
-
-for(
-const cdn of OL_CDNS
-){
-
-try{
-
-return await importOpenLayers(cdn);
-
-}catch(error){
-
-console.warn(
-"OpenLayers CDN failed:",
-cdn,
-error
-);
-
-lastError=error;
-
-}
-
-}
-
-throw lastError ||
-new Error(
-"OpenLayers не загрузился"
-);
-
-}
-
-try{
-
-OL=await loadOpenLayers();
-
-}catch(error){
-
-console.error(
-"OPENLAYERS LOAD ERROR",
-error
-);
-
-const statusEl=
-document.getElementById("status");
+const statusEl=document.getElementById("status");
 
 if(statusEl){
-
-statusEl.textContent=
-"Ошибка загрузки карты";
-
+statusEl.textContent="Ошибка загрузки карты";
 }
 
-throw error;
+throw new Error("OpenLayers не загрузился");
 
 }
 
@@ -1415,17 +1154,6 @@ throw error;
 /* =========================================================
    ELEMENTS
 ========================================================= */
-
-const {
-Map,
-View,
-TileLayer,
-ImageLayer,
-XYZ,
-ImageStatic,
-fromLonLat,
-transformExtent
-}=OL;
 
 const status=document.getElementById("status");
 const loading=document.getElementById("loading");
@@ -1482,13 +1210,10 @@ function formatTime(ts){
 if(!ts)return"—";
 
 return new Date(ts*1000)
-.toLocaleTimeString(
-"ru-RU",
-{
+.toLocaleTimeString("ru-RU",{
 hour:"2-digit",
 minute:"2-digit"
-}
-);
+});
 
 }
 
@@ -1498,7 +1223,7 @@ minute:"2-digit"
 ========================================================= */
 
 const osmSource=
-new XYZ({
+new ol.source.XYZ({
 
 url:
 "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -1512,8 +1237,9 @@ attributions:
 
 });
 
+
 const osmLayer=
-new TileLayer({
+new ol.layer.Tile({
 
 source:osmSource,
 
@@ -1523,10 +1249,10 @@ zIndex:0
 
 
 const view=
-new View({
+new ol.View({
 
 center:
-fromLonLat([
+ol.proj.fromLonLat([
 37.61,
 55.75
 ]),
@@ -1545,7 +1271,7 @@ enableRotation:false
 
 
 const map=
-new Map({
+new ol.Map({
 
 target:"map",
 
@@ -1563,9 +1289,7 @@ view:view
 ========================================================= */
 
 function resizeMap(){
-
 map.updateSize();
-
 }
 
 window.addEventListener(
@@ -1584,20 +1308,9 @@ resizeMap,
 
 });
 
-setTimeout(
-resizeMap,
-100
-);
-
-setTimeout(
-resizeMap,
-500
-);
-
-setTimeout(
-resizeMap,
-1000
-);
+setTimeout(resizeMap,100);
+setTimeout(resizeMap,500);
+setTimeout(resizeMap,1000);
 
 
 /* =========================================================
@@ -1607,11 +1320,15 @@ resizeMap,
 let activeLayer="radar";
 
 let radarLayer=null;
+
 let rainFrames=[];
+
 let currentFrame=0;
+
 let rainFrameRequestId=0;
 
 let playing=false;
+
 let playTimer=null;
 
 
@@ -1620,27 +1337,37 @@ let playTimer=null;
 ========================================================= */
 
 let oyaAllTimes=[];
+
 let oyaTimes=[];
+
 let oyaFrameCount=50;
+
 let oyaFrameIndex=0;
 
 let oyaImage=null;
+
 let oyaImageBlobUrl=null;
 
 const oyaLoadedTimes=new Set();
+
 const oyaFrameCache=new Map();
+
 const oyaPendingRequests=new Map();
 
 let oyaCapabilitiesLoaded=false;
+
 let oyaCapabilitiesLoading=false;
 
 let oyaCacheGeneration=0;
+
 let oyaPreloadGeneration=0;
 
 let oyaPreloading=false;
+
 let oyaViewportKey="";
 
 let viewportTimer=null;
+
 let oyaFrameRequestId=0;
 
 
@@ -1673,7 +1400,7 @@ const extent=
 view.calculateExtent(size);
 
 const geoExtent=
-transformExtent(
+ol.proj.transformExtent(
 extent,
 "EPSG:3857",
 "EPSG:4326"
@@ -1709,13 +1436,9 @@ height
 return{
 
 extent,
-
 geoExtent,
-
 width,
-
 height,
-
 key
 
 };
@@ -1842,9 +1565,7 @@ oyaTimes[i]
 )
 ){
 
-segment.classList.add(
-"loaded"
-);
+segment.classList.add("loaded");
 
 }
 
@@ -1852,9 +1573,7 @@ if(
 i===oyaFrameIndex
 ){
 
-segment.classList.add(
-"current"
-);
+segment.classList.add("current");
 
 }
 
@@ -1871,8 +1590,7 @@ segment
 
 }else{
 
-oyaLongProgress.style.display=
-"block";
+oyaLongProgress.style.display="block";
 
 let loaded=0;
 
@@ -1895,8 +1613,7 @@ oyaLongProgressFill.style.width=
 loaded/
 oyaTimes.length*
 100
-)+
-"%";
+)+"%";
 
 }
 
@@ -1991,11 +1708,9 @@ function setRadarTimeline(){
 
 oyaTimelineSegments.innerHTML="";
 
-oyaTimelineSegments.style.display=
-"none";
+oyaTimelineSegments.style.display="none";
 
-oyaLongProgress.style.display=
-"none";
+oyaLongProgress.style.display="none";
 
 timeSlider.min=0;
 
@@ -2014,8 +1729,7 @@ currentFrame
 )
 );
 
-timeSlider.value=
-currentFrame;
+timeSlider.value=currentFrame;
 
 updateTimeLabel();
 
@@ -2065,16 +1779,13 @@ updatePreloadButton();
 
 function isoToUnix(value){
 
-const t=
-Date.parse(value);
+const t=Date.parse(value);
 
 return Number.isNaN(t)
 ?
 null
 :
-Math.floor(
-t/1000
-);
+Math.floor(t/1000);
 
 }
 
@@ -2094,9 +1805,7 @@ for(
 const value of
 text
 .split(",")
-.map(
-x=>x.trim()
-)
+.map(x=>x.trim())
 .filter(Boolean)
 ){
 
@@ -2139,10 +1848,7 @@ oyaCapabilitiesLoading
 ){
 
 await new Promise(
-r=>setTimeout(
-r,
-50
-)
+r=>setTimeout(r,50)
 );
 
 }
@@ -2158,9 +1864,7 @@ oyaCapabilitiesLoading=true;
 
 try{
 
-setStatus(
-"Получение времени ОЯ…"
-);
+setStatus("Получение времени ОЯ…");
 
 const response=
 await fetch(
@@ -2191,14 +1895,10 @@ text,
 );
 
 if(
-xml.querySelector(
-"parsererror"
-)
+xml.querySelector("parsererror")
 ){
 
-throw new Error(
-"Ошибка XML"
-);
+throw new Error("Ошибка XML");
 
 }
 
@@ -2221,9 +1921,7 @@ continue;
 }
 
 const name=
-node.getAttribute(
-"name"
-);
+node.getAttribute("name");
 
 if(
 name &&
@@ -2235,8 +1933,7 @@ continue;
 }
 
 const value=
-(node.textContent||"")
-.trim();
+(node.textContent||"").trim();
 
 if(!value)
 continue;
@@ -2358,9 +2055,7 @@ oyaFrameCount,
 false
 );
 
-setStatus(
-"Опасные явления"
-);
+setStatus("Опасные явления");
 
 return true;
 
@@ -2371,9 +2066,7 @@ console.error(
 error
 );
 
-setStatus(
-"Ошибка времени ОЯ"
-);
+setStatus("Ошибка времени ОЯ");
 
 return false;
 
@@ -2426,9 +2119,7 @@ oyaTimes.length-1;
 if(oldTime!==null){
 
 const index=
-oyaTimes.indexOf(
-oldTime
-);
+oyaTimes.indexOf(oldTime);
 
 if(index!==-1)
 oyaFrameIndex=index;
@@ -2437,9 +2128,7 @@ oyaFrameIndex=index;
 
 localStorage.setItem(
 "gptrad-oya-frame-count",
-String(
-oyaFrameCount
-)
+String(oyaFrameCount)
 );
 
 frameCountSlider.min=1;
@@ -2459,7 +2148,7 @@ setOyaTimeline();
 
 
 /* =========================================================
-   OYA CACHE KEY
+   CACHE KEY
 ========================================================= */
 
 function makeOyaCacheKey(
@@ -2476,7 +2165,7 @@ data.viewportKey
 
 
 /* =========================================================
-   OYA IMAGE LAYER
+   OYA IMAGE
 ========================================================= */
 
 function createOyaImageLayer(
@@ -2487,20 +2176,20 @@ extent
 return new Promise(
 (resolve,reject)=>{
 
-const testImage=
+const image=
 new Image();
 
-let finished=false;
+let done=false;
 
-const finish=()=>{
+function success(){
 
-if(finished)
+if(done)
 return;
 
-finished=true;
+done=true;
 
 const source=
-new ImageStatic({
+new ol.source.ImageStatic({
 
 url:blobUrl,
 
@@ -2513,9 +2202,9 @@ interpolate:false
 });
 
 const layer=
-new ImageLayer({
+new ol.layer.Image({
 
-source,
+source:source,
 
 opacity:.75,
 
@@ -2523,20 +2212,18 @@ zIndex:60
 
 });
 
-map.addLayer(
-layer
-);
+map.addLayer(layer);
 
 resolve(layer);
 
-};
+}
 
-const fail=()=>{
+function error(){
 
-if(finished)
+if(done)
 return;
 
-finished=true;
+done=true;
 
 reject(
 new Error(
@@ -2544,13 +2231,13 @@ new Error(
 )
 );
 
-};
+}
 
-testImage.onload=finish;
+image.onload=success;
 
-testImage.onerror=fail;
+image.onerror=error;
 
-testImage.src=blobUrl;
+image.src=blobUrl;
 
 }
 
@@ -2561,22 +2248,20 @@ testImage.src=blobUrl;
    OYA SWAP
 ========================================================= */
 
+}
+
 function swapOyaLayer(
 newLayer,
 newBlobUrl
 ){
 
-const oldLayer=
-oyaImage;
+const oldLayer=oyaImage;
 
-const oldUrl=
-oyaImageBlobUrl;
+const oldUrl=oyaImageBlobUrl;
 
-oyaImage=
-newLayer;
+oyaImage=newLayer;
 
-oyaImageBlobUrl=
-newBlobUrl;
+oyaImageBlobUrl=newBlobUrl;
 
 requestAnimationFrame(
 ()=>{
@@ -2586,9 +2271,7 @@ oldLayer &&
 oldLayer!==oyaImage
 ){
 
-map.removeLayer(
-oldLayer
-);
+map.removeLayer(oldLayer);
 
 }
 
@@ -2598,11 +2281,7 @@ oldUrl!==oyaImageBlobUrl
 ){
 
 try{
-
-URL.revokeObjectURL(
-oldUrl
-);
-
+URL.revokeObjectURL(oldUrl);
 }catch(e){}
 
 }
@@ -2618,14 +2297,10 @@ oldUrl
 
 async function loadOyaFrame(index){
 
-if(
-activeLayer!=="oya"
-)
+if(activeLayer!=="oya")
 return;
 
-if(
-!oyaTimes.length
-){
+if(!oyaTimes.length){
 
 if(
 !(await loadOyaCapabilities())
@@ -2664,9 +2339,7 @@ const timeValue=
 oyaTimes[index];
 
 const requestData=
-getOyaRequestData(
-timeValue
-);
+getOyaRequestData(timeValue);
 
 const cacheKey=
 makeOyaCacheKey(
@@ -2677,20 +2350,14 @@ requestData
 try{
 
 let result=
-oyaFrameCache.get(
-cacheKey
-);
+oyaFrameCache.get(cacheKey);
 
 if(!result){
 
-setStatus(
-"Загрузка ОЯ…"
-);
+setStatus("Загрузка ОЯ…");
 
 let pending=
-oyaPendingRequests.get(
-cacheKey
-);
+oyaPendingRequests.get(cacheKey);
 
 if(!pending){
 
@@ -2726,18 +2393,15 @@ return null;
 }
 
 const blobUrl=
-URL.createObjectURL(
-blob
-);
+URL.createObjectURL(blob);
 
 const value={
 
-blobUrl,
+blobUrl:blobUrl,
 
-extent:
-requestData.extent,
+extent:requestData.extent,
 
-timeValue
+timeValue:timeValue
 
 };
 
@@ -2761,12 +2425,9 @@ pending
 
 }
 
-result=
-await pending;
+result=await pending;
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 }
 
@@ -2797,9 +2458,7 @@ activeLayer!=="oya" ||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
 
-map.removeLayer(
-newLayer
-);
+map.removeLayer(newLayer);
 
 return;
 
@@ -2810,21 +2469,15 @@ newLayer,
 result.blobUrl
 );
 
-oyaLoadedTimes.add(
-timeValue
-);
+oyaLoadedTimes.add(timeValue);
 
 renderOyaTimeline();
 
-setStatus(
-"Опасные явления"
-);
+setStatus("Опасные явления");
 
 }catch(error){
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 console.error(
 "OYA frame",
@@ -2835,9 +2488,7 @@ if(
 requestId===oyaFrameRequestId
 ){
 
-setStatus(
-"Ошибка ОЯ"
-);
+setStatus("Ошибка ОЯ");
 
 }
 
@@ -2847,7 +2498,7 @@ setStatus(
 
 
 /* =========================================================
-   PRELOAD FRAME
+   PRELOAD ONE
 ========================================================= */
 
 async function preloadOyaFrame(
@@ -2867,9 +2518,7 @@ return false;
 }
 
 const data=
-getOyaRequestData(
-timeValue
-);
+getOyaRequestData(timeValue);
 
 const key=
 makeOyaCacheKey(
@@ -2881,18 +2530,14 @@ if(
 oyaFrameCache.has(key)
 ){
 
-oyaLoadedTimes.add(
-timeValue
-);
+oyaLoadedTimes.add(timeValue);
 
 return true;
 
 }
 
 let pending=
-oyaPendingRequests.get(
-key
-);
+oyaPendingRequests.get(key);
 
 if(!pending){
 
@@ -2930,26 +2575,22 @@ return null;
 }
 
 const blobUrl=
-URL.createObjectURL(
-blob
-);
+URL.createObjectURL(blob);
 
 oyaFrameCache.set(
 key,
 {
 
-blobUrl,
+blobUrl:blobUrl,
 
 extent:data.extent,
 
-timeValue
+timeValue:timeValue
 
 }
 );
 
-oyaLoadedTimes.add(
-timeValue
-);
+oyaLoadedTimes.add(timeValue);
 
 return true;
 
@@ -2964,9 +2605,7 @@ pending
 
 try{
 
-return !!(
-await pending
-);
+return !!(await pending);
 
 }catch(error){
 
@@ -2979,9 +2618,7 @@ return false;
 
 }finally{
 
-oyaPendingRequests.delete(
-key
-);
+oyaPendingRequests.delete(key);
 
 }
 
@@ -3034,16 +2671,10 @@ return;
 
 }
 
-const index=
-cursor++;
+const index=cursor++;
 
-if(
-index>=times.length
-){
-
+if(index>=times.length)
 return;
-
-}
 
 await preloadOyaFrame(
 times[index],
@@ -3082,13 +2713,7 @@ try{
 await Promise.all(
 Array.from(
 {
-
-length:
-Math.min(
-4,
-times.length
-)
-
+length:Math.min(4,times.length)
 },
 ()=>worker()
 )
@@ -3118,9 +2743,7 @@ complete
 
 console.error(error);
 
-setStatus(
-"Ошибка загрузки ОЯ"
-);
+setStatus("Ошибка загрузки ОЯ");
 
 }finally{
 
@@ -3142,14 +2765,12 @@ updatePreloadButton();
 
 
 /* =========================================================
-   VIEWPORT INVALIDATION
+   INVALIDATE VIEWPORT
 ========================================================= */
 
 function invalidateOyaViewport(){
 
-if(
-activeLayer!=="oya"
-)
+if(activeLayer!=="oya")
 return;
 
 const viewport=
@@ -3187,11 +2808,7 @@ value.blobUrl!==oldUrl
 ){
 
 try{
-
-URL.revokeObjectURL(
-value.blobUrl
-);
-
+URL.revokeObjectURL(value.blobUrl);
 }catch(e){}
 
 }
@@ -3217,14 +2834,10 @@ updatePreloadButton();
 
 function scheduleOyaViewportReload(){
 
-if(
-activeLayer!=="oya"
-)
+if(activeLayer!=="oya")
 return;
 
-clearTimeout(
-viewportTimer
-);
+clearTimeout(viewportTimer);
 
 viewportTimer=
 setTimeout(
@@ -3232,9 +2845,7 @@ setTimeout(
 
 invalidateOyaViewport();
 
-if(
-oyaTimes.length
-){
+if(oyaTimes.length){
 
 loadOyaFrame(
 oyaFrameIndex
@@ -3272,9 +2883,7 @@ oyaPreloading=false;
 
 if(radarLayer){
 
-map.removeLayer(
-radarLayer
-);
+map.removeLayer(radarLayer);
 
 radarLayer=null;
 
@@ -3282,15 +2891,36 @@ radarLayer=null;
 
 if(oyaImage){
 
-map.removeLayer(
-oyaImage
-);
+map.removeLayer(oyaImage);
 
 oyaImage=null;
 
 }
 
+if(oyaImageBlobUrl){
+
+try{
+URL.revokeObjectURL(oyaImageBlobUrl);
+}catch(e){}
+
+}
+
 oyaImageBlobUrl=null;
+
+for(
+const value of
+oyaFrameCache.values()
+){
+
+if(value.blobUrl){
+
+try{
+URL.revokeObjectURL(value.blobUrl);
+}catch(e){}
+
+}
+
+}
 
 oyaFrameCache.clear();
 
@@ -3339,9 +2969,7 @@ oyaFrameIndex
 
 async function loadRainViewer(){
 
-showLoading(
-"Загрузка радара…"
-);
+showLoading("Загрузка радара…");
 
 try{
 
@@ -3374,13 +3002,9 @@ rainFrames.sort(
 (a,b)=>a.time-b.time
 );
 
-if(
-!rainFrames.length
-){
+if(!rainFrames.length){
 
-throw new Error(
-"Нет кадров"
-);
+throw new Error("Нет кадров");
 
 }
 
@@ -3389,13 +3013,9 @@ rainFrames.length-1;
 
 setRadarTimeline();
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(currentFrame);
 
-setStatus(
-"Радар RainViewer"
-);
+setStatus("Радар RainViewer");
 
 }catch(error){
 
@@ -3404,9 +3024,7 @@ console.error(
 error
 );
 
-setStatus(
-"Ошибка RainViewer"
-);
+setStatus("Ошибка RainViewer");
 
 }finally{
 
@@ -3424,7 +3042,7 @@ hideLoading();
 function makeRainLayer(frame){
 
 const source=
-new XYZ({
+new ol.source.XYZ({
 
 url:
 "https://tilecache.rainviewer.com"+
@@ -3439,9 +3057,9 @@ transition:0
 
 });
 
-return new TileLayer({
+return new ol.layer.Tile({
 
-source,
+source:source,
 
 opacity:1,
 
@@ -3503,9 +3121,7 @@ requestId!==rainFrameRequestId ||
 activeLayer!=="radar"
 ){
 
-map.removeLayer(
-newLayer
-);
+map.removeLayer(newLayer);
 
 return;
 
@@ -3519,9 +3135,7 @@ newLayer;
 
 if(oldLayer){
 
-map.removeLayer(
-oldLayer
-);
+map.removeLayer(oldLayer);
 
 }
 
@@ -3554,9 +3168,7 @@ source.on(
 onError
 );
 
-map.addLayer(
-newLayer
-);
+map.addLayer(newLayer);
 
 setTimeout(
 ()=>{
@@ -3595,27 +3207,19 @@ oyaPreloading=false;
 
 if(oyaImage){
 
-map.removeLayer(
-oyaImage
-);
+map.removeLayer(oyaImage);
 
 oyaImage=null;
 
 }
 
-if(
-rainFrames.length
-){
+if(rainFrames.length){
 
 setRadarTimeline();
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(currentFrame);
 
-setStatus(
-"Радар RainViewer"
-);
+setStatus("Радар RainViewer");
 
 }else{
 
@@ -3635,32 +3239,22 @@ timeSlider.addEventListener(
 ()=>{
 
 const index=
-Number(
-timeSlider.value
-);
+Number(timeSlider.value);
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
-if(
-!rainFrames.length
-)
+if(!rainFrames.length)
 return;
 
 currentFrame=index;
 
 updateTimeLabel();
 
-showRainFrame(
-index
-);
+showRainFrame(index);
 
 }else{
 
-if(
-!oyaTimes.length
-)
+if(!oyaTimes.length)
 return;
 
 oyaFrameIndex=index;
@@ -3669,14 +3263,11 @@ updateTimeLabel();
 
 renderOyaTimeline();
 
-loadOyaFrame(
-index
-);
+loadOyaFrame(index);
 
 }
 
-}
-);
+});
 
 
 /* =========================================================
@@ -3689,13 +3280,9 @@ document
 "click",
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
-if(
-!rainFrames.length
-)
+if(!rainFrames.length)
 return;
 
 currentFrame=
@@ -3707,15 +3294,11 @@ currentFrame-1
 timeSlider.value=
 currentFrame;
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(currentFrame);
 
 }else{
 
-if(
-!oyaTimes.length
-)
+if(!oyaTimes.length)
 return;
 
 oyaFrameIndex=
@@ -3727,9 +3310,7 @@ oyaFrameIndex-1
 timeSlider.value=
 oyaFrameIndex;
 
-loadOyaFrame(
-oyaFrameIndex
-);
+loadOyaFrame(oyaFrameIndex);
 
 }
 
@@ -3747,13 +3328,9 @@ document
 "click",
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
-if(
-!rainFrames.length
-)
+if(!rainFrames.length)
 return;
 
 currentFrame=
@@ -3765,15 +3342,11 @@ currentFrame+1
 timeSlider.value=
 currentFrame;
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(currentFrame);
 
 }else{
 
-if(
-!oyaTimes.length
-)
+if(!oyaTimes.length)
 return;
 
 oyaFrameIndex=
@@ -3785,9 +3358,7 @@ oyaFrameIndex+1
 timeSlider.value=
 oyaFrameIndex;
 
-loadOyaFrame(
-oyaFrameIndex
-);
+loadOyaFrame(oyaFrameIndex);
 
 }
 
@@ -3822,9 +3393,7 @@ playing
 :
 "▶";
 
-clearInterval(
-playTimer
-);
+clearInterval(playTimer);
 
 if(!playing)
 return;
@@ -3833,9 +3402,7 @@ playTimer=
 setInterval(
 ()=>{
 
-if(
-activeLayer==="radar"
-){
+if(activeLayer==="radar"){
 
 currentFrame++;
 
@@ -3850,9 +3417,7 @@ currentFrame=0;
 timeSlider.value=
 currentFrame;
 
-showRainFrame(
-currentFrame
-);
+showRainFrame(currentFrame);
 
 }else{
 
@@ -3869,9 +3434,7 @@ oyaFrameIndex=0;
 timeSlider.value=
 oyaFrameIndex;
 
-loadOyaFrame(
-oyaFrameIndex
-);
+loadOyaFrame(oyaFrameIndex);
 
 }
 
@@ -3886,14 +3449,11 @@ function stopPlayback(){
 
 playing=false;
 
-clearInterval(
-playTimer
-);
+clearInterval(playTimer);
 
 playTimer=null;
 
-playBtn.textContent=
-"▶";
+playBtn.textContent="▶";
 
 }
 
@@ -3906,9 +3466,7 @@ preloadBtn.addEventListener(
 "click",
 ()=>{
 
-if(
-!preloadBtn.disabled
-){
+if(!preloadBtn.disabled){
 
 preloadAllOyaFrames();
 
@@ -3927,9 +3485,7 @@ document
 "click",
 ()=>{
 
-if(
-!navigator.geolocation
-){
+if(!navigator.geolocation){
 
 setStatus(
 "Геолокация недоступна"
@@ -3950,7 +3506,7 @@ position=>{
 view.animate({
 
 center:
-fromLonLat([
+ol.proj.fromLonLat([
 position.coords.longitude,
 position.coords.latitude
 ]),
@@ -4006,23 +3562,42 @@ document
 
 stopPlayback();
 
-if(
-activeLayer==="oya"
-){
+if(activeLayer==="oya"){
 
 oyaFrameRequestId++;
 
 if(oyaImage){
 
-map.removeLayer(
-oyaImage
-);
+map.removeLayer(oyaImage);
 
 }
 
 oyaImage=null;
 
+if(oyaImageBlobUrl){
+
+try{
+URL.revokeObjectURL(oyaImageBlobUrl);
+}catch(e){}
+
+}
+
 oyaImageBlobUrl=null;
+
+for(
+const value of
+oyaFrameCache.values()
+){
+
+if(value.blobUrl){
+
+try{
+URL.revokeObjectURL(value.blobUrl);
+}catch(e){}
+
+}
+
+}
 
 oyaFrameCache.clear();
 
@@ -4069,9 +3644,7 @@ document
 "click",
 ()=>{
 
-settings.classList.toggle(
-"open"
-);
+settings.classList.toggle("open");
 
 });
 
@@ -4084,9 +3657,7 @@ document
 
 document
 .getElementById("appearanceSection")
-.classList.toggle(
-"open"
-);
+.classList.toggle("open");
 
 });
 
@@ -4103,13 +3674,9 @@ document.getElementById(
 );
 
 const opening=
-!section.classList.contains(
-"open"
-);
+!section.classList.contains("open");
 
-section.classList.toggle(
-"open"
-);
+section.classList.toggle("open");
 
 if(
 opening &&
@@ -4132,15 +3699,11 @@ await loadOyaCapabilities();
 
 function changeOyaFrameCount(delta){
 
-if(
-!oyaAllTimes.length
-)
+if(!oyaAllTimes.length)
 return;
 
 let count=
-Number(
-frameCountSlider.value
-)||
+Number(frameCountSlider.value)||
 oyaFrameCount||
 50;
 
@@ -4158,9 +3721,7 @@ count,
 true
 );
 
-if(
-activeLayer==="oya"
-){
+if(activeLayer==="oya"){
 
 oyaFrameRequestId++;
 
@@ -4177,21 +3738,15 @@ frameCountSlider.addEventListener(
 "input",
 ()=>{
 
-if(
-!oyaAllTimes.length
-)
+if(!oyaAllTimes.length)
 return;
 
 applyOyaFrameCount(
-Number(
-frameCountSlider.value
-),
+Number(frameCountSlider.value),
 true
 );
 
-if(
-activeLayer==="oya"
-){
+if(activeLayer==="oya"){
 
 oyaFrameRequestId++;
 
@@ -4210,6 +3765,7 @@ document
 "click",
 ()=>changeOyaFrameCount(-1)
 );
+
 
 document
 .getElementById("frameCountNext")
@@ -4240,13 +3796,9 @@ document.body.classList.remove(
 "green"
 );
 
-if(
-theme!=="dark"
-){
+if(theme!=="dark"){
 
-document.body.classList.add(
-theme
-);
+document.body.classList.add(theme);
 
 }
 
@@ -4261,8 +3813,7 @@ renderOyaTimeline();
 
 );
 
-}
-);
+});
 
 
 const savedTheme=
@@ -4272,13 +3823,9 @@ localStorage.getItem(
 
 if(savedTheme){
 
-if(
-savedTheme!=="dark"
-){
+if(savedTheme!=="dark"){
 
-document.body.classList.add(
-savedTheme
-);
+document.body.classList.add(savedTheme);
 
 }
 
@@ -4294,9 +3841,7 @@ selectedLayer.addEventListener(
 ()=>{
 
 const open=
-layerDrawer.classList.toggle(
-"open"
-);
+layerDrawer.classList.toggle("open");
 
 selectedLayer.classList.toggle(
 "open",
@@ -4322,20 +3867,14 @@ document
 .querySelectorAll(".layer-item")
 .forEach(
 x=>
-x.classList.remove(
-"active"
-)
+x.classList.remove("active")
 );
 
-button.classList.add(
-"active"
-);
+button.classList.add("active");
 
 activeLayer=type;
 
-if(
-type==="oya"
-){
+if(type==="oya"){
 
 selectedLayerName.textContent=
 "Опасные явления";
@@ -4351,44 +3890,39 @@ showRadar();
 
 }
 
-layerDrawer.classList.remove(
-"open"
-);
+layerDrawer.classList.remove("open");
 
-selectedLayer.classList.remove(
-"open"
-);
+selectedLayer.classList.remove("open");
 
 }
 
 );
 
-}
-);
+});
 
 
 /* =========================================================
    INITIAL
 ========================================================= */
 
-setStatus(
-"Загрузка карты…"
-);
+setStatus("Загрузка карты…");
 
 requestAnimationFrame(
 ()=>{
 
 resizeMap();
 
-setStatus(
-"Загрузка радара…"
-);
+setStatus("Загрузка радара…");
 
 loadRainViewer();
 
 }
 );
 
+
+/* =========================================================
+   OYA BACKGROUND
+========================================================= */
 
 setTimeout(
 async()=>{
