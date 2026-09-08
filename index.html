@@ -591,9 +591,7 @@ transform:scale(.91);
 opacity:.30;
 }
 
-/*
-Одна цельная стрелка.
-*/
+/* Одна цельная стрелка */
 
 .download-icon{
 width:15px;
@@ -612,6 +610,7 @@ clip-path:polygon(
 0% 55%,
 38% 55%
 );
+
 -webkit-clip-path:polygon(
 38% 0%,
 62% 0%,
@@ -1909,11 +1908,11 @@ if(!preloadBtn)
 return;
 
 /*
-Кнопка доступна сразу,
-если OYA уже получил список кадров.
+1–51 кадров:
+кнопка доступна сразу после получения списка.
 
-1–51 = разрешено.
-52+ = всегда выключено.
+52+:
+кнопка всегда отключена.
 */
 
 const enabled=
@@ -1924,6 +1923,10 @@ oyaTimes.length<52;
 if(!enabled){
 
 preloadBtn.disabled=true;
+preloadBtn.setAttribute(
+"disabled",
+""
+);
 
 preloadBtn.classList.remove(
 "loading",
@@ -1947,14 +1950,16 @@ return;
 }
 
 /*
-Важно:
-кнопка НЕ зависит от allLoaded.
-Она должна быть активной сразу.
+Кнопка НЕ ждёт загрузки всех кадров.
 */
 
 if(oyaPreloading){
 
 preloadBtn.disabled=true;
+preloadBtn.setAttribute(
+"disabled",
+""
+);
 
 preloadBtn.title=
 "Загрузка кадров…";
@@ -1962,6 +1967,9 @@ preloadBtn.title=
 }else{
 
 preloadBtn.disabled=false;
+preloadBtn.removeAttribute(
+"disabled"
+);
 
 preloadBtn.title=
 "Загрузить все кадры";
@@ -2389,19 +2397,16 @@ onLoad,
 ========================================================= */
 
 /*
-Double-buffer.
+Настоящий double-buffer.
 
-Старый кадр не убирается сразу.
-Новый кадр:
+Новый кадр сначала полностью
+добавляется поверх старого.
 
-1. уже создан;
-2. уже добавлен поверх старого;
-3. дождался загрузки;
-4. получает два animation frame;
-5. только после этого старый удаляется.
+Старый кадр удаляется только после
+двух animation frame + небольшой задержки.
 
-Это убирает белый/прозрачный промежуток
-при быстром переключении кадров.
+Это предотвращает видимый промежуток
+между кадрами при быстром переключении.
 */
 
 function swapOyaOverlay(
@@ -2421,6 +2426,11 @@ newOverlay;
 oyaImageBlobUrl=
 newBlobUrl;
 
+/*
+Если старого кадра нет,
+новый просто остаётся на карте.
+*/
+
 if(
 !oldImage ||
 !map.hasLayer(oldImage)
@@ -2434,9 +2444,15 @@ oldBlobUrl!==newBlobUrl
 setTimeout(
 ()=>{
 
+if(
+oldBlobUrl!==oyaImageBlobUrl
+){
+
 revokeOyaBlobUrl(
 oldBlobUrl
 );
+
+}
 
 },
 50
@@ -2449,8 +2465,9 @@ return;
 }
 
 /*
-Сначала даём браузеру отрисовать
-новый overlay поверх старого.
+Два кадра отрисовки дают браузеру
+возможность реально показать новый
+overlay поверх старого.
 */
 
 requestAnimationFrame(
@@ -2461,15 +2478,6 @@ requestAnimationFrame(
 
 setTimeout(
 ()=>{
-
-/*
-Если oldImage уже не текущий,
-его можно удалить.
-
-Если за это время появился
-ещё более новый кадр, это тоже
-безопасно.
-*/
 
 if(
 oldImage &&
@@ -2709,9 +2717,7 @@ if(
 oyaPendingRequests.get(cacheKey)===promise
 ){
 
-oyaPendingRequests.delete(
-cacheKey
-);
+oyaPendingRequests.delete(cacheKey);
 
 }
 
@@ -2724,6 +2730,11 @@ cacheKey
 ========================================================= */
 
 async function preloadAllOyaFrames(){
+
+/*
+Строго:
+52+ кадров — никакой предзагрузки.
+*/
 
 if(
 activeLayer!=="oya" ||
@@ -2809,11 +2820,8 @@ cacheGeneration
 );
 
 /*
-Всегда пересчитываем реальное
-количество загруженных кадров,
-а не просто ++.
-
-Это исключает двойной подсчёт.
+Пересчитываем фактическое
+количество загруженных кадров.
 */
 
 const loadedCount=
@@ -3803,9 +3811,7 @@ radarLayer &&
 map.hasLayer(radarLayer)
 ){
 
-map.removeLayer(
-radarLayer
-);
+map.removeLayer(radarLayer);
 
 }
 
@@ -4774,9 +4780,7 @@ if(!oyaAllTimes.length)
 return;
 
 let count=
-Number(
-frameCountSlider.value
-) ||
+Number(frameCountSlider.value) ||
 oyaFrameCount ||
 50;
 
@@ -5004,9 +5008,7 @@ x.classList.remove(
 }
 );
 
-button.classList.add(
-"active"
-);
+button.classList.add("active");
 
 stopPlayback();
 
