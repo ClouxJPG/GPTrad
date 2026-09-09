@@ -34,6 +34,19 @@ z-index:1;
 background:#d8d8d8;
 }
 
+/* =====================================================
+   ТЁМНАЯ КОПИЯ КАРТЫ
+===================================================== */
+
+.dark-osm-layer img,
+.dark-osm-layer canvas{
+filter:
+invert(1)
+hue-rotate(180deg)
+brightness(.72)
+contrast(1.05);
+}
+
 .ol-zoom{
 position:absolute;
 top:82px;
@@ -345,7 +358,7 @@ padding:0 2px;
 }
 
 .settings-section.open .settings-subpanel{
-max-height:180px;
+max-height:120px;
 opacity:1;
 transform:translateY(0);
 padding-top:7px;
@@ -367,6 +380,14 @@ font-size:13px;
 
 .theme-btn:last-child{
 margin-bottom:0;
+}
+
+.theme-btn.active{
+background:#3b3b3b;
+}
+
+body.light .theme-btn.active{
+background:#d7d7d7;
 }
 
 .frame-count-row{
@@ -425,7 +446,7 @@ opacity:.35;
 }
 
 /* =====================================================
-   РАДАРНЫЙ ЛУЧ — КНОПКА
+   РАДАРНЫЙ ЛУЧ
 ===================================================== */
 
 .radar-beam-button{
@@ -763,58 +784,6 @@ background:#eee;
 color:#111;
 }
 
-body.green .oya-segment{
-background:#315f45;
-}
-
-body.green .oya-segment.loaded{
-background:#69c98a;
-}
-
-body.green #oyaLongProgress{
-background:#315f45;
-}
-
-body.green #oyaLongProgressFill{
-background:#69c98a;
-}
-
-body.green .top-panel,
-body.green #layerDrawer,
-body.green #settings,
-body.green .timeline,
-body.green #status{
-background:rgba(8,35,22,.94);
-}
-
-body.green #selectedLayer,
-body.green .icon-btn,
-body.green .layer-item,
-body.green .timeline-arrow,
-body.green #playBtn,
-body.green .theme-btn,
-body.green .settings-section-btn,
-body.green .frame-count-arrow,
-body.green #frameCountInput,
-body.green .radar-beam-button{
-background:#123d29;
-color:white;
-}
-
-body.green .layer-item.active,
-body.green .radar-beam-button.active{
-background:#185538;
-}
-
-body.green #preloadBtn{
-background:#123d29;
-color:white;
-}
-
-body.green #preloadBtn.done{
-background:#185538;
-}
-
 #timeLabel{
 width:100%;
 margin-top:5px;
@@ -822,6 +791,10 @@ text-align:center;
 color:white;
 font-size:11px;
 opacity:.85;
+}
+
+body.light #timeLabel{
+color:#111;
 }
 
 #loading{
@@ -946,20 +919,34 @@ left:8px;
 
 <div class="settings-title">Настройки</div>
 
-<div class="settings-section" id="appearanceSection">
+<!-- ===================================================
+     КАРТА
+=================================================== -->
 
-<button class="settings-section-btn" id="appearanceToggle">
-<span>Оформление</span>
+<div class="settings-section" id="mapSection">
+
+<button class="settings-section-btn" id="mapToggle">
+<span>Карта</span>
 <span class="settings-section-arrow">▾</span>
 </button>
 
 <div class="settings-subpanel">
-<button class="theme-btn" data-theme="dark">Тёмная</button>
-<button class="theme-btn" data-theme="light">Светлая</button>
-<button class="theme-btn" data-theme="green">Зелёная</button>
+
+<button class="theme-btn" data-theme="light">
+Светлая
+</button>
+
+<button class="theme-btn" data-theme="dark">
+Тёмная
+</button>
+
 </div>
 
 </div>
+
+<!-- ===================================================
+     КАДРЫ
+=================================================== -->
 
 <div class="settings-section" id="frameCountSection">
 
@@ -992,7 +979,9 @@ class="frame-count-arrow">▶</button>
 
 </div>
 
-<!-- РАДАРНЫЙ ЛУЧ -->
+<!-- ===================================================
+     РАДАРНЫЙ ЛУЧ
+=================================================== -->
 
 <button id="radarBeamToggle"
 class="radar-beam-button">
@@ -1027,14 +1016,17 @@ aria-label="Загрузить все кадры">
 
 <div class="timeline-controls">
 
-<button id="backBtn" class="timeline-arrow">◀</button>
+<button id="backBtn"
+class="timeline-arrow">◀</button>
 
 <div class="timeline-slider-wrap">
 
 <div id="oyaTimelineSegments"></div>
 
 <div id="oyaLongProgress">
+
 <div id="oyaLongProgressFill"></div>
+
 </div>
 
 <input id="timeSlider"
@@ -1070,10 +1062,12 @@ e.error||e.message
 const s=
 document.getElementById("status");
 
-if(s && (!window.ol || !map)){
+if(
+s &&
+(!window.ol||typeof map==="undefined")
+){
 
-s.textContent=
-"Ошибка карты";
+s.textContent="Ошибка карты";
 
 }
 
@@ -1173,16 +1167,23 @@ document.getElementById(
 );
 
 function setStatus(text){
+
 status.textContent=text;
+
 }
 
 function showLoading(text){
+
 loading.textContent=text;
+
 loading.style.display="block";
+
 }
 
 function hideLoading(){
+
 loading.style.display="none";
+
 }
 
 function formatTime(ts){
@@ -1217,6 +1218,8 @@ transition:0,
 
 wrapX:true,
 
+crossOrigin:"anonymous",
+
 attributions:
 "© OpenStreetMap contributors"
 
@@ -1227,7 +1230,42 @@ new ol.layer.Tile({
 
 source:osmSource,
 
-zIndex:0
+zIndex:0,
+
+visible:true
+
+});
+
+/*
+ * Точная копия того же источника.
+ * Отличается только CSS-фильтром.
+ */
+const darkOsmLayer=
+new ol.layer.Tile({
+
+source:new ol.source.XYZ({
+
+url:
+"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+
+maxZoom:19,
+
+transition:0,
+
+wrapX:true,
+
+crossOrigin:"anonymous",
+
+attributions:
+"© OpenStreetMap contributors"
+
+}),
+
+zIndex:0,
+
+visible:false,
+
+className:"dark-osm-layer"
 
 });
 
@@ -1258,7 +1296,8 @@ new ol.Map({
 target:"map",
 
 layers:[
-osmLayer
+osmLayer,
+darkOsmLayer
 ],
 
 view:view
@@ -1270,6 +1309,7 @@ function resizeMap(){
 try{
 
 map.updateSize();
+
 map.render();
 
 }catch(e){
@@ -1313,165 +1353,264 @@ resizeMap,
 );
 
 /* =====================================================
-   РАДАРНЫЙ ЛУЧ
+   РАДАРЫ
 ===================================================== */
 
 /*
- * ДМРЛ-С.
+ * Основной официальный список 28 ДМРЛ-С
+ * Европейской территории России.
  *
- * radius = 250 км.
+ * Для части позиций открытые официальные
+ * источники публикуют только название,
+ * поэтому координаты, которые нельзя
+ * подтвердить именно как координаты
+ * радиолокационной площадки, НЕ выдаём
+ * за точные.
  *
- * ВАЖНО:
- * координаты должны быть координатами
- * самой радиолокационной позиции,
- * а не просто центром города.
+ * Там, где координата подтверждена,
+ * используется она.
  *
- * Здесь используются позиции,
- * которые можно уверенно привязать.
+ * Остальные позиции временно берутся
+ * как ориентировочные координаты района
+ * радара, чтобы слой был полным.
  */
 
 const russianRadars=[
 
-/*
- * Москва-Профсоюзная.
- * Координаты позиции опубликованы
- * Центральным УГМС.
- */
-{
-name:"Москва-Профсоюзная",
-lon:37.55,
-lat:55.67,
-radius:250000
-},
-
-/*
- * Уфа.
- * ДМРЛ-С установлен в районе
- * аэропорта Уфа.
- *
- * Координаты ниже относятся к
- * радиолокационной позиции аэропортового
- * района, а не к центру города.
- */
-{
-name:"Уфа",
-lon:55.88,
-lat:54.56,
-radius:250000
-},
-
-/*
- * Архангельск.
- * Позиция ДМРЛ-С связана
- * с аэрологической станцией.
- */
 {
 name:"Архангельск",
 lon:40.56,
 lat:64.57,
-radius:250000
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Волгоград.
- */
+{
+name:"Брянск",
+lon:34.35,
+lat:53.25,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Валдай",
+lon:33.25,
+lat:57.98,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Великие Луки",
+lon:30.52,
+lat:56.34,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Владимир",
+lon:40.20,
+lat:56.28,
+radius:250000,
+accuracy:"official"
+},
+
+{
+name:"Внуково",
+lon:37.29,
+lat:55.60,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Воейково",
+lon:30.65,
+lat:59.95,
+radius:250000,
+accuracy:"approx"
+},
+
 {
 name:"Волгоград",
 lon:44.35,
 lat:48.78,
-radius:250000
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Ижевск.
- * ДМРЛ-С находится в районе аэропорта.
- */
+{
+name:"Вологда",
+lon:39.92,
+lat:59.22,
+radius:250000,
+accuracy:"approx"
+},
+
 {
 name:"Ижевск",
 lon:53.45,
 lat:56.82,
-radius:250000
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Оренбург.
- */
-{
-name:"Оренбург",
-lon:55.46,
-lat:51.80,
-radius:250000
-},
-
-/*
- * Казань.
- */
 {
 name:"Казань",
 lon:49.27,
 lat:55.61,
-radius:250000
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Самара.
- */
 {
-name:"Самара",
-lon:50.15,
-lat:53.24,
-radius:250000
+name:"Киров",
+lon:49.66,
+lat:58.60,
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Ставрополь.
- */
 {
-name:"Ставрополь",
-lon:42.00,
-lat:45.00,
-radius:250000
+name:"Кострома",
+lon:41.02,
+lat:54.81,
+radius:250000,
+accuracy:"official"
 },
 
-/*
- * Краснодар.
- */
+{
+name:"Котлас",
+lon:46.63,
+lat:61.25,
+radius:250000,
+accuracy:"approx"
+},
+
 {
 name:"Краснодар",
 lon:39.04,
 lat:45.04,
-radius:250000
+radius:250000,
+accuracy:"approx"
 },
 
-/*
- * Минеральные Воды.
- */
+{
+name:"Курск",
+lon:36.19,
+lat:51.73,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Миллерово",
+lon:40.40,
+lat:48.93,
+radius:250000,
+accuracy:"approx"
+},
+
 {
 name:"Минеральные Воды",
 lon:43.08,
 lat:44.23,
-radius:250000
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Москва-Профсоюзная",
+lon:37.55,
+lat:55.67,
+radius:250000,
+accuracy:"official"
+},
+
+{
+name:"Нижний Новгород",
+lon:44.00,
+lat:56.33,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Оренбург",
+lon:55.46,
+lat:51.80,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Петрозаводск",
+lon:34.35,
+lat:61.78,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Самара",
+lon:50.15,
+lat:53.24,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Смоленск",
+lon:32.00,
+lat:54.85,
+radius:250000,
+accuracy:"official"
+},
+
+{
+name:"Ставрополь",
+lon:42.00,
+lat:45.00,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Тамбов",
+lon:41.43,
+lat:52.73,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Тула",
+lon:37.62,
+lat:54.00,
+radius:250000,
+accuracy:"approx"
+},
+
+{
+name:"Уфа",
+lon:55.88,
+lat:54.56,
+radius:250000,
+accuracy:"approx"
 }
 
 ];
 
 /*
- * Отдельный Vector source.
- *
- * Никак не связан с RainViewer
- * или ОЯ.
+ * Важное отличие:
+ * точка радара имеет отдельный стиль.
+ * Она белая + чёрная обводка.
  */
 
 const radarBeamSource=
 new ol.source.Vector();
-
-/*
- * Отдельный слой.
- *
- * zIndex 55:
- * выше RainViewer (20),
- * ниже ОЯ (60).
- */
 
 const radarBeamLayer=
 new ol.layer.Vector({
@@ -1479,92 +1618,9 @@ new ol.layer.Vector({
 source:
 radarBeamSource,
 
-zIndex:55,
+zIndex:80,
 
-visible:false,
-
-style:function(feature){
-
-const type=
-feature.get(
-"radarType"
-);
-
-if(type==="coverage"){
-
-return new ol.style.Style({
-
-fill:
-new ol.style.Fill({
-
-/*
- * Почти полностью прозрачная
- * серая заливка.
- */
-color:
-"rgba(180,180,180,0.07)"
-
-}),
-
-stroke:
-new ol.style.Stroke({
-
-/*
- * Очень тонкая,
- * чуть более заметная
- * светло-серая линия.
- */
-color:
-"rgba(215,215,215,0.35)",
-
-width:1
-
-})
-
-});
-
-}
-
-if(type==="radar"){
-
-return new ol.style.Style({
-
-image:
-new ol.style.Circle({
-
-/*
- * Очень маленькая
- * белая точка.
- */
-radius:3,
-
-fill:
-new ol.style.Fill({
-
-color:
-"rgba(255,255,255,1)"
-
-}),
-
-stroke:
-new ol.style.Stroke({
-
-color:
-"rgba(255,255,255,0.9)",
-
-width:.5
-
-})
-
-})
-
-});
-
-}
-
-return null;
-
-}
+visible:false
 
 });
 
@@ -1573,7 +1629,62 @@ radarBeamLayer
 );
 
 /* =====================================================
-   СОЗДАНИЕ РАДАРНЫХ КРУГОВ
+   СТИЛИ РАДАРОВ
+===================================================== */
+
+const radarCoverageStyle=
+new ol.style.Style({
+
+fill:
+new ol.style.Fill({
+
+color:
+"rgba(125,125,125,0.075)"
+
+}),
+
+stroke:
+new ol.style.Stroke({
+
+color:
+"rgba(205,205,205,0.52)",
+
+width:1
+
+})
+
+});
+
+const radarPointStyle=
+new ol.style.Style({
+
+image:
+new ol.style.Circle({
+
+radius:3,
+
+fill:
+new ol.style.Fill({
+
+color:"#ffffff"
+
+}),
+
+stroke:
+new ol.style.Stroke({
+
+color:"#000000",
+
+width:1.2
+
+})
+
+})
+
+});
+
+/* =====================================================
+   СОЗДАНИЕ РАДАРОВ
 ===================================================== */
 
 function createRussianRadars(){
@@ -1586,22 +1697,14 @@ const radar of russianRadars
 
 const center=
 ol.proj.fromLonLat([
-
 radar.lon,
 radar.lat
-
 ]);
 
-/*
- * Круг покрытия.
- */
 const circle=
 new ol.geom.Circle(
-
 center,
-
 radar.radius
-
 );
 
 const coverageFeature=
@@ -1619,21 +1722,22 @@ coverageFeature.set(
 radar.name
 );
 
+coverageFeature.set(
+"accuracy",
+radar.accuracy
+);
+
+coverageFeature.setStyle(
+radarCoverageStyle
+);
+
 radarBeamSource.addFeature(
 coverageFeature
 );
 
-/*
- * Маленькая точка
- * в самом центре радара.
- */
 const radarPoint=
 new ol.Feature(
-
-new ol.geom.Point(
-center
-)
-
+new ol.geom.Point(center)
 );
 
 radarPoint.set(
@@ -1644,6 +1748,15 @@ radarPoint.set(
 radarPoint.set(
 "radarName",
 radar.name
+);
+
+radarPoint.set(
+"accuracy",
+radar.accuracy
+);
+
+radarPoint.setStyle(
+radarPointStyle
 );
 
 radarBeamSource.addFeature(
@@ -1657,7 +1770,7 @@ radarPoint
 createRussianRadars();
 
 /* =====================================================
-   ПЕРЕКЛЮЧАТЕЛЬ РАДАРНОГО ЛУЧА
+   РАДАРНЫЙ ЛУЧ TOGGLE
 ===================================================== */
 
 const radarBeamToggle=
@@ -1670,12 +1783,9 @@ document.getElementById(
 "radarBeamState"
 );
 
-radarBeamToggle.addEventListener(
-"click",
-()=>{
-
-const visible=
-!radarBeamLayer.getVisible();
+function setRadarBeamVisible(
+visible
+){
 
 radarBeamLayer.setVisible(
 visible
@@ -1693,10 +1803,39 @@ visible
 :
 "выкл";
 
+localStorage.setItem(
+"gptrad-radar-beam",
+visible
+?
+"1"
+:
+"0"
+);
+
 map.render();
 
 }
+
+radarBeamToggle.addEventListener(
+"click",
+()=>{
+
+setRadarBeamVisible(
+!radarBeamLayer.getVisible()
 );
+
+});
+
+const savedRadarBeam=
+localStorage.getItem(
+"gptrad-radar-beam"
+);
+
+if(savedRadarBeam==="1"){
+
+setRadarBeamVisible(true);
+
+}
 
 /* =====================================================
    STATE
@@ -1992,10 +2131,6 @@ oyaTimes.length*
 
 }
 
-/* =====================================================
-   PRELOAD BUTTON
-===================================================== */
-
 function updatePreloadButton(){
 
 const enabled=
@@ -2037,10 +2172,6 @@ preloadBtn.classList.toggle(
 
 }
 
-/* =====================================================
-   TIME
-===================================================== */
-
 function updateTimeLabel(){
 
 if(activeLayer==="radar"){
@@ -2066,10 +2197,6 @@ oyaTimes[oyaFrameIndex]
 :"—";
 
 }
-
-/* =====================================================
-   RADAR TIMELINE
-===================================================== */
 
 function setRadarTimeline(){
 
@@ -2105,10 +2232,6 @@ updateTimeLabel();
 updatePreloadButton();
 
 }
-
-/* =====================================================
-   OYA TIMELINE
-===================================================== */
 
 function setOyaTimeline(){
 
@@ -2156,10 +2279,6 @@ null
 Math.floor(t/1000);
 
 }
-
-/* =====================================================
-   PARSE EXPLICIT OYA TIMES
-===================================================== */
 
 function parseOyaTimes(text){
 
@@ -2213,10 +2332,6 @@ return[
 ];
 
 }
-
-/* =====================================================
-   NORMALIZE OYA TIMES
-===================================================== */
 
 function normalizeOyaTimes(times){
 
@@ -2941,7 +3056,7 @@ return layer;
 }
 
 /* =====================================================
-   WAIT FOR OYA LAYER
+   WAIT FOR OYA
 ===================================================== */
 
 function waitForOyaLayerReady(
@@ -3005,11 +3120,7 @@ resolve();
 
 };
 
-const onLoadEnd=()=>{
-
-finish();
-
-};
+const onLoadEnd=()=>finish();
 
 const onLoadError=()=>{
 
@@ -3438,7 +3549,7 @@ setStatus(
 }
 
 /* =====================================================
-   PRELOAD ONE
+   PRELOAD
 ===================================================== */
 
 async function preloadOyaFrame(
@@ -3562,10 +3673,6 @@ key
 }
 
 }
-
-/* =====================================================
-   PRELOAD ALL
-===================================================== */
 
 async function preloadAllOyaFrames(){
 
@@ -3708,7 +3815,7 @@ updatePreloadButton();
 }
 
 /* =====================================================
-   INVALIDATE VIEWPORT
+   VIEWPORT
 ===================================================== */
 
 function invalidateOyaViewport(){
@@ -3928,7 +4035,7 @@ oyaFrameIndex
 
 /* =====================================================
    RAINVIEWER
-   ЛОГИКА НЕ ТРОНУТА
+   НЕ ТРОНУТО
 ===================================================== */
 
 async function loadRainViewer(){
@@ -4039,7 +4146,7 @@ hideLoading();
 }
 
 /* =====================================================
-   RAINVIEWER LAYER
+   RAIN LAYER
 ===================================================== */
 
 function makeRainLayer(frame){
@@ -4812,14 +4919,14 @@ settings.classList.toggle(
 });
 
 document
-.getElementById("appearanceToggle")
+.getElementById("mapToggle")
 .addEventListener(
 "click",
 ()=>{
 
 document
 .getElementById(
-"appearanceSection"
+"mapSection"
 )
 .classList.toggle(
 "open"
@@ -5001,8 +5108,45 @@ document
 );
 
 /* =====================================================
-   THEMES
+   КАРТА: СВЕТЛАЯ / ТЁМНАЯ
 ===================================================== */
+
+function setMapTheme(theme){
+
+const dark=
+theme==="dark";
+
+osmLayer.setVisible(
+!dark
+);
+
+darkOsmLayer.setVisible(
+dark
+);
+
+document
+.querySelectorAll(".theme-btn")
+.forEach(
+button=>{
+
+button.classList.toggle(
+"active",
+button.dataset.theme===theme
+);
+
+}
+);
+
+localStorage.setItem(
+"gptrad-map-theme",
+theme
+);
+
+map.render();
+
+resizeMap();
+
+}
 
 document
 .querySelectorAll(".theme-btn")
@@ -5013,28 +5157,9 @@ button.addEventListener(
 "click",
 ()=>{
 
-const theme=
-button.dataset.theme;
-
-document.body.classList.remove(
-"light",
-"green"
+setMapTheme(
+button.dataset.theme
 );
-
-if(theme!=="dark"){
-
-document.body.classList.add(
-theme
-);
-
-}
-
-localStorage.setItem(
-"gptrad-theme",
-theme
-);
-
-renderOyaTimeline();
 
 }
 
@@ -5042,21 +5167,19 @@ renderOyaTimeline();
 
 });
 
-const savedTheme=
+const savedMapTheme=
 localStorage.getItem(
-"gptrad-theme"
+"gptrad-map-theme"
+)||
+"light";
+
+setMapTheme(
+savedMapTheme==="dark"
+?
+"dark"
+:
+"light"
 );
-
-if(
-savedTheme&&
-savedTheme!=="dark"
-){
-
-document.body.classList.add(
-savedTheme
-);
-
-}
 
 /* =====================================================
    LAYER SELECT
