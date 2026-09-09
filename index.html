@@ -920,13 +920,13 @@ left:8px;
 <div class="settings-title">Настройки</div>
 
 <!-- ===================================================
-     КАРТА
+     ОФОРМЛЕНИЕ
 =================================================== -->
 
-<div class="settings-section" id="mapSection">
+<div class="settings-section" id="appearanceSection">
 
-<button class="settings-section-btn" id="mapToggle">
-<span>Карта</span>
+<button class="settings-section-btn" id="appearanceToggle">
+<span>Оформление</span>
 <span class="settings-section-arrow">▾</span>
 </button>
 
@@ -1352,31 +1352,11 @@ resizeMap,
    РАДАРЫ
 ===================================================== */
 
-/*
- * Координаты радаров получаются через
- * существующий proxy:
- *
- * /api/oya?action=vector
- *
- * Формат ответа:
- *
- * [
- *   [latitude, longitude, distance, bearing],
- *   ...
- * ]
- *
- * Используем только latitude / longitude.
- *
- * distance и bearing здесь НЕ используются
- * для размера круга, потому что это параметры
- * векторного поля, а не радиус покрытия радара.
- */
-
 const RADAR_VECTOR_PROXY=
 "/api/oya?action=vector";
 
 const RADAR_COVERAGE_RADIUS=
-250000;
+300000;
 
 const RADAR_UPDATE_INTERVAL=
 5*60*1000;
@@ -1477,12 +1457,6 @@ if(
 return;
 
 }
-
-/*
- * Не очищаем слой до проверки новых данных.
- * Это предотвращает исчезновение радаров при
- * временном сбое сети.
- */
 
 radarBeamSource.clear();
 
@@ -1662,7 +1636,7 @@ lon
 }
 
 /*
- * Удаляем дубликаты координат.
+ * Удаляем только настоящие дубликаты.
  */
 
 const unique=[];
@@ -1689,6 +1663,11 @@ seen.add(key);
 unique.push(radar);
 
 }
+
+console.log(
+"Radar positions:",
+unique.length
+);
 
 return unique;
 
@@ -1735,12 +1714,6 @@ radarPositions
 
 }
 
-/*
- * Загружаем координаты после создания карты.
- * Это не блокирует карту и не задерживает
- * RainViewer/OYA.
- */
-
 setTimeout(
 ()=>{
 
@@ -1749,10 +1722,6 @@ updateRadarPositions();
 },
 300
 );
-
-/*
- * Периодическое обновление.
- */
 
 setInterval(
 ()=>{
@@ -4918,21 +4887,29 @@ settings.classList.toggle(
 
 });
 
+/* =====================================================
+   ОФОРМЛЕНИЕ
+===================================================== */
+
 document
-.getElementById("mapToggle")
+.getElementById("appearanceToggle")
 .addEventListener(
 "click",
 ()=>{
 
 document
 .getElementById(
-"mapSection"
+"appearanceSection"
 )
 .classList.toggle(
 "open"
 );
 
 });
+
+/* =====================================================
+   FRAME COUNT
+===================================================== */
 
 document
 .getElementById("frameCountToggle")
@@ -5135,6 +5112,11 @@ button.dataset.theme===theme
 );
 
 }
+);
+
+document.body.classList.toggle(
+"light",
+theme==="light"
 );
 
 localStorage.setItem(
