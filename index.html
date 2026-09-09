@@ -1584,7 +1584,7 @@ Math.floor(t/1000);
 }
 
 /* =====================================================
-   PARSE OYA TIMES
+   PARSE EXPLICIT OYA TIMES
 ===================================================== */
 
 function parseOyaTimes(text){
@@ -1603,7 +1603,37 @@ const value of text
 const unix=isoToUnix(value);
 
 if(unix!==null){
+
+/*
+ * OYA кадры должны идти
+ * по 10-минутной сетке.
+ *
+ * Значения вроде:
+ * 18:05
+ * 18:15
+ * 18:25
+ *
+ * отбрасываем.
+ */
+
+const date=
+new Date(unix*1000);
+
+const minute=
+date.getUTCMinutes();
+
+const second=
+date.getUTCSeconds();
+
+if(
+minute%10===0&&
+second===0
+){
+
 result.push(unix);
+
+}
+
 }
 
 }
@@ -1611,6 +1641,74 @@ result.push(unix);
 return[
 ...new Set(result)
 ];
+
+}
+
+/* =====================================================
+   NORMALIZE OYA TIMES
+===================================================== */
+
+function normalizeOyaTimes(times){
+
+const now=
+Math.floor(
+Date.now()/1000
+);
+
+const result=[];
+
+for(const time of times){
+
+if(!Number.isFinite(time)){
+continue;
+}
+
+/*
+ * Будущие кадры нам не нужны.
+ */
+
+if(time>now){
+continue;
+}
+
+const date=
+new Date(time*1000);
+
+const minute=
+date.getUTCMinutes();
+
+const second=
+date.getUTCSeconds();
+
+/*
+ * Оставляем только:
+ *
+ * XX:00
+ * XX:10
+ * XX:20
+ * XX:30
+ * XX:40
+ * XX:50
+ */
+
+if(
+minute%10!==0||
+second!==0
+){
+
+continue;
+
+}
+
+result.push(time);
+
+}
+
+return[
+...new Set(result)
+].sort(
+(a,b)=>a-b
+);
 
 }
 
@@ -1679,7 +1777,11 @@ text,
 );
 
 if(xml.querySelector("parsererror")){
-throw new Error("Ошибка XML");
+
+throw new Error(
+"Ошибка XML"
+);
+
 }
 
 let times=[];
@@ -1700,7 +1802,8 @@ continue;
 
 }
 
-const name=node.getAttribute("name");
+const name=
+node.getAttribute("name");
 
 if(
 name&&
@@ -1717,47 +1820,68 @@ const value=
 if(!value)continue;
 
 /* =====================================================
-   ИНТЕРВАЛ В GETCAPABILITIES
+   ИНТЕРВАЛ
 ===================================================== */
 
 if(value.includes("/")){
 
-const parts=value.split("/");
+const parts=
+value.split("/");
 
-const start=isoToUnix(parts[0]);
-const end=isoToUnix(parts[1]);
+const start=
+isoToUnix(parts[0]);
+
+const end=
+isoToUnix(parts[1]);
 
 if(
 start!==null&&
-end!==null
+end!==null&&
+end>=start
 ){
 
 /*
- * Реальные кадры OYA идут
- * с интервалом 10 минут.
+ * ВАЖНО:
  *
- * Не используем шаг, который
- * сервер может написать в capabilities.
+ * Не начинаем отсчёт
+ * от start.
+ *
+ * Если сервер написал:
+ *
+ * 18:05 / 23:55
+ *
+ * старый код создавал:
+ *
+ * 18:05
+ * 18:15
+ * 18:25
+ *
+ * Теперь сначала выравниваем
+ * начало на глобальную
+ * 10-минутную сетку UTC.
  */
 
 const step=600;
+
+const alignedStart=
+Math.ceil(
+start/step
+)*step;
 
 const now=
 Math.floor(
 Date.now()/1000
 );
 
-/*
- * Разрешаем только актуальное
- * прошлое и небольшой запас.
- */
-
 const lastAllowed=
-now+120;
+Math.min(
+end,
+now
+);
 
 for(
-let t=start;
-t<=end&&t<=lastAllowed;
+let t=alignedStart;
+t<=lastAllowed;
 t+=step
 ){
 
@@ -1770,8 +1894,13 @@ times.push(t);
 }else{
 
 /*
- * Если сервер прислал конкретный
- * список времён — используем его.
+ * Конкретный список времени.
+ *
+ * Здесь НЕ генерируем новые
+ * значения.
+ *
+ * Берём только то,
+ * что реально прислал сервер.
  */
 
 times.push(
@@ -1782,32 +1911,19 @@ times.push(
 
 }
 
-oyaAllTimes=[
-...new Set(times)
-].sort(
-(a,b)=>a-b
-);
-
-/*
- * Убираем будущие времена,
- * которые могли прийти отдельным
- * списком, а не интервалом.
- */
-
-const now=
-Math.floor(
-Date.now()/1000
-)+120;
+/* =====================================================
+   ФИНАЛЬНАЯ ФИЛЬТРАЦИЯ
+===================================================== */
 
 oyaAllTimes=
-oyaAllTimes.filter(
-t=>t<=now
+normalizeOyaTimes(
+times
 );
 
 if(!oyaAllTimes.length){
 
 throw new Error(
-"В GetCapabilities нет времени"
+"В GetCapabilities нет актуального времени"
 );
 
 }
