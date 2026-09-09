@@ -1236,10 +1236,6 @@ visible:true
 
 });
 
-/*
- * Точная копия того же источника.
- * Отличается только CSS-фильтром.
- */
 const darkOsmLayer=
 new ol.layer.Tile({
 
@@ -1357,279 +1353,38 @@ resizeMap,
 ===================================================== */
 
 /*
- * Основной официальный список 28 ДМРЛ-С
- * Европейской территории России.
+ * Координаты радаров получаются через
+ * существующий proxy:
  *
- * Для части позиций открытые официальные
- * источники публикуют только название,
- * поэтому координаты, которые нельзя
- * подтвердить именно как координаты
- * радиолокационной площадки, НЕ выдаём
- * за точные.
+ * /api/oya?action=vector
  *
- * Там, где координата подтверждена,
- * используется она.
+ * Формат ответа:
  *
- * Остальные позиции временно берутся
- * как ориентировочные координаты района
- * радара, чтобы слой был полным.
+ * [
+ *   [latitude, longitude, distance, bearing],
+ *   ...
+ * ]
+ *
+ * Используем только latitude / longitude.
+ *
+ * distance и bearing здесь НЕ используются
+ * для размера круга, потому что это параметры
+ * векторного поля, а не радиус покрытия радара.
  */
 
-const russianRadars=[
+const RADAR_VECTOR_PROXY=
+"/api/oya?action=vector";
 
-{
-name:"Архангельск",
-lon:40.56,
-lat:64.57,
-radius:250000,
-accuracy:"approx"
-},
+const RADAR_COVERAGE_RADIUS=
+250000;
 
-{
-name:"Брянск",
-lon:34.35,
-lat:53.25,
-radius:250000,
-accuracy:"approx"
-},
+const RADAR_UPDATE_INTERVAL=
+5*60*1000;
 
-{
-name:"Валдай",
-lon:33.25,
-lat:57.98,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Великие Луки",
-lon:30.52,
-lat:56.34,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Владимир",
-lon:40.20,
-lat:56.28,
-radius:250000,
-accuracy:"official"
-},
-
-{
-name:"Внуково",
-lon:37.29,
-lat:55.60,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Воейково",
-lon:30.65,
-lat:59.95,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Волгоград",
-lon:44.35,
-lat:48.78,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Вологда",
-lon:39.92,
-lat:59.22,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Ижевск",
-lon:53.45,
-lat:56.82,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Казань",
-lon:49.27,
-lat:55.61,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Киров",
-lon:49.66,
-lat:58.60,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Кострома",
-lon:41.02,
-lat:54.81,
-radius:250000,
-accuracy:"official"
-},
-
-{
-name:"Котлас",
-lon:46.63,
-lat:61.25,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Краснодар",
-lon:39.04,
-lat:45.04,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Курск",
-lon:36.19,
-lat:51.73,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Миллерово",
-lon:40.40,
-lat:48.93,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Минеральные Воды",
-lon:43.08,
-lat:44.23,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Москва-Профсоюзная",
-lon:37.55,
-lat:55.67,
-radius:250000,
-accuracy:"official"
-},
-
-{
-name:"Нижний Новгород",
-lon:44.00,
-lat:56.33,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Оренбург",
-lon:55.46,
-lat:51.80,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Петрозаводск",
-lon:34.35,
-lat:61.78,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Самара",
-lon:50.15,
-lat:53.24,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Смоленск",
-lon:32.00,
-lat:54.85,
-radius:250000,
-accuracy:"official"
-},
-
-{
-name:"Ставрополь",
-lon:42.00,
-lat:45.00,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Тамбов",
-lon:41.43,
-lat:52.73,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Тула",
-lon:37.62,
-lat:54.00,
-radius:250000,
-accuracy:"approx"
-},
-
-{
-name:"Уфа",
-lon:55.88,
-lat:54.56,
-radius:250000,
-accuracy:"approx"
-}
-
-];
-
-/*
- * Важное отличие:
- * точка радара имеет отдельный стиль.
- * Она белая + чёрная обводка.
- */
-
-const radarBeamSource=
-new ol.source.Vector();
-
-const radarBeamLayer=
-new ol.layer.Vector({
-
-source:
-radarBeamSource,
-
-zIndex:80,
-
-visible:false
-
-});
-
-map.addLayer(
-radarBeamLayer
-);
+let radarPositions=[];
 
 /* =====================================================
-   СТИЛИ РАДАРОВ
+   РАДАРНЫЕ СТИЛИ
 ===================================================== */
 
 const radarCoverageStyle=
@@ -1639,7 +1394,7 @@ fill:
 new ol.style.Fill({
 
 color:
-"rgba(125,125,125,0.075)"
+"rgba(125,125,125,0.10)"
 
 }),
 
@@ -1647,7 +1402,7 @@ stroke:
 new ol.style.Stroke({
 
 color:
-"rgba(205,205,205,0.52)",
+"rgba(205,205,205,0.48)",
 
 width:1
 
@@ -1684,16 +1439,65 @@ width:1.2
 });
 
 /* =====================================================
-   СОЗДАНИЕ РАДАРОВ
+   РАДАРНЫЙ VECTOR LAYER
 ===================================================== */
 
-function createRussianRadars(){
+const radarBeamSource=
+new ol.source.Vector();
+
+const radarBeamLayer=
+new ol.layer.Vector({
+
+source:
+radarBeamSource,
+
+zIndex:80,
+
+visible:false
+
+});
+
+map.addLayer(
+radarBeamLayer
+);
+
+/* =====================================================
+   СОЗДАНИЕ РАДАРНЫХ КРУГОВ
+===================================================== */
+
+function renderRadarPositions(
+radars
+){
+
+if(
+!Array.isArray(radars)||
+!radars.length
+){
+
+return;
+
+}
+
+/*
+ * Не очищаем слой до проверки новых данных.
+ * Это предотвращает исчезновение радаров при
+ * временном сбое сети.
+ */
 
 radarBeamSource.clear();
 
 for(
-const radar of russianRadars
+const radar of radars
 ){
+
+if(
+!Number.isFinite(radar.lat)||
+!Number.isFinite(radar.lon)
+){
+
+continue;
+
+}
 
 const center=
 ol.proj.fromLonLat([
@@ -1704,7 +1508,7 @@ radar.lat
 const circle=
 new ol.geom.Circle(
 center,
-radar.radius
+RADAR_COVERAGE_RADIUS
 );
 
 const coverageFeature=
@@ -1718,13 +1522,13 @@ coverageFeature.set(
 );
 
 coverageFeature.set(
-"radarName",
-radar.name
+"radarLatitude",
+radar.lat
 );
 
 coverageFeature.set(
-"accuracy",
-radar.accuracy
+"radarLongitude",
+radar.lon
 );
 
 coverageFeature.setStyle(
@@ -1737,7 +1541,9 @@ coverageFeature
 
 const radarPoint=
 new ol.Feature(
-new ol.geom.Point(center)
+new ol.geom.Point(
+center
+)
 );
 
 radarPoint.set(
@@ -1746,13 +1552,13 @@ radarPoint.set(
 );
 
 radarPoint.set(
-"radarName",
-radar.name
+"radarLatitude",
+radar.lat
 );
 
 radarPoint.set(
-"accuracy",
-radar.accuracy
+"radarLongitude",
+radar.lon
 );
 
 radarPoint.setStyle(
@@ -1765,9 +1571,197 @@ radarPoint
 
 }
 
+map.render();
+
 }
 
-createRussianRadars();
+/* =====================================================
+   ПОЛУЧЕНИЕ КООРДИНАТ РАДАРОВ
+===================================================== */
+
+async function loadRadarPositions(){
+
+try{
+
+const response=
+await fetch(
+RADAR_VECTOR_PROXY,
+{
+cache:"no-store"
+}
+);
+
+if(!response.ok){
+
+throw new Error(
+"Radar vector HTTP "+
+response.status
+);
+
+}
+
+const data=
+await response.json();
+
+if(!Array.isArray(data)){
+
+throw new Error(
+"Invalid radar vector"
+);
+
+}
+
+const result=[];
+
+for(
+const item of data
+){
+
+if(
+!Array.isArray(item)||
+item.length<2
+){
+
+continue;
+
+}
+
+const lat=
+Number(item[0]);
+
+const lon=
+Number(item[1]);
+
+if(
+!Number.isFinite(lat)||
+!Number.isFinite(lon)
+){
+
+continue;
+
+}
+
+if(
+lat<-90||
+lat>90||
+lon<-180||
+lon>180
+){
+
+continue;
+
+}
+
+result.push({
+
+lat,
+lon
+
+});
+
+}
+
+/*
+ * Удаляем дубликаты координат.
+ */
+
+const unique=[];
+const seen=new Set();
+
+for(
+const radar of result
+){
+
+const key=
+radar.lat.toFixed(6)+","+
+radar.lon.toFixed(6);
+
+if(
+seen.has(key)
+){
+
+continue;
+
+}
+
+seen.add(key);
+
+unique.push(radar);
+
+}
+
+return unique;
+
+}catch(error){
+
+console.error(
+"Radar positions:",
+error
+);
+
+return[];
+
+}
+
+}
+
+/* =====================================================
+   ОБНОВЛЕНИЕ РАДАРОВ
+===================================================== */
+
+async function updateRadarPositions(){
+
+const radars=
+await loadRadarPositions();
+
+if(
+!radars.length
+){
+
+console.warn(
+"Radar coordinates were not received"
+);
+
+return;
+
+}
+
+radarPositions=
+radars;
+
+renderRadarPositions(
+radarPositions
+);
+
+}
+
+/*
+ * Загружаем координаты после создания карты.
+ * Это не блокирует карту и не задерживает
+ * RainViewer/OYA.
+ */
+
+setTimeout(
+()=>{
+
+updateRadarPositions();
+
+},
+300
+);
+
+/*
+ * Периодическое обновление.
+ */
+
+setInterval(
+()=>{
+
+updateRadarPositions();
+
+},
+RADAR_UPDATE_INTERVAL
+);
 
 /* =====================================================
    РАДАРНЫЙ ЛУЧ TOGGLE
@@ -1831,9 +1825,13 @@ localStorage.getItem(
 "gptrad-radar-beam"
 );
 
-if(savedRadarBeam==="1"){
+if(
+savedRadarBeam==="1"
+){
 
-setRadarBeamVisible(true);
+setRadarBeamVisible(
+true
+);
 
 }
 
@@ -4821,6 +4819,8 @@ document
 ()=>{
 
 stopPlayback();
+
+updateRadarPositions();
 
 if(activeLayer==="oya"){
 
