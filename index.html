@@ -1002,10 +1002,6 @@ left:8px;
 
 <div class="settings-title">Настройки</div>
 
-<!-- =====================================================
-     ОФОРМЛЕНИЕ — ТОЛЬКО ИНТЕРФЕЙС
-===================================================== -->
-
 <div class="settings-section" id="appearanceSection">
 
 <button class="settings-section-btn" id="appearanceToggle">
@@ -1026,10 +1022,6 @@ left:8px;
 </div>
 
 </div>
-
-<!-- =====================================================
-     КАРТА — ТОЛЬКО КАРТА
-===================================================== -->
 
 <div class="settings-section" id="mapSection">
 
@@ -1060,10 +1052,6 @@ class="map-action-btn">
 
 </div>
 
-<!-- =====================================================
-     ПРОЗРАЧНОСТЬ OYA
-===================================================== -->
-
 <div class="settings-section" id="opacitySection">
 
 <button class="settings-section-btn" id="opacityToggle">
@@ -1082,7 +1070,7 @@ class="map-action-btn">
 </span>
 
 <span id="oyaOpacityValue">
-100%
+90%
 </span>
 
 </div>
@@ -1093,7 +1081,7 @@ type="range"
 min="0"
 max="100"
 step="1"
-value="100">
+value="90">
 
 <div class="opacity-hints">
 
@@ -1107,10 +1095,6 @@ value="100">
 </div>
 
 </div>
-
-<!-- =====================================================
-     КАДРЫ
-===================================================== -->
 
 <div class="settings-section" id="frameCountSection">
 
@@ -1258,10 +1242,6 @@ throw new Error(
 
 }
 
-/* =====================================================
-   ELEMENTS
-===================================================== */
-
 const status=
 document.getElementById("status");
 
@@ -1337,23 +1317,16 @@ document.getElementById(
 );
 
 function setStatus(text){
-
 status.textContent=text;
-
 }
 
 function showLoading(text){
-
 loading.textContent=text;
-
 loading.style.display="block";
-
 }
 
 function hideLoading(){
-
 loading.style.display="none";
-
 }
 
 function formatTime(ts){
@@ -1371,10 +1344,6 @@ minute:"2-digit"
 );
 
 }
-
-/* =====================================================
-   MAP
-===================================================== */
 
 const DEFAULT_MAP_CENTER=
 [37.61,55.75];
@@ -1479,7 +1448,6 @@ function resizeMap(){
 try{
 
 map.updateSize();
-
 map.render();
 
 }catch(e){
@@ -1522,16 +1490,8 @@ resizeMap,
 1000
 );
 
-/* =====================================================
-   РАДАРЫ
-===================================================== */
-
 const RADAR_VECTOR_PROXY=
 "/api/oya?action=vector";
-
-/*
- * 310 км — радиус радарного луча.
- */
 
 const RADAR_COVERAGE_RADIUS=
 310000;
@@ -1554,10 +1514,6 @@ lon:40.20
 ];
 
 let radarPositions=[];
-
-/* =====================================================
-   РАДАРНЫЕ СТИЛИ
-===================================================== */
 
 const radarCoverageStyle=
 new ol.style.Style({
@@ -1610,10 +1566,6 @@ width:1.2
 
 });
 
-/* =====================================================
-   РАДАРНЫЙ VECTOR LAYER
-===================================================== */
-
 const radarBeamSource=
 new ol.source.Vector();
 
@@ -1633,13 +1585,7 @@ map.addLayer(
 radarBeamLayer
 );
 
-/* =====================================================
-   СОЗДАНИЕ РАДАРНЫХ КРУГОВ
-===================================================== */
-
-function renderRadarPositions(
-radars
-){
+function renderRadarPositions(radars){
 
 if(
 !Array.isArray(radars)||
@@ -1741,10 +1687,6 @@ map.render();
 
 }
 
-/* =====================================================
-   ОБЪЕДИНЕНИЕ РАДАРНЫХ ТОЧЕК
-===================================================== */
-
 function mergeRadarPositions(
 dynamicPositions
 ){
@@ -1797,10 +1739,6 @@ lon:radar.lon
 return result;
 
 }
-
-/* =====================================================
-   ПОЛУЧЕНИЕ КООРДИНАТ РАДАРОВ
-===================================================== */
 
 async function loadRadarPositions(){
 
@@ -1909,10 +1847,6 @@ return mergeRadarPositions([]);
 
 }
 
-/* =====================================================
-   ОБНОВЛЕНИЕ РАДАРОВ
-===================================================== */
-
 async function updateRadarPositions(){
 
 const radars=
@@ -1956,10 +1890,6 @@ updateRadarPositions();
 },
 RADAR_UPDATE_INTERVAL
 );
-
-/* =====================================================
-   РАДАРНЫЙ ЛУЧ TOGGLE
-===================================================== */
 
 const radarBeamToggle=
 document.getElementById(
@@ -2029,10 +1959,6 @@ true
 
 }
 
-/* =====================================================
-   STATE
-===================================================== */
-
 let activeLayer="radar";
 
 let radarLayer=null;
@@ -2046,10 +1972,6 @@ let rainFrameRequestId=0;
 let playing=false;
 
 let playTimer=null;
-
-/* =====================================================
-   OYA STATE
-===================================================== */
 
 let oyaAllTimes=[];
 let oyaTimes=[];
@@ -2094,6 +2016,14 @@ const OYA_LAYER=
 const OYA_OPACITY_STORAGE_KEY=
 "gptrad-oya-opacity";
 
+/*
+ * 90% по умолчанию.
+ *
+ * 0%   = полностью прозрачный
+ * 90%  = непрозрачность 0.90
+ * 100% = полностью непрозрачный
+ */
+
 let oyaOpacity=
 Number(
 localStorage.getItem(
@@ -2107,7 +2037,7 @@ oyaOpacity<0||
 oyaOpacity>100
 ){
 
-oyaOpacity=100;
+oyaOpacity=90;
 
 }
 
@@ -2128,7 +2058,7 @@ if(
 !Number.isFinite(value)
 ){
 
-value=100;
+value=90;
 
 }
 
@@ -4248,12 +4178,12 @@ loadOyaFrame(
 oyaFrameIndex
 );
 
-}
-
 /* =====================================================
    RAINVIEWER
    НЕ ТРОНУТО
 ===================================================== */
+
+}
 
 async function loadRainViewer(){
 
@@ -5081,10 +5011,6 @@ loadRainViewer();
 
 });
 
-/* =====================================================
-   SETTINGS
-===================================================== */
-
 document
 .getElementById("settingsBtn")
 .addEventListener(
@@ -5168,10 +5094,6 @@ duration:600
 });
 
 });
-
-/* =====================================================
-   FRAME COUNT
-===================================================== */
 
 document
 .getElementById("frameCountToggle")
@@ -5342,10 +5264,6 @@ document
 ()=>changeOyaFrameCount(1)
 );
 
-/* =====================================================
-   ОФОРМЛЕНИЕ ИНТЕРФЕЙСА
-===================================================== */
-
 function setInterfaceTheme(theme){
 
 const light=
@@ -5412,10 +5330,6 @@ savedInterfaceTheme==="light"
 :
 "dark"
 );
-
-/* =====================================================
-   КАРТА: СВЕТЛАЯ / ТЁМНАЯ
-===================================================== */
 
 function setMapTheme(theme){
 
@@ -5486,10 +5400,6 @@ savedMapTheme==="dark"
 :
 "light"
 );
-
-/* =====================================================
-   LAYER SELECT
-===================================================== */
 
 selectedLayer.addEventListener(
 "click",
@@ -5566,10 +5476,6 @@ selectedLayer.classList.remove(
 );
 
 });
-
-/* =====================================================
-   INITIAL
-===================================================== */
 
 setOyaOpacity(
 oyaOpacity
