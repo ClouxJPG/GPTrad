@@ -1013,7 +1013,6 @@ window.addEventListener("unhandledrejection",function(e){
 console.error("GPTrad promise:",e.reason);
 });
 
-
 if(!window.ol){
 
 document.getElementById("status").textContent=
@@ -1022,7 +1021,6 @@ document.getElementById("status").textContent=
 throw new Error("OpenLayers unavailable");
 
 }
-
 
 /* =====================================================
    ELEMENTS
@@ -1057,7 +1055,6 @@ document.getElementById("preloadBtn");
 const playBtn=
 document.getElementById("playBtn");
 
-
 function setStatus(text){
 status.textContent=text;
 }
@@ -1071,18 +1068,11 @@ function hideLoading(){
 loading.style.display="none";
 }
 
-
-/* =====================================================
-   TIME FORMAT
-===================================================== */
-
 function formatTime(ts){
 
-if(!Number.isFinite(Number(ts)))return"—";
+if(!ts)return"—";
 
-return new Date(
-Number(ts)*1000
-).toLocaleTimeString(
+return new Date(ts*1000).toLocaleTimeString(
 "ru-RU",
 {
 hour:"2-digit",
@@ -1091,31 +1081,6 @@ minute:"2-digit"
 );
 
 }
-
-
-/*
- * Полный timestamp используется
- * для диагностики и title.
- */
-
-function formatTimestamp(ts){
-
-if(!Number.isFinite(Number(ts)))return"—";
-
-return new Date(
-Number(ts)*1000
-).toLocaleString(
-"ru-RU",
-{
-day:"2-digit",
-month:"2-digit",
-hour:"2-digit",
-minute:"2-digit"
-}
-);
-
-}
-
 
 /* =====================================================
    MAP
@@ -1135,7 +1100,6 @@ attributions:"© OpenStreetMap contributors"
 
 });
 
-
 const osmLayer=new ol.layer.Tile({
 
 source:osmSource,
@@ -1143,7 +1107,6 @@ source:osmSource,
 zIndex:0
 
 });
-
 
 const view=new ol.View({
 
@@ -1164,7 +1127,6 @@ enableRotation:false
 
 });
 
-
 const map=new ol.Map({
 
 target:"map",
@@ -1176,7 +1138,6 @@ osmLayer
 view:view
 
 });
-
 
 function resizeMap(){
 
@@ -1209,7 +1170,6 @@ setTimeout(resizeMap,100);
 setTimeout(resizeMap,500);
 setTimeout(resizeMap,1000);
 
-
 /* =====================================================
    STATE
 ===================================================== */
@@ -1227,7 +1187,6 @@ let rainFrameRequestId=0;
 let playing=false;
 
 let playTimer=null;
-
 
 /* =====================================================
    OYA STATE
@@ -1257,21 +1216,6 @@ let oyaViewportKey="";
 let viewportTimer=null;
 let oyaFrameRequestId=0;
 
-
-/*
- * Отдельный набор времени,
- * который уже был проверен WMS.
- *
- * Это важно:
- * GetCapabilities может вернуть
- * интервал, но не каждый момент
- * внутри интервала обязан иметь
- * реальный кадр.
- */
-
-const oyaValidatedTimes=new Set();
-
-
 /* =====================================================
    OYA
 ===================================================== */
@@ -1282,7 +1226,6 @@ const OYA_LAYER=
 "bufr_phenomena,"+
 "bufr_novosib_phenomena,"+
 "bufr_vlad_phenomena";
-
 
 /* =====================================================
    VIEWPORT
@@ -1344,62 +1287,14 @@ key
 
 }
 
-
 /* =====================================================
    OYA REQUEST
 ===================================================== */
 
-function getOyaRequestData(
-timeValue,
-small=false
-){
+function getOyaRequestData(timeValue){
 
 const viewport=
 getCurrentViewportData();
-
-let extent=viewport.extent;
-let width=viewport.width;
-let height=viewport.height;
-
-
-/*
- * Для проверки существования timestamp
- * не нужен огромный PNG.
- *
- * Используем маленькое изображение.
- */
-
-if(small){
-
-width=32;
-height=32;
-
-const centerX=
-(extent[0]+extent[2])/2;
-
-const centerY=
-(extent[1]+extent[3])/2;
-
-const halfX=
-Math.max(
-1000,
-(extent[2]-extent[0])*0.03
-);
-
-const halfY=
-Math.max(
-1000,
-(extent[3]-extent[1])*0.03
-);
-
-extent=[
-centerX-halfX,
-centerY-halfY,
-centerX+halfX,
-centerY+halfY
-];
-
-}
 
 const params=
 new URLSearchParams({
@@ -1418,11 +1313,11 @@ STYLES:"",
 
 SRS:"EPSG:3857",
 
-BBOX:extent.join(","),
+BBOX:viewport.extent.join(","),
 
-WIDTH:String(width),
+WIDTH:String(viewport.width),
 
-HEIGHT:String(height),
+HEIGHT:String(viewport.height),
 
 FORMAT:"image/png",
 
@@ -1456,7 +1351,6 @@ viewportKey:viewport.key
 };
 
 }
-
 
 /* =====================================================
    TIMELINE
@@ -1501,13 +1395,9 @@ segment.classList.add("current");
 }
 
 segment.title=
-formatTimestamp(
-oyaTimes[i]
-);
+formatTime(oyaTimes[i]);
 
-oyaTimelineSegments.appendChild(
-segment
-);
+oyaTimelineSegments.appendChild(segment);
 
 }
 
@@ -1533,7 +1423,6 @@ loaded/oyaTimes.length*100
 }
 
 }
-
 
 /* =====================================================
    PRELOAD BUTTON
@@ -1579,7 +1468,6 @@ preloadBtn.classList.toggle(
 
 }
 
-
 /* =====================================================
    TIME
 ===================================================== */
@@ -1609,7 +1497,6 @@ oyaTimes[oyaFrameIndex]
 :"—";
 
 }
-
 
 /* =====================================================
    RADAR TIMELINE
@@ -1647,7 +1534,6 @@ updatePreloadButton();
 
 }
 
-
 /* =====================================================
    OYA TIMELINE
 ===================================================== */
@@ -1681,7 +1567,6 @@ updatePreloadButton();
 
 }
 
-
 /* =====================================================
    ISO
 ===================================================== */
@@ -1697,65 +1582,6 @@ null
 Math.floor(t/1000);
 
 }
-
-
-/* =====================================================
-   ISO DURATION
-===================================================== */
-
-/*
- * Поддерживает:
- *
- * PT5M
- * PT10M
- * PT1H
- * PT1H30M
- * P1D
- *
- * GetCapabilities может отдавать
- * не только PT10M.
- */
-
-function parseIsoDuration(value){
-
-if(!value)return null;
-
-const text=
-String(value).trim().toUpperCase();
-
-const match=
-text.match(
-/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
-);
-
-if(!match)return null;
-
-const days=
-Number(match[1]||0);
-
-const hours=
-Number(match[2]||0);
-
-const minutes=
-Number(match[3]||0);
-
-const seconds=
-Number(match[4]||0);
-
-const total=
-days*86400+
-hours*3600+
-minutes*60+
-seconds;
-
-return total>0
-?
-Math.floor(total)
-:
-null;
-
-}
-
 
 /* =====================================================
    PARSE OYA TIMES
@@ -1787,176 +1613,6 @@ return[
 ];
 
 }
-
-
-/* =====================================================
-   OYA VALIDATION REQUEST
-===================================================== */
-
-/*
- * Проверяем timestamp через WMS.
- *
- * Если сервер говорит HTTP 4xx/5xx,
- * timestamp считается отсутствующим.
- *
- * Важно:
- * мы НЕ используем полноценный кадр
- * для этой проверки — только 32x32.
- */
-
-async function validateOyaTime(
-timeValue
-){
-
-if(
-oyaValidatedTimes.has(timeValue)
-){
-
-return true;
-
-}
-
-const data=
-getOyaRequestData(
-timeValue,
-true
-);
-
-try{
-
-const response=
-await fetch(
-data.url,
-{
-cache:"no-store"
-}
-);
-
-if(!response.ok){
-
-return false;
-
-}
-
-const blob=
-await response.blob();
-
-if(
-!blob||
-blob.size===0
-){
-
-return false;
-
-}
-
-
-/*
- * Сервер действительно вернул PNG.
- *
- * Для WMS это означает, что TIME
- * принят сервером.
- *
- * Даже полностью прозрачный кадр
- * считаем существующим: отсутствие
- * ОЯ на момент времени — это валидный
- * кадр, а не отсутствие timestamp.
- */
-
-oyaValidatedTimes.add(
-timeValue
-);
-
-return true;
-
-}catch(error){
-
-console.warn(
-"OYA timestamp validation:",
-formatTimestamp(timeValue),
-error
-);
-
-return false;
-
-}
-
-}
-
-
-/* =====================================================
-   VALIDATE OYA TIMES
-===================================================== */
-
-/*
- * Проверяем кандидатов пачками,
- * чтобы не открыть десятки запросов
- * одновременно.
- */
-
-async function validateOyaTimes(
-candidates
-){
-
-if(!candidates.length){
-return[];
-}
-
-const result=[];
-
-const concurrency=5;
-
-let cursor=0;
-
-async function worker(){
-
-while(true){
-
-const index=cursor++;
-
-if(index>=candidates.length){
-return;
-}
-
-const time=
-candidates[index];
-
-const valid=
-await validateOyaTime(
-time
-);
-
-if(valid){
-
-result.push(time);
-
-}
-
-}
-
-}
-
-await Promise.all(
-Array.from(
-{
-length:
-Math.min(
-concurrency,
-candidates.length
-)
-},
-()=>worker()
-)
-);
-
-return[
-...new Set(result)
-].sort(
-(a,b)=>a-b
-);
-
-}
-
 
 /* =====================================================
    OYA CAPABILITIES
@@ -2023,24 +1679,32 @@ text,
 );
 
 if(xml.querySelector("parsererror")){
-
-throw new Error(
-"Ошибка XML"
-);
-
+throw new Error("Ошибка XML");
 }
 
 let times=[];
 
-let intervalCandidates=[];
-
-
 /*
- * Сначала собираем:
+ * Реальное время кадров ОЯ.
  *
- * 1. конкретные timestamp
- * 2. интервалы start/end/period
+ * Важный момент:
+ * GetCapabilities может отдавать интервал
+ * вроде:
+ *
+ * 18:00 / 18:10 / PT5M
+ *
+ * но это НЕ означает, что существует кадр
+ * на 18:05.
+ *
+ * Для ОЯ используем фактический шаг 10 минут.
+ *
+ * Также не добавляем будущие времена,
+ * которые сервер может рекламировать
+ * до следующего дня.
  */
+
+const nowUnix=
+Math.floor(Date.now()/1000);
 
 for(
 const node of
@@ -2053,21 +1717,16 @@ if(
 node.localName!=="Extent"&&
 node.localName!=="Dimension"
 ){
-
 continue;
-
 }
 
-const name=
-node.getAttribute("name");
+const name=node.getAttribute("name");
 
 if(
 name&&
 name.toLowerCase()!=="time"
 ){
-
 continue;
-
 }
 
 const value=
@@ -2075,301 +1734,82 @@ const value=
 
 if(!value)continue;
 
+if(value.includes("/")){
+
+const parts=value.split("/");
+
+const start=isoToUnix(parts[0]);
+const end=isoToUnix(parts[1]);
+
+if(
+start!==null&&
+end!==null
+){
 
 /*
- * Иногда внутри Dimension
- * может быть список конкретных
- * timestamp'ов.
+ * ОЯ обновляется кадрами с шагом 10 минут.
+ *
+ * Игнорируем PT5M из Capabilities,
+ * поскольку он может описывать диапазон,
+ * а не наличие каждого отдельного кадра.
  */
 
-if(!value.includes("/")){
+const step=600;
+
+/*
+ * Не уходим в следующий день.
+ *
+ * Берём только времена, которые уже
+ * наступили.
+ */
+
+const safeEnd=
+Math.min(
+end,
+nowUnix
+);
+
+for(
+let t=start;
+t<=safeEnd;
+t+=step
+){
+
+times.push(t);
+
+}
+
+}
+
+}else{
+
+/*
+ * Если сервер отдаёт явный список
+ * времён — используем именно его.
+ */
 
 times.push(
 ...parseOyaTimes(value)
 );
 
-continue;
-
-}
-
-
-/*
- * Интервал:
- *
- * START / END / PERIOD
- */
-
-const parts=
-value
-.split("/")
-.map(
-x=>x.trim()
-);
-
-if(parts.length<2){
-
-continue;
-
-}
-
-const start=
-isoToUnix(parts[0]);
-
-const end=
-isoToUnix(parts[1]);
-
-if(
-start===null||
-end===null||
-end<start
-){
-
-continue;
-
-}
-
-const step=
-parseIsoDuration(
-parts[2]
-);
-
-intervalCandidates.push({
-start,
-end,
-step
-});
-
-}
-
-
-/* =====================================================
-   EXPLICIT TIMES
-===================================================== */
-
-/*
- * Конкретные timestamp'ы из capabilities
- * считаются реальными без дополнительного
- * перебора.
- */
-
-const explicitTimes=[
-...new Set(times)
-];
-
-
-/* =====================================================
-   INTERVAL CANDIDATES
-===================================================== */
-
-/*
- * Интервал может содержать "фантомные"
- * времена.
- *
- * Поэтому генерируем только кандидатов,
- * а затем проверяем каждый через WMS.
- */
-
-const generatedCandidates=[];
-
-for(
-const interval of
-intervalCandidates
-){
-
-const step=
-interval.step||
-600;
-
-
-/*
- * Защита от кривого capabilities,
- * который мог бы создать десятки тысяч
- * запросов.
- */
-
-const count=
-Math.floor(
-(
-interval.end-
-interval.start
-)/
-step
-)+1;
-
-if(count<=0)continue;
-
-
-/*
- * Максимум 2000 кандидатов
- * на один interval.
- */
-
-if(count>2000){
-
-console.warn(
-"OYA interval too large:",
-interval
-);
-
-continue;
-
-}
-
-for(
-let i=0;
-i<count;
-i++
-){
-
-const timestamp=
-interval.start+
-i*step;
-
-if(timestamp>interval.end){
-break;
-}
-
-generatedCandidates.push(
-timestamp
-);
-
 }
 
 }
-
-
-/*
- * Убираем уже явно указанные времена.
- */
-
-const uniqueCandidates=[
-...new Set(
-generatedCandidates.filter(
-time=>
-!explicitTimes.includes(time)
-)
-)
-].sort(
-(a,b)=>a-b
-);
-
-
-/* =====================================================
-   VALIDATE INTERVAL
-===================================================== */
-
-let validatedIntervalTimes=[];
-
-if(uniqueCandidates.length){
-
-setStatus(
-`Проверка кадров ОЯ: 0/${uniqueCandidates.length}`
-);
-
-
-/*
- * Небольшой отдельный progress
- * через последовательную пачку.
- */
-
-let validatedCount=0;
-
-const valid=[];
-
-const concurrency=5;
-
-let cursor=0;
-
-async function worker(){
-
-while(true){
-
-const index=cursor++;
-
-if(index>=uniqueCandidates.length){
-return;
-}
-
-const time=
-uniqueCandidates[index];
-
-const isValid=
-await validateOyaTime(
-time
-);
-
-if(isValid){
-
-valid.push(time);
-
-}
-
-validatedCount++;
-
-if(
-validatedCount%5===0||
-validatedCount===uniqueCandidates.length
-){
-
-setStatus(
-`Проверка кадров ОЯ: ${validatedCount}/${uniqueCandidates.length}`
-);
-
-}
-
-}
-
-}
-
-await Promise.all(
-Array.from(
-{
-length:
-Math.min(
-concurrency,
-uniqueCandidates.length
-)
-},
-()=>worker()
-)
-);
-
-validatedIntervalTimes=
-[
-...new Set(valid)
-].sort(
-(a,b)=>a-b
-);
-
-}
-
-
-/* =====================================================
-   FINAL REAL TIMESTAMPS
-===================================================== */
 
 oyaAllTimes=[
-...new Set([
-...explicitTimes,
-...validatedIntervalTimes
-])
-].sort(
+...new Set(times)
+]
+.filter(
+t=>t<=nowUnix
+)
+.sort(
 (a,b)=>a-b
 );
-
-
-/*
- * Очень важный момент:
- *
- * Если capabilities содержит только диапазон,
- * в итог попадают только timestamp'ы,
- * которые реально принял WMS.
- */
 
 if(!oyaAllTimes.length){
 
 throw new Error(
-"В GetCapabilities нет доступных кадров"
+"В GetCapabilities нет времени"
 );
 
 }
@@ -2410,10 +1850,6 @@ oyaFrameCount,
 false
 );
 
-setStatus(
-`ОЯ: ${oyaAllTimes.length} кадров`
-);
-
 return true;
 
 }catch(error){
@@ -2436,7 +1872,6 @@ oyaCapabilitiesLoading=false;
 }
 
 }
-
 
 /* =====================================================
    FRAME COUNT
@@ -2463,11 +1898,7 @@ count,
 );
 
 if(!Number.isFinite(numeric)){
-
-numeric=
-oyaFrameCount||
-50;
-
+numeric=oyaFrameCount||50;
 }
 
 oyaFrameCount=
@@ -2493,9 +1924,7 @@ const index=
 oyaTimes.indexOf(oldTime);
 
 if(index!==-1){
-
 oyaFrameIndex=index;
-
 }
 
 }
@@ -2517,7 +1946,6 @@ setOyaTimeline();
 
 }
 
-
 /* =====================================================
    CACHE
 ===================================================== */
@@ -2533,7 +1961,6 @@ data.viewportKey
 ].join("|");
 
 }
-
 
 /* =====================================================
    CLEAN OYA PNG
@@ -2570,9 +1997,7 @@ willReadFrequently:true
 if(!ctx){
 
 reject(
-new Error(
-"Canvas unavailable"
-)
+new Error("Canvas unavailable")
 );
 
 return;
@@ -2663,9 +2088,7 @@ return;
 }
 
 resolve(
-URL.createObjectURL(
-blob
-)
+URL.createObjectURL(blob)
 );
 
 },
@@ -2696,7 +2119,6 @@ image.src=blobUrl;
 
 }
 
-
 /* =====================================================
    RETRY FETCH
 ===================================================== */
@@ -2711,7 +2133,6 @@ ms
 );
 
 }
-
 
 async function fetchOyaBlob(
 url,
@@ -2748,10 +2169,7 @@ response.status
 const blob=
 await response.blob();
 
-if(
-!blob||
-blob.size===0
-){
+if(!blob||blob.size===0){
 
 throw new Error(
 "OYA empty response"
@@ -2783,12 +2201,9 @@ await wait(
 }
 
 throw lastError||
-new Error(
-"OYA request failed"
-);
+new Error("OYA request failed");
 
 }
-
 
 /* =====================================================
    CREATE OYA IMAGE
@@ -2835,7 +2250,6 @@ return layer;
 
 }
 
-
 /* =====================================================
    WAIT FOR OYA LAYER
 ===================================================== */
@@ -2870,7 +2284,6 @@ onLoadError
 if(timer){
 
 clearTimeout(timer);
-
 timer=null;
 
 }
@@ -2948,23 +2361,18 @@ map.renderSync();
 
 }
 
-
 /* =====================================================
    SWAP OYA
 ===================================================== */
 
-function swapOyaLayer(
-newLayer
-){
+function swapOyaLayer(newLayer){
 
-const oldLayer=
-oyaImage;
+const oldLayer=oyaImage;
 
 const oldCleanUrl=
 oyaImageBlobUrl;
 
-oyaImage=
-newLayer;
+oyaImage=newLayer;
 
 oyaImageBlobUrl=
 newLayer.__oyaCleanUrl||
@@ -3004,23 +2412,18 @@ oldCleanUrl
 
 }
 
-
 /* =====================================================
    LOAD OYA FRAME
 ===================================================== */
 
-async function loadOyaFrame(
-index
-){
+async function loadOyaFrame(index){
 
 if(activeLayer!=="oya")return;
 
 if(!oyaTimes.length){
 
 if(!(await loadOyaCapabilities())){
-
 return;
-
 }
 
 }
@@ -3319,7 +2722,6 @@ setStatus(
 
 }
 
-
 /* =====================================================
    PRELOAD ONE
 ===================================================== */
@@ -3443,7 +2845,6 @@ key
 }
 
 }
-
 
 /* =====================================================
    PRELOAD ALL
@@ -3582,7 +2983,6 @@ updatePreloadButton();
 
 }
 
-
 /* =====================================================
    INVALIDATE VIEWPORT
 ===================================================== */
@@ -3644,7 +3044,6 @@ updatePreloadButton();
 
 }
 
-
 /* =====================================================
    MAP MOVEMENT
 ===================================================== */
@@ -3678,7 +3077,6 @@ map.on(
 "moveend",
 scheduleOyaViewportReload
 );
-
 
 /* =====================================================
    SHOW OYA
@@ -3800,7 +3198,6 @@ oyaFrameIndex
 
 }
 
-
 /* =====================================================
    RAINVIEWER
    ЛОГИКА НЕ ТРОНУТА
@@ -3909,7 +3306,6 @@ hideLoading();
 
 }
 
-
 /* =====================================================
    RAINVIEWER LAYER
 ===================================================== */
@@ -3971,7 +3367,6 @@ layer.__rainFrame=frame;
 return layer;
 
 }
-
 
 /* =====================================================
    SHOW RAIN
@@ -4179,7 +3574,6 @@ setStatus(
 
 }
 
-
 /* =====================================================
    SHOW RADAR
 ===================================================== */
@@ -4238,7 +3632,6 @@ loadRainViewer();
 
 }
 
-
 /* =====================================================
    SLIDER
 ===================================================== */
@@ -4277,7 +3670,6 @@ loadOyaFrame(index);
 }
 
 });
-
 
 /* =====================================================
    BACK
@@ -4328,7 +3720,6 @@ oyaFrameIndex
 }
 );
 
-
 /* =====================================================
    FORWARD
 ===================================================== */
@@ -4377,7 +3768,6 @@ oyaFrameIndex
 
 }
 );
-
 
 /* =====================================================
    PLAY
@@ -4458,7 +3848,6 @@ oyaFrameIndex
 
 });
 
-
 function stopPlayback(){
 
 playing=false;
@@ -4472,7 +3861,6 @@ playTimer=null;
 playBtn.textContent="▶";
 
 }
-
 
 /* =====================================================
    PRELOAD
@@ -4489,7 +3877,6 @@ preloadAllOyaFrames();
 }
 
 });
-
 
 /* =====================================================
    LOCATION
@@ -4561,7 +3948,6 @@ maximumAge:30000
 
 });
 
-
 /* =====================================================
    RELOAD
 ===================================================== */
@@ -4627,8 +4013,6 @@ oyaPendingRequests.clear();
 
 oyaLoadedTimes.clear();
 
-oyaValidatedTimes.clear();
-
 oyaCapabilitiesLoaded=false;
 
 oyaCapabilitiesLoading=false;
@@ -4656,7 +4040,6 @@ loadRainViewer();
 
 });
 
-
 /* =====================================================
    SETTINGS
 ===================================================== */
@@ -4673,7 +4056,6 @@ settings.classList.toggle(
 
 });
 
-
 document
 .getElementById("appearanceToggle")
 .addEventListener(
@@ -4687,7 +4069,6 @@ document
 );
 
 });
-
 
 document
 .getElementById("frameCountToggle")
@@ -4722,7 +4103,6 @@ await loadOyaCapabilities();
 }
 
 });
-
 
 /* =====================================================
    FRAME COUNT
@@ -4782,7 +4162,6 @@ oyaFrameIndex
 
 }
 
-
 function changeOyaFrameCount(delta){
 
 if(!oyaAllTimes.length)return;
@@ -4827,7 +4206,6 @@ oyaFrameIndex
 
 }
 
-
 frameCountInput.addEventListener(
 "change",
 commitOyaFrameCount
@@ -4849,7 +4227,6 @@ frameCountInput.blur();
 
 });
 
-
 document
 .getElementById("frameCountPrev")
 .addEventListener(
@@ -4863,7 +4240,6 @@ document
 "click",
 ()=>changeOyaFrameCount(1)
 );
-
 
 /* =====================================================
    THEMES
@@ -4907,7 +4283,6 @@ renderOyaTimeline();
 
 });
 
-
 const savedTheme=
 localStorage.getItem(
 "gptrad-theme"
@@ -4920,7 +4295,6 @@ savedTheme
 );
 
 }
-
 
 /* =====================================================
    LAYER SELECT
@@ -4941,7 +4315,6 @@ open
 );
 
 });
-
 
 document
 .querySelectorAll(".layer-item")
@@ -4997,7 +4370,6 @@ selectedLayer.classList.remove(
 
 });
 
-
 /* =====================================================
    INITIAL
 ===================================================== */
@@ -5017,7 +4389,6 @@ setStatus(
 loadRainViewer();
 
 });
-
 
 /* =====================================================
    OYA BACKGROUND
