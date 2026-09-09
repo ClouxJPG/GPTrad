@@ -993,7 +993,6 @@ class="timeline-arrow">▶</button>
 
 <div id="loading">Загрузка…</div>
 
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/dist/ol.js"></script>
 
 <script>
@@ -1072,13 +1071,44 @@ function hideLoading(){
 loading.style.display="none";
 }
 
+
+/* =====================================================
+   TIME FORMAT
+===================================================== */
+
 function formatTime(ts){
 
-if(!ts)return"—";
+if(!Number.isFinite(Number(ts)))return"—";
 
-return new Date(ts*1000).toLocaleTimeString(
+return new Date(
+Number(ts)*1000
+).toLocaleTimeString(
 "ru-RU",
 {
+hour:"2-digit",
+minute:"2-digit"
+}
+);
+
+}
+
+
+/*
+ * Полный timestamp используется
+ * для диагностики и title.
+ */
+
+function formatTimestamp(ts){
+
+if(!Number.isFinite(Number(ts)))return"—";
+
+return new Date(
+Number(ts)*1000
+).toLocaleString(
+"ru-RU",
+{
+day:"2-digit",
+month:"2-digit",
 hour:"2-digit",
 minute:"2-digit"
 }
@@ -1228,6 +1258,20 @@ let viewportTimer=null;
 let oyaFrameRequestId=0;
 
 
+/*
+ * Отдельный набор времени,
+ * который уже был проверен WMS.
+ *
+ * Это важно:
+ * GetCapabilities может вернуть
+ * интервал, но не каждый момент
+ * внутри интервала обязан иметь
+ * реальный кадр.
+ */
+
+const oyaValidatedTimes=new Set();
+
+
 /* =====================================================
    OYA
 ===================================================== */
@@ -1305,10 +1349,57 @@ key
    OYA REQUEST
 ===================================================== */
 
-function getOyaRequestData(timeValue){
+function getOyaRequestData(
+timeValue,
+small=false
+){
 
 const viewport=
 getCurrentViewportData();
+
+let extent=viewport.extent;
+let width=viewport.width;
+let height=viewport.height;
+
+
+/*
+ * Для проверки существования timestamp
+ * не нужен огромный PNG.
+ *
+ * Используем маленькое изображение.
+ */
+
+if(small){
+
+width=32;
+height=32;
+
+const centerX=
+(extent[0]+extent[2])/2;
+
+const centerY=
+(extent[1]+extent[3])/2;
+
+const halfX=
+Math.max(
+1000,
+(extent[2]-extent[0])*0.03
+);
+
+const halfY=
+Math.max(
+1000,
+(extent[3]-extent[1])*0.03
+);
+
+extent=[
+centerX-halfX,
+centerY-halfY,
+centerX+halfX,
+centerY+halfY
+];
+
+}
 
 const params=
 new URLSearchParams({
@@ -1327,11 +1418,11 @@ STYLES:"",
 
 SRS:"EPSG:3857",
 
-BBOX:viewport.extent.join(","),
+BBOX:extent.join(","),
 
-WIDTH:String(viewport.width),
+WIDTH:String(width),
 
-HEIGHT:String(viewport.height),
+HEIGHT:String(height),
 
 FORMAT:"image/png",
 
@@ -1410,9 +1501,13 @@ segment.classList.add("current");
 }
 
 segment.title=
-formatTime(oyaTimes[i]);
+formatTimestamp(
+oyaTimes[i]
+);
 
-oyaTimelineSegments.appendChild(segment);
+oyaTimelineSegments.appendChild(
+segment
+);
 
 }
 
@@ -1605,6 +1700,64 @@ Math.floor(t/1000);
 
 
 /* =====================================================
+   ISO DURATION
+===================================================== */
+
+/*
+ * Поддерживает:
+ *
+ * PT5M
+ * PT10M
+ * PT1H
+ * PT1H30M
+ * P1D
+ *
+ * GetCapabilities может отдавать
+ * не только PT10M.
+ */
+
+function parseIsoDuration(value){
+
+if(!value)return null;
+
+const text=
+String(value).trim().toUpperCase();
+
+const match=
+text.match(
+/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
+);
+
+if(!match)return null;
+
+const days=
+Number(match[1]||0);
+
+const hours=
+Number(match[2]||0);
+
+const minutes=
+Number(match[3]||0);
+
+const seconds=
+Number(match[4]||0);
+
+const total=
+days*86400+
+hours*3600+
+minutes*60+
+seconds;
+
+return total>0
+?
+Math.floor(total)
+:
+null;
+
+}
+
+
+/* =====================================================
    PARSE OYA TIMES
 ===================================================== */
 
@@ -1632,6 +1785,175 @@ result.push(unix);
 return[
 ...new Set(result)
 ];
+
+}
+
+
+/* =====================================================
+   OYA VALIDATION REQUEST
+===================================================== */
+
+/*
+ * Проверяем timestamp через WMS.
+ *
+ * Если сервер говорит HTTP 4xx/5xx,
+ * timestamp считается отсутствующим.
+ *
+ * Важно:
+ * мы НЕ используем полноценный кадр
+ * для этой проверки — только 32x32.
+ */
+
+async function validateOyaTime(
+timeValue
+){
+
+if(
+oyaValidatedTimes.has(timeValue)
+){
+
+return true;
+
+}
+
+const data=
+getOyaRequestData(
+timeValue,
+true
+);
+
+try{
+
+const response=
+await fetch(
+data.url,
+{
+cache:"no-store"
+}
+);
+
+if(!response.ok){
+
+return false;
+
+}
+
+const blob=
+await response.blob();
+
+if(
+!blob||
+blob.size===0
+){
+
+return false;
+
+}
+
+
+/*
+ * Сервер действительно вернул PNG.
+ *
+ * Для WMS это означает, что TIME
+ * принят сервером.
+ *
+ * Даже полностью прозрачный кадр
+ * считаем существующим: отсутствие
+ * ОЯ на момент времени — это валидный
+ * кадр, а не отсутствие timestamp.
+ */
+
+oyaValidatedTimes.add(
+timeValue
+);
+
+return true;
+
+}catch(error){
+
+console.warn(
+"OYA timestamp validation:",
+formatTimestamp(timeValue),
+error
+);
+
+return false;
+
+}
+
+}
+
+
+/* =====================================================
+   VALIDATE OYA TIMES
+===================================================== */
+
+/*
+ * Проверяем кандидатов пачками,
+ * чтобы не открыть десятки запросов
+ * одновременно.
+ */
+
+async function validateOyaTimes(
+candidates
+){
+
+if(!candidates.length){
+return[];
+}
+
+const result=[];
+
+const concurrency=5;
+
+let cursor=0;
+
+async function worker(){
+
+while(true){
+
+const index=cursor++;
+
+if(index>=candidates.length){
+return;
+}
+
+const time=
+candidates[index];
+
+const valid=
+await validateOyaTime(
+time
+);
+
+if(valid){
+
+result.push(time);
+
+}
+
+}
+
+}
+
+await Promise.all(
+Array.from(
+{
+length:
+Math.min(
+concurrency,
+candidates.length
+)
+},
+()=>worker()
+)
+);
+
+return[
+...new Set(result)
+].sort(
+(a,b)=>a-b
+);
 
 }
 
@@ -1701,10 +2023,24 @@ text,
 );
 
 if(xml.querySelector("parsererror")){
-throw new Error("Ошибка XML");
+
+throw new Error(
+"Ошибка XML"
+);
+
 }
 
 let times=[];
+
+let intervalCandidates=[];
+
+
+/*
+ * Сначала собираем:
+ *
+ * 1. конкретные timestamp
+ * 2. интервалы start/end/period
+ */
 
 for(
 const node of
@@ -1717,16 +2053,21 @@ if(
 node.localName!=="Extent"&&
 node.localName!=="Dimension"
 ){
+
 continue;
+
 }
 
-const name=node.getAttribute("name");
+const name=
+node.getAttribute("name");
 
 if(
 name&&
 name.toLowerCase()!=="time"
 ){
+
 continue;
+
 }
 
 const value=
@@ -1734,71 +2075,301 @@ const value=
 
 if(!value)continue;
 
-if(value.includes("/")){
 
-const parts=value.split("/");
+/*
+ * Иногда внутри Dimension
+ * может быть список конкретных
+ * timestamp'ов.
+ */
 
-const start=isoToUnix(parts[0]);
-const end=isoToUnix(parts[1]);
-
-if(
-start!==null&&
-end!==null
-){
-
-let step=600;
-
-if(parts[2]){
-
-const match=
-parts[2].match(
-/PT(\d+)M/i
-);
-
-if(match){
-
-step=
-Math.max(
-60,
-Number(match[1])*60
-);
-
-}
-
-}
-
-for(
-let t=start;
-t<=end;
-t+=step
-){
-
-times.push(t);
-
-}
-
-}
-
-}else{
+if(!value.includes("/")){
 
 times.push(
 ...parseOyaTimes(value)
 );
 
-}
+continue;
 
 }
 
-oyaAllTimes=[
+
+/*
+ * Интервал:
+ *
+ * START / END / PERIOD
+ */
+
+const parts=
+value
+.split("/")
+.map(
+x=>x.trim()
+);
+
+if(parts.length<2){
+
+continue;
+
+}
+
+const start=
+isoToUnix(parts[0]);
+
+const end=
+isoToUnix(parts[1]);
+
+if(
+start===null||
+end===null||
+end<start
+){
+
+continue;
+
+}
+
+const step=
+parseIsoDuration(
+parts[2]
+);
+
+intervalCandidates.push({
+start,
+end,
+step
+});
+
+}
+
+
+/* =====================================================
+   EXPLICIT TIMES
+===================================================== */
+
+/*
+ * Конкретные timestamp'ы из capabilities
+ * считаются реальными без дополнительного
+ * перебора.
+ */
+
+const explicitTimes=[
 ...new Set(times)
+];
+
+
+/* =====================================================
+   INTERVAL CANDIDATES
+===================================================== */
+
+/*
+ * Интервал может содержать "фантомные"
+ * времена.
+ *
+ * Поэтому генерируем только кандидатов,
+ * а затем проверяем каждый через WMS.
+ */
+
+const generatedCandidates=[];
+
+for(
+const interval of
+intervalCandidates
+){
+
+const step=
+interval.step||
+600;
+
+
+/*
+ * Защита от кривого capabilities,
+ * который мог бы создать десятки тысяч
+ * запросов.
+ */
+
+const count=
+Math.floor(
+(
+interval.end-
+interval.start
+)/
+step
+)+1;
+
+if(count<=0)continue;
+
+
+/*
+ * Максимум 2000 кандидатов
+ * на один interval.
+ */
+
+if(count>2000){
+
+console.warn(
+"OYA interval too large:",
+interval
+);
+
+continue;
+
+}
+
+for(
+let i=0;
+i<count;
+i++
+){
+
+const timestamp=
+interval.start+
+i*step;
+
+if(timestamp>interval.end){
+break;
+}
+
+generatedCandidates.push(
+timestamp
+);
+
+}
+
+}
+
+
+/*
+ * Убираем уже явно указанные времена.
+ */
+
+const uniqueCandidates=[
+...new Set(
+generatedCandidates.filter(
+time=>
+!explicitTimes.includes(time)
+)
+)
 ].sort(
 (a,b)=>a-b
 );
 
+
+/* =====================================================
+   VALIDATE INTERVAL
+===================================================== */
+
+let validatedIntervalTimes=[];
+
+if(uniqueCandidates.length){
+
+setStatus(
+`Проверка кадров ОЯ: 0/${uniqueCandidates.length}`
+);
+
+
+/*
+ * Небольшой отдельный progress
+ * через последовательную пачку.
+ */
+
+let validatedCount=0;
+
+const valid=[];
+
+const concurrency=5;
+
+let cursor=0;
+
+async function worker(){
+
+while(true){
+
+const index=cursor++;
+
+if(index>=uniqueCandidates.length){
+return;
+}
+
+const time=
+uniqueCandidates[index];
+
+const isValid=
+await validateOyaTime(
+time
+);
+
+if(isValid){
+
+valid.push(time);
+
+}
+
+validatedCount++;
+
+if(
+validatedCount%5===0||
+validatedCount===uniqueCandidates.length
+){
+
+setStatus(
+`Проверка кадров ОЯ: ${validatedCount}/${uniqueCandidates.length}`
+);
+
+}
+
+}
+
+}
+
+await Promise.all(
+Array.from(
+{
+length:
+Math.min(
+concurrency,
+uniqueCandidates.length
+)
+},
+()=>worker()
+)
+);
+
+validatedIntervalTimes=
+[
+...new Set(valid)
+].sort(
+(a,b)=>a-b
+);
+
+}
+
+
+/* =====================================================
+   FINAL REAL TIMESTAMPS
+===================================================== */
+
+oyaAllTimes=[
+...new Set([
+...explicitTimes,
+...validatedIntervalTimes
+])
+].sort(
+(a,b)=>a-b
+);
+
+
+/*
+ * Очень важный момент:
+ *
+ * Если capabilities содержит только диапазон,
+ * в итог попадают только timestamp'ы,
+ * которые реально принял WMS.
+ */
+
 if(!oyaAllTimes.length){
 
 throw new Error(
-"В GetCapabilities нет времени"
+"В GetCapabilities нет доступных кадров"
 );
 
 }
@@ -1837,6 +2408,10 @@ oyaFrameCount;
 applyOyaFrameCount(
 oyaFrameCount,
 false
+);
+
+setStatus(
+`ОЯ: ${oyaAllTimes.length} кадров`
 );
 
 return true;
@@ -1888,7 +2463,11 @@ count,
 );
 
 if(!Number.isFinite(numeric)){
-numeric=oyaFrameCount||50;
+
+numeric=
+oyaFrameCount||
+50;
+
 }
 
 oyaFrameCount=
@@ -1914,7 +2493,9 @@ const index=
 oyaTimes.indexOf(oldTime);
 
 if(index!==-1){
+
 oyaFrameIndex=index;
+
 }
 
 }
@@ -1989,7 +2570,9 @@ willReadFrequently:true
 if(!ctx){
 
 reject(
-new Error("Canvas unavailable")
+new Error(
+"Canvas unavailable"
+)
 );
 
 return;
@@ -2080,7 +2663,9 @@ return;
 }
 
 resolve(
-URL.createObjectURL(blob)
+URL.createObjectURL(
+blob
+)
 );
 
 },
@@ -2128,15 +2713,6 @@ ms
 }
 
 
-/*
- * Иногда WMS отвечает ошибкой/обрывом
- * с первого запроса.
- *
- * Делаем несколько попыток,
- * но не создаём несколько кадров
- * одновременно.
- */
-
 async function fetchOyaBlob(
 url,
 attempts=3
@@ -2172,7 +2748,10 @@ response.status
 const blob=
 await response.blob();
 
-if(!blob||blob.size===0){
+if(
+!blob||
+blob.size===0
+){
 
 throw new Error(
 "OYA empty response"
@@ -2204,7 +2783,9 @@ await wait(
 }
 
 throw lastError||
-new Error("OYA request failed");
+new Error(
+"OYA request failed"
+);
 
 }
 
@@ -2259,16 +2840,6 @@ return layer;
    WAIT FOR OYA LAYER
 ===================================================== */
 
-/*
- * Главный фикс пропавших кадров.
- *
- * Раньше новый кадр мог быть добавлен
- * на карту ещё до того, как OpenLayers
- * реально закончил загрузку ImageStatic.
- *
- * Теперь сначала ждём imageloadend.
- */
-
 function waitForOyaLayerReady(
 layer,
 timeout=15000
@@ -2299,6 +2870,7 @@ onLoadError
 if(timer){
 
 clearTimeout(timer);
+
 timer=null;
 
 }
@@ -2343,12 +2915,6 @@ new Error(
 
 };
 
-
-/*
- * Слушатели ставятся ДО добавления
- * слоя на карту.
- */
-
 source.on(
 "imageloadend",
 onLoadEnd
@@ -2387,14 +2953,18 @@ map.renderSync();
    SWAP OYA
 ===================================================== */
 
-function swapOyaLayer(newLayer){
+function swapOyaLayer(
+newLayer
+){
 
-const oldLayer=oyaImage;
+const oldLayer=
+oyaImage;
 
 const oldCleanUrl=
 oyaImageBlobUrl;
 
-oyaImage=newLayer;
+oyaImage=
+newLayer;
 
 oyaImageBlobUrl=
 newLayer.__oyaCleanUrl||
@@ -2439,14 +3009,18 @@ oldCleanUrl
    LOAD OYA FRAME
 ===================================================== */
 
-async function loadOyaFrame(index){
+async function loadOyaFrame(
+index
+){
 
 if(activeLayer!=="oya")return;
 
 if(!oyaTimes.length){
 
 if(!(await loadOyaCapabilities())){
+
 return;
+
 }
 
 }
@@ -2586,23 +3160,11 @@ return;
 
 }
 
-
-/*
- * Создаём очищенный PNG.
- */
-
 newLayer=
 await createOyaImageLayer(
 result.blobUrl,
 result.extent
 );
-
-
-/*
- * Пока новый слой обрабатывается,
- * старый кадр всё ещё находится
- * на карте.
- */
 
 if(
 requestId!==oyaFrameRequestId||
@@ -2626,15 +3188,6 @@ newLayer.__oyaCleanUrl
 return;
 
 }
-
-
-/*
- * КРИТИЧЕСКИЙ МОМЕНТ:
- *
- * Новый слой добавляется, но старый
- * не удаляется до тех пор, пока
- * OpenLayers не сообщит imageloadend.
- */
 
 try{
 
@@ -2674,14 +3227,6 @@ throw error;
 
 }
 
-
-/*
- * Пока новый кадр загружался,
- * пользователь мог выбрать другой.
- *
- * Поэтому ещё раз проверяем состояние.
- */
-
 if(
 requestId!==oyaFrameRequestId||
 generation!==oyaCacheGeneration||
@@ -2712,12 +3257,6 @@ newLayer.__oyaCleanUrl
 return;
 
 }
-
-
-/*
- * Только теперь новый кадр
- * становится текущим.
- */
 
 swapOyaLayer(
 newLayer
@@ -2775,8 +3314,6 @@ requestId===oyaFrameRequestId
 setStatus(
 "Кадр ОЯ не загрузился"
 );
-
-}
 
 }
 
@@ -4090,6 +4627,8 @@ oyaPendingRequests.clear();
 
 oyaLoadedTimes.clear();
 
+oyaValidatedTimes.clear();
+
 oyaCapabilitiesLoaded=false;
 
 oyaCapabilitiesLoading=false;
@@ -4099,15 +4638,6 @@ oyaAllTimes=[];
 oyaTimes=[];
 
 oyaFrameIndex=0;
-
-
-/*
- * Не сбрасываем значение
- * количества кадров.
- *
- * Оно берётся из localStorage
- * после повторного GetCapabilities.
- */
 
 frameCountInput.min=1;
 
@@ -4297,14 +4827,6 @@ oyaFrameIndex
 
 }
 
-
-/*
- * Ввод числа не вызывает перезагрузку
- * на каждую введённую цифру.
- *
- * Применяется после изменения поля
- * или по Enter.
- */
 
 frameCountInput.addEventListener(
 "change",
