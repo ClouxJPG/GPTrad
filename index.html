@@ -1,22 +1,21 @@
+Да. В твоём коде причина действительно была в том, что PNG ОЯ сам содержит полупрозрачные пиксели. Я исправил именно обработку изображения: после удаления серого фона все оставшиеся пиксели ОЯ получают альфа-канал 255. Поэтому при 100% слой теперь будет реально полностью непрозрачным.
+
+Остальное оставил без изменений: RainViewer, радары, 310 км, настройки, кэш и API /api/oya не трогал.
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport"
 content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-
 <title>GPTrad</title>
-
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css">
-
 <style>
 *{
 box-sizing:border-box;
 -webkit-tap-highlight-color:transparent;
 }
-
 html,body{
 margin:0;
 padding:0;
@@ -26,14 +25,12 @@ overflow:hidden;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
 background:#111;
 }
-
 #map{
 position:absolute;
 inset:0;
 z-index:1;
 background:#d8d8d8;
 }
-
 .dark-osm-layer img,
 .dark-osm-layer canvas{
 filter:
@@ -42,18 +39,15 @@ hue-rotate(180deg)
 brightness(.72)
 contrast(1.05);
 }
-
 .ol-zoom{
 position:absolute;
 top:82px;
 left:12px;
 }
-
 .ol-control{
 background:transparent!important;
 padding:0!important;
 }
-
 .ol-zoom button{
 display:block;
 width:38px;
@@ -67,25 +61,21 @@ font-size:22px;
 line-height:36px;
 cursor:pointer;
 }
-
 .ol-attribution{
 right:8px!important;
 bottom:4px!important;
 }
-
 .ol-attribution button{
 background:rgba(28,28,28,.8)!important;
 color:white!important;
 border-radius:7px;
 }
-
 .ol-attribution ul{
 background:rgba(28,28,28,.8);
 color:white;
 border-radius:7px;
 padding:4px 8px;
 }
-
 .top-panel{
 position:absolute;
 top:12px;
@@ -103,7 +93,6 @@ backdrop-filter:blur(14px);
 border-radius:15px;
 box-shadow:0 5px 25px rgba(0,0,0,.25);
 }
-
 .logo{
 color:white;
 font-size:25px;
@@ -112,7 +101,6 @@ white-space:nowrap;
 margin-left:8px;
 margin-right:8px;
 }
-
 #selectedLayer{
 flex:1;
 min-width:0;
@@ -131,24 +119,20 @@ align-items:center;
 justify-content:space-between;
 gap:8px;
 }
-
 #selectedLayerName{
 overflow:hidden;
 text-overflow:ellipsis;
 white-space:nowrap;
 }
-
 #selectedLayerArrow{
 flex:none;
 font-size:14px;
 opacity:.7;
 transition:transform .25s ease;
 }
-
 #selectedLayer.open #selectedLayerArrow{
 transform:rotate(180deg);
 }
-
 .icon-btn{
 flex:none;
 width:42px;
@@ -164,11 +148,9 @@ align-items:center;
 justify-content:center;
 transition:transform .15s ease;
 }
-
 .icon-btn:active{
 transform:scale(.94);
 }
-
 #layerDrawer{
 position:absolute;
 top:72px;
@@ -189,20 +171,17 @@ transition:
 transform .28s cubic-bezier(.22,.61,.36,1),
 opacity .22s ease;
 }
-
 #layerDrawer.open{
 transform:translate(-50%,0) scale(1);
 opacity:1;
 pointer-events:auto;
 }
-
 .drawer-header{
 color:white;
 font-size:14px;
 font-weight:700;
 padding:4px 7px 9px;
 }
-
 .layer-item{
 width:100%;
 min-height:48px;
@@ -220,19 +199,15 @@ font-size:15px;
 text-align:left;
 transition:background .15s ease,transform .15s ease;
 }
-
 .layer-item:last-child{
 margin-bottom:0;
 }
-
 .layer-item:active{
 transform:scale(.985);
 }
-
 .layer-item.active{
 background:#3b3b3b;
 }
-
 .layer-dot{
 width:10px;
 height:10px;
@@ -240,12 +215,10 @@ flex:none;
 border-radius:50%;
 background:#777;
 }
-
 .layer-item.active .layer-dot{
 background:#36d67a;
 box-shadow:0 0 8px rgba(54,214,122,.55);
 }
-
 #status{
 position:absolute;
 left:14px;
@@ -259,7 +232,6 @@ font-size:12px;
 pointer-events:none;
 opacity:.9;
 }
-
 #settings{
 position:absolute;
 left:12px;
@@ -283,7 +255,6 @@ transform .28s cubic-bezier(.22,.61,.36,1),
 max-height .32s ease,
 visibility 0s linear .32s;
 }
-
 #settings.open{
 opacity:1;
 visibility:visible;
@@ -296,21 +267,17 @@ transform .28s cubic-bezier(.22,.61,.36,1),
 max-height .32s ease,
 visibility 0s linear 0s;
 }
-
 .settings-title{
 font-size:15px;
 font-weight:700;
 margin-bottom:10px;
 }
-
 .settings-section{
 margin-bottom:7px;
 }
-
 .settings-section:last-child{
 margin-bottom:0;
 }
-
 .settings-section-btn{
 width:100%;
 height:40px;
@@ -326,21 +293,17 @@ align-items:center;
 justify-content:space-between;
 padding:0 11px;
 }
-
 .settings-section-btn:active{
 transform:scale(.98);
 }
-
 .settings-section-arrow{
 font-size:12px;
 opacity:.65;
 transition:transform .25s ease;
 }
-
 .settings-section.open .settings-section-arrow{
 transform:rotate(180deg);
 }
-
 .settings-subpanel{
 max-height:0;
 opacity:0;
@@ -352,7 +315,6 @@ opacity .2s ease,
 transform .25s ease;
 padding:0 2px;
 }
-
 .settings-section.open .settings-subpanel{
 max-height:180px;
 opacity:1;
@@ -360,7 +322,6 @@ transform:translateY(0);
 padding-top:7px;
 padding-bottom:2px;
 }
-
 .theme-btn,
 .map-theme-btn,
 .map-action-btn{
@@ -375,29 +336,24 @@ color:white;
 text-align:left;
 font-size:13px;
 }
-
 .theme-btn:last-child,
 .map-theme-btn:last-child,
 .map-action-btn:last-child{
 margin-bottom:0;
 }
-
 .theme-btn.active,
 .map-theme-btn.active{
 background:#3b3b3b;
 }
-
 body.light .theme-btn.active,
 body.light .map-theme-btn.active{
 background:#d7d7d7;
 }
-
 .map-action-btn:active,
 .map-theme-btn:active,
 .theme-btn:active{
 transform:scale(.98);
 }
-
 .frame-count-row{
 display:flex;
 align-items:center;
@@ -405,7 +361,6 @@ justify-content:center;
 gap:6px;
 padding:3px 1px 2px;
 }
-
 #frameCountInput{
 width:76px;
 height:30px;
@@ -422,17 +377,14 @@ padding:0 7px;
 appearance:textfield;
 -webkit-appearance:none;
 }
-
 #frameCountInput::-webkit-inner-spin-button,
 #frameCountInput::-webkit-outer-spin-button{
 opacity:1;
 margin:0;
 }
-
 #frameCountInput:focus{
 box-shadow:0 0 0 2px rgba(69,201,239,.45);
 }
-
 .frame-count-arrow{
 width:26px;
 height:26px;
@@ -448,19 +400,15 @@ align-items:center;
 justify-content:center;
 padding:0;
 }
-
 .frame-count-arrow:disabled{
 opacity:.35;
 }
-
 /* =====================================================
    ПРОЗРАЧНОСТЬ OYA
 ===================================================== */
-
 .opacity-panel{
 padding:4px 3px 2px;
 }
-
 .opacity-value-row{
 display:flex;
 align-items:center;
@@ -468,16 +416,13 @@ justify-content:space-between;
 margin-bottom:7px;
 font-size:12px;
 }
-
 .opacity-value-label{
 opacity:.65;
 }
-
 #oyaOpacityValue{
 font-weight:700;
 font-size:13px;
 }
-
 #oyaOpacitySlider{
 width:100%;
 height:20px;
@@ -486,13 +431,11 @@ appearance:none;
 -webkit-appearance:none;
 background:transparent;
 }
-
 #oyaOpacitySlider::-webkit-slider-runnable-track{
 height:6px;
 border-radius:999px;
 background:#555;
 }
-
 #oyaOpacitySlider::-webkit-slider-thumb{
 -webkit-appearance:none;
 width:18px;
@@ -503,13 +446,11 @@ border:2px solid white;
 background:#fff;
 box-shadow:0 1px 5px rgba(0,0,0,.45);
 }
-
 #oyaOpacitySlider::-moz-range-track{
 height:6px;
 border-radius:999px;
 background:#555;
 }
-
 #oyaOpacitySlider::-moz-range-thumb{
 width:18px;
 height:18px;
@@ -517,7 +458,6 @@ border-radius:50%;
 border:2px solid white;
 background:#fff;
 }
-
 .opacity-hints{
 display:flex;
 justify-content:space-between;
@@ -525,15 +465,12 @@ font-size:10px;
 opacity:.5;
 margin-top:3px;
 }
-
 body.light #oyaOpacitySlider::-webkit-slider-runnable-track{
 background:#c5c5c5;
 }
-
 body.light #oyaOpacitySlider::-moz-range-track{
 background:#c5c5c5;
 }
-
 .radar-beam-button{
 width:100%;
 height:40px;
@@ -553,25 +490,20 @@ transition:
 background .18s ease,
 transform .15s ease;
 }
-
 .radar-beam-button:active{
 transform:scale(.98);
 }
-
 .radar-beam-button .radar-beam-state{
 font-size:12px;
 opacity:.55;
 }
-
 .radar-beam-button.active{
 background:#3b3b3b;
 }
-
 .radar-beam-button.active .radar-beam-state{
 color:#69d99a;
 opacity:1;
 }
-
 .timeline{
 position:absolute;
 left:50%;
@@ -586,7 +518,6 @@ backdrop-filter:blur(12px);
 -webkit-backdrop-filter:blur(12px);
 box-shadow:0 5px 25px rgba(0,0,0,.3);
 }
-
 .timeline-play{
 width:100%;
 display:flex;
@@ -595,7 +526,6 @@ align-items:center;
 gap:7px;
 margin-bottom:6px;
 }
-
 #playBtn{
 width:38px;
 height:30px;
@@ -609,11 +539,9 @@ display:flex;
 align-items:center;
 justify-content:center;
 }
-
 #playBtn:active{
 transform:scale(.92);
 }
-
 #preloadBtn{
 width:34px;
 height:30px;
@@ -628,15 +556,12 @@ align-items:center;
 justify-content:center;
 padding:0;
 }
-
 #preloadBtn:active{
 transform:scale(.91);
 }
-
 #preloadBtn:disabled{
 opacity:.3;
 }
-
 .download-icon{
 width:15px;
 height:18px;
@@ -661,26 +586,21 @@ clip-path:polygon(
 38% 55%
 );
 }
-
 #preloadBtn.loading .download-icon{
 animation:downloadFloat .7s ease-in-out infinite;
 }
-
 @keyframes downloadFloat{
 0%,100%{transform:translateY(0)}
 50%{transform:translateY(2px)}
 }
-
 #preloadBtn.done{
 background:#315f45;
 }
-
 .timeline-controls{
 display:flex;
 align-items:center;
 gap:7px;
 }
-
 .timeline-arrow{
 width:36px;
 height:32px;
@@ -695,11 +615,9 @@ display:flex;
 align-items:center;
 justify-content:center;
 }
-
 .timeline-arrow:active{
 transform:scale(.92);
 }
-
 .timeline-slider-wrap{
 position:relative;
 flex:1;
@@ -708,7 +626,6 @@ height:18px;
 display:flex;
 align-items:center;
 }
-
 #oyaTimelineSegments{
 position:absolute;
 left:0;
@@ -722,7 +639,6 @@ pointer-events:none;
 overflow:hidden;
 z-index:1;
 }
-
 .oya-segment{
 flex:1;
 min-width:0;
@@ -735,16 +651,13 @@ background .18s ease,
 transform .12s ease,
 opacity .18s ease;
 }
-
 .oya-segment.loaded{
 background:#45c9ef;
 }
-
 .oya-segment.current{
 transform:scaleY(1.08);
 filter:brightness(1.15);
 }
-
 #oyaLongProgress{
 position:absolute;
 left:0;
@@ -758,7 +671,6 @@ pointer-events:none;
 z-index:1;
 display:none;
 }
-
 #oyaLongProgressFill{
 position:absolute;
 left:0;
@@ -768,7 +680,6 @@ width:0%;
 background:#45c9ef;
 border-radius:999px;
 }
-
 #timeSlider{
 position:relative;
 z-index:3;
@@ -779,13 +690,11 @@ background:transparent;
 appearance:none;
 -webkit-appearance:none;
 }
-
 #timeSlider::-webkit-slider-runnable-track{
 height:14px;
 background:transparent;
 border:0;
 }
-
 #timeSlider::-webkit-slider-thumb{
 -webkit-appearance:none;
 width:18px;
@@ -796,13 +705,11 @@ border:2px solid white;
 background:#fff;
 box-shadow:0 1px 5px rgba(0,0,0,.45);
 }
-
 #timeSlider::-moz-range-track{
 height:14px;
 background:transparent;
 border:0;
 }
-
 #timeSlider::-moz-range-thumb{
 width:18px;
 height:18px;
@@ -810,23 +717,18 @@ border-radius:50%;
 border:2px solid white;
 background:#fff;
 }
-
 body.light .oya-segment{
 background:#c8c8c8;
 }
-
 body.light .oya-segment.loaded{
 background:#49b9df;
 }
-
 body.light #oyaLongProgress{
 background:#c8c8c8;
 }
-
 body.light #oyaLongProgressFill{
 background:#49b9df;
 }
-
 body.light .top-panel,
 body.light #layerDrawer,
 body.light #settings,
@@ -834,13 +736,11 @@ body.light .timeline,
 body.light #status{
 background:rgba(255,255,255,.94);
 }
-
 body.light .logo,
 body.light #status,
 body.light .drawer-header{
 color:#111;
 }
-
 body.light #selectedLayer,
 body.light .icon-btn,
 body.light .layer-item,
@@ -856,17 +756,14 @@ body.light .radar-beam-button{
 background:#eee;
 color:#111;
 }
-
 body.light .layer-item.active,
 body.light .radar-beam-button.active{
 background:#ddd;
 }
-
 body.light #preloadBtn{
 background:#eee;
 color:#111;
 }
-
 #timeLabel{
 width:100%;
 margin-top:5px;
@@ -875,11 +772,9 @@ color:white;
 font-size:11px;
 opacity:.85;
 }
-
 body.light #timeLabel{
 color:#111;
 }
-
 #loading{
 position:absolute;
 left:50%;
@@ -893,9 +788,7 @@ background:rgba(20,20,20,.92);
 color:white;
 font-size:13px;
 }
-
 @media(max-width:600px){
-
 .top-panel{
 top:8px;
 left:8px;
@@ -903,178 +796,128 @@ right:8px;
 height:54px;
 gap:5px;
 }
-
 .logo{
 font-size:21px;
 margin-left:6px;
 margin-right:3px;
 }
-
 #selectedLayer{
 height:42px;
 padding:0 11px;
 font-size:16px;
 }
-
 .icon-btn{
 width:38px;
 height:38px;
 border-radius:11px;
 font-size:19px;
 }
-
 #layerDrawer{
 top:70px;
 width:calc(100% - 16px);
 }
-
 #status{
 top:68px;
 left:9px;
 }
-
 #settings{
 left:8px;
 top:68px;
 width:235px;
 }
-
 .timeline{
 bottom:8px;
 width:calc(100vw - 16px);
 }
-
 #timeLabel{
 font-size:10px;
 }
-
 .timeline-arrow{
 width:35px;
 }
-
 .ol-zoom{
 top:68px;
 left:8px;
 }
-
 }
 </style>
 </head>
-
 <body>
-
 <div id="map"></div>
-
 <div class="top-panel">
-
 <div class="logo">GPTrad</div>
-
 <button id="selectedLayer">
 <span id="selectedLayerName">Радар (RainViewer)</span>
 <span id="selectedLayerArrow">▾</span>
 </button>
-
 <button id="locateBtn" class="icon-btn">⌖</button>
 <button id="reloadBtn" class="icon-btn">↻</button>
 <button id="settingsBtn" class="icon-btn">⚙</button>
-
 </div>
-
 <div id="layerDrawer">
-
 <div class="drawer-header">Слои</div>
-
 <button class="layer-item active" data-layer="radar">
 <span class="layer-dot"></span>
 <span>Радар (RainViewer)</span>
 </button>
-
 <button class="layer-item" data-layer="oya">
 <span class="layer-dot"></span>
 <span>Опасные явления</span>
 </button>
-
 </div>
-
 <div id="status">Загрузка…</div>
-
 <div id="settings">
-
 <div class="settings-title">Настройки</div>
-
 <div class="settings-section" id="appearanceSection">
-
 <button class="settings-section-btn" id="appearanceToggle">
 <span>Оформление</span>
 <span class="settings-section-arrow">▾</span>
 </button>
-
 <div class="settings-subpanel">
-
 <button class="theme-btn" data-theme="light">
 Светлый интерфейс
 </button>
-
 <button class="theme-btn" data-theme="dark">
 Тёмный интерфейс
 </button>
-
 </div>
-
 </div>
-
 <div class="settings-section" id="mapSection">
-
 <button class="settings-section-btn" id="mapToggle">
 <span>Карта</span>
 <span class="settings-section-arrow">▾</span>
 </button>
-
 <div class="settings-subpanel">
-
 <button class="map-theme-btn"
 data-map-theme="light">
 Светлая карта
 </button>
-
 <button class="map-theme-btn"
 data-map-theme="dark">
 Тёмная карта
 </button>
-
 <button
 id="resetMapBtn"
 class="map-action-btn">
 Сбросить вид карты
 </button>
-
 </div>
-
 </div>
-
 <div class="settings-section" id="opacitySection">
-
 <button class="settings-section-btn" id="opacityToggle">
 <span>Прозрачность</span>
 <span class="settings-section-arrow">▾</span>
 </button>
-
 <div class="settings-subpanel">
-
 <div class="opacity-panel">
-
 <div class="opacity-value-row">
-
 <span class="opacity-value-label">
 Слой ОЯ
 </span>
-
 <span id="oyaOpacityValue">
 90%
 </span>
-
 </div>
-
 <input
 id="oyaOpacitySlider"
 type="range"
@@ -1082,34 +925,22 @@ min="0"
 max="100"
 step="1"
 value="90">
-
 <div class="opacity-hints">
-
 <span>0%</span>
 <span>100%</span>
-
 </div>
-
 </div>
-
 </div>
-
 </div>
-
 <div class="settings-section" id="frameCountSection">
-
 <button class="settings-section-btn" id="frameCountToggle">
 <span>Кол. кадров</span>
 <span class="settings-section-arrow">▾</span>
 </button>
-
 <div class="settings-subpanel">
-
 <div class="frame-count-row">
-
 <button id="frameCountPrev"
 class="frame-count-arrow">◀</button>
-
 <input id="frameCountInput"
 type="number"
 min="1"
@@ -1117,222 +948,154 @@ max="1"
 step="1"
 value="50"
 inputmode="numeric">
-
 <button id="frameCountNext"
 class="frame-count-arrow">▶</button>
-
 </div>
-
 </div>
-
 </div>
-
 <button id="radarBeamToggle"
 class="radar-beam-button">
-
 <span>Радарный луч</span>
-
 <span
 id="radarBeamState"
 class="radar-beam-state">
 выкл
 </span>
-
 </button>
-
 </div>
-
 <div class="timeline">
-
 <div class="timeline-play">
-
 <button id="playBtn">▶</button>
-
 <button id="preloadBtn"
 title="Загрузить все кадры"
 aria-label="Загрузить все кадры">
-
 <span class="download-icon"></span>
-
 </button>
-
 </div>
-
 <div class="timeline-controls">
-
 <button id="backBtn"
 class="timeline-arrow">◀</button>
-
 <div class="timeline-slider-wrap">
-
 <div id="oyaTimelineSegments"></div>
-
 <div id="oyaLongProgress">
-
 <div id="oyaLongProgressFill"></div>
-
 </div>
-
 <input id="timeSlider"
 type="range"
 min="0"
 max="0"
 value="0">
-
 </div>
-
 <button id="forwardBtn"
 class="timeline-arrow">▶</button>
-
 </div>
-
 <div id="timeLabel">—</div>
-
 </div>
-
 <div id="loading">Загрузка…</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/dist/ol.js"></script>
-
 <script>
-
 window.addEventListener("error",function(e){
-
 console.error(
 "GPTrad:",
 e.error||e.message
 );
-
 const s=
 document.getElementById("status");
-
 if(
 s &&
 (!window.ol||typeof map==="undefined")
 ){
-
 s.textContent="Ошибка карты";
-
 }
-
 });
-
 window.addEventListener(
 "unhandledrejection",
 function(e){
-
 console.error(
 "GPTrad promise:",
 e.reason
 );
-
 }
 );
-
 if(!window.ol){
-
 document.getElementById(
 "status"
 ).textContent=
 "OpenLayers не загрузился";
-
 throw new Error(
 "OpenLayers unavailable"
 );
-
 }
-
 const status=
 document.getElementById("status");
-
 const loading=
 document.getElementById("loading");
-
 const selectedLayer=
 document.getElementById("selectedLayer");
-
 const selectedLayerName=
 document.getElementById(
 "selectedLayerName"
 );
-
 const layerDrawer=
 document.getElementById(
 "layerDrawer"
 );
-
 const settings=
 document.getElementById(
 "settings"
 );
-
 const timeSlider=
 document.getElementById(
 "timeSlider"
 );
-
 const timeLabel=
 document.getElementById(
 "timeLabel"
 );
-
 const oyaTimelineSegments=
 document.getElementById(
 "oyaTimelineSegments"
 );
-
 const oyaLongProgress=
 document.getElementById(
 "oyaLongProgress"
 );
-
 const oyaLongProgressFill=
 document.getElementById(
 "oyaLongProgressFill"
 );
-
 const frameCountInput=
 document.getElementById(
 "frameCountInput"
 );
-
 const preloadBtn=
 document.getElementById(
 "preloadBtn"
 );
-
 const playBtn=
 document.getElementById(
 "playBtn"
 );
-
 const oyaOpacitySlider=
 document.getElementById(
 "oyaOpacitySlider"
 );
-
 const oyaOpacityValue=
 document.getElementById(
 "oyaOpacityValue"
 );
-
 function setStatus(text){
 status.textContent=text;
 }
-
 function showLoading(text){
 loading.textContent=text;
 loading.style.display="block";
 }
-
 function hideLoading(){
 loading.style.display="none";
 }
-
 function formatTime(ts){
-
 if(!ts)return"—";
-
 return new Date(
 ts*1000
 ).toLocaleTimeString(
@@ -1342,408 +1105,269 @@ hour:"2-digit",
 minute:"2-digit"
 }
 );
-
 }
-
 const DEFAULT_MAP_CENTER=
 [37.61,55.75];
-
 const DEFAULT_MAP_ZOOM=5;
-
 const osmSource=
 new ol.source.XYZ({
-
 url:
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-
 maxZoom:19,
-
 transition:0,
-
 wrapX:true,
-
 crossOrigin:"anonymous",
-
 attributions:
 "© OpenStreetMap contributors"
-
 });
-
 const osmLayer=
 new ol.layer.Tile({
-
 source:osmSource,
-
 zIndex:0,
-
 visible:true
-
 });
-
 const darkOsmLayer=
 new ol.layer.Tile({
-
 source:new ol.source.XYZ({
-
 url:
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-
 maxZoom:19,
-
 transition:0,
-
 wrapX:true,
-
 crossOrigin:"anonymous",
-
 attributions:
 "© OpenStreetMap contributors"
-
 }),
-
 zIndex:0,
-
 visible:false,
-
 className:"dark-osm-layer"
-
 });
-
 const view=
 new ol.View({
-
 center:
 ol.proj.fromLonLat(
 DEFAULT_MAP_CENTER
 ),
-
 zoom:DEFAULT_MAP_ZOOM,
-
 minZoom:2,
-
 maxZoom:19,
-
 constrainResolution:false,
-
 enableRotation:false
-
 });
-
 const map=
 new ol.Map({
-
 target:"map",
-
 layers:[
 osmLayer,
 darkOsmLayer
 ],
-
 view:view
-
 });
-
 function resizeMap(){
-
 try{
-
 map.updateSize();
 map.render();
-
 }catch(e){
-
 console.error(e);
-
 }
-
 }
-
 window.addEventListener(
 "resize",
 resizeMap
 );
-
 window.addEventListener(
 "orientationchange",
 ()=>{
-
 setTimeout(
 resizeMap,
 250
 );
-
 }
 );
-
 setTimeout(
 resizeMap,
 100
 );
-
 setTimeout(
 resizeMap,
 500
 );
-
 setTimeout(
 resizeMap,
 1000
 );
-
 const RADAR_VECTOR_PROXY=
 "/api/oya?action=vector";
-
 const RADAR_COVERAGE_RADIUS=
 310000;
-
 const RADAR_UPDATE_INTERVAL=
 5*60*1000;
-
 const KNOWN_RADAR_POSITIONS=[
-
 {
 lat:55.67,
 lon:37.55
 },
-
 {
 lat:56.28,
 lon:40.20
 }
-
 ];
-
 let radarPositions=[];
-
 const radarCoverageStyle=
 new ol.style.Style({
-
 fill:
 new ol.style.Fill({
-
 color:
 "rgba(125,125,125,0.10)"
-
 }),
-
 stroke:
 new ol.style.Stroke({
-
 color:
 "rgba(205,205,205,0.48)",
-
 width:1
-
 })
-
 });
-
 const radarPointStyle=
 new ol.style.Style({
-
 image:
 new ol.style.Circle({
-
 radius:3,
-
 fill:
 new ol.style.Fill({
-
 color:"#ffffff"
-
 }),
-
 stroke:
 new ol.style.Stroke({
-
 color:"#000000",
-
 width:1.2
-
 })
-
 })
-
 });
-
 const radarBeamSource=
 new ol.source.Vector();
-
 const radarBeamLayer=
 new ol.layer.Vector({
-
 source:
 radarBeamSource,
-
 zIndex:80,
-
 visible:false
-
 });
-
 map.addLayer(
 radarBeamLayer
 );
-
 function renderRadarPositions(radars){
-
 if(
 !Array.isArray(radars)||
 !radars.length
 ){
-
 return;
-
 }
-
 radarBeamSource.clear();
-
 for(
 const radar of radars
 ){
-
 if(
 !Number.isFinite(radar.lat)||
 !Number.isFinite(radar.lon)
 ){
-
 continue;
-
 }
-
 const center=
 ol.proj.fromLonLat([
 radar.lon,
 radar.lat
 ]);
-
 const circle=
 new ol.geom.Circle(
 center,
 RADAR_COVERAGE_RADIUS
 );
-
 const coverageFeature=
 new ol.Feature(
 circle
 );
-
 coverageFeature.set(
 "radarType",
 "coverage"
 );
-
 coverageFeature.set(
 "radarLatitude",
 radar.lat
 );
-
 coverageFeature.set(
 "radarLongitude",
 radar.lon
 );
-
 coverageFeature.setStyle(
 radarCoverageStyle
 );
-
 radarBeamSource.addFeature(
 coverageFeature
 );
-
 const radarPoint=
 new ol.Feature(
 new ol.geom.Point(
 center
 )
 );
-
 radarPoint.set(
 "radarType",
 "radar"
 );
-
 radarPoint.set(
 "radarLatitude",
 radar.lat
 );
-
 radarPoint.set(
 "radarLongitude",
 radar.lon
 );
-
 radarPoint.setStyle(
 radarPointStyle
 );
-
 radarBeamSource.addFeature(
 radarPoint
 );
-
 }
-
 map.render();
-
 }
-
 function mergeRadarPositions(
 dynamicPositions
 ){
-
 const result=[];
 const seen=new Set();
-
 const all=[
 ...KNOWN_RADAR_POSITIONS,
 ...dynamicPositions
 ];
-
 for(
 const radar of all
 ){
-
 if(
 !radar||
 !Number.isFinite(radar.lat)||
 !Number.isFinite(radar.lon)
 ){
-
 continue;
-
 }
-
 const key=
 radar.lat.toFixed(6)+","+
 radar.lon.toFixed(6);
-
 if(
 seen.has(key)
 ){
-
 continue;
-
 }
-
 seen.add(key);
-
 result.push({
-
 lat:radar.lat,
 lon:radar.lon
-
 });
-
 }
-
 return result;
-
 }
-
 async function loadRadarPositions(){
-
 try{
-
 const response=
 await fetch(
 RADAR_VECTOR_PROXY,
@@ -1751,176 +1375,122 @@ RADAR_VECTOR_PROXY,
 cache:"no-store"
 }
 );
-
 if(!response.ok){
-
 throw new Error(
 "Radar vector HTTP "+
 response.status
 );
-
 }
-
 const data=
 await response.json();
-
 if(!Array.isArray(data)){
-
 throw new Error(
 "Invalid radar vector"
 );
-
 }
-
 const result=[];
-
 for(
 const item of data
 ){
-
 if(
 !Array.isArray(item)||
 item.length<2
 ){
-
 continue;
-
 }
-
 const lat=
 Number(item[0]);
-
 const lon=
 Number(item[1]);
-
 if(
 !Number.isFinite(lat)||
 !Number.isFinite(lon)
 ){
-
 continue;
-
 }
-
 if(
 lat<-90||
 lat>90||
 lon<-180||
 lon>180
 ){
-
 continue;
-
 }
-
 result.push({
-
 lat,
 lon
-
 });
-
 }
-
 const unique=
 mergeRadarPositions(
 result
 );
-
 console.log(
 "Radar positions:",
 unique.length
 );
-
 return unique;
-
 }catch(error){
-
 console.error(
 "Radar positions:",
 error
 );
-
 return mergeRadarPositions([]);
-
 }
-
 }
-
 async function updateRadarPositions(){
-
 const radars=
 await loadRadarPositions();
-
 if(
 !radars.length
 ){
-
 console.warn(
 "Radar coordinates were not received"
 );
-
 return;
-
 }
-
 radarPositions=
 radars;
-
 renderRadarPositions(
 radarPositions
 );
-
 }
-
 setTimeout(
 ()=>{
-
 updateRadarPositions();
-
 },
 300
 );
-
 setInterval(
 ()=>{
-
 updateRadarPositions();
-
 },
 RADAR_UPDATE_INTERVAL
 );
-
 const radarBeamToggle=
 document.getElementById(
 "radarBeamToggle"
 );
-
 const radarBeamState=
 document.getElementById(
 "radarBeamState"
 );
-
 function setRadarBeamVisible(
 visible
 ){
-
 radarBeamLayer.setVisible(
 visible
 );
-
 radarBeamToggle.classList.toggle(
 "active",
 visible
 );
-
 radarBeamState.textContent=
 visible
 ?
 "вкл"
 :
 "выкл";
-
 localStorage.setItem(
 "gptrad-radar-beam",
 visible
@@ -1929,93 +1499,63 @@ visible
 :
 "0"
 );
-
 map.render();
-
 }
-
 radarBeamToggle.addEventListener(
 "click",
 ()=>{
-
 setRadarBeamVisible(
 !radarBeamLayer.getVisible()
 );
-
 });
-
 const savedRadarBeam=
 localStorage.getItem(
 "gptrad-radar-beam"
 );
-
 if(
 savedRadarBeam==="1"
 ){
-
 setRadarBeamVisible(
 true
 );
-
 }
-
 let activeLayer="radar";
-
 let radarLayer=null;
-
 let rainFrames=[];
-
 let currentFrame=0;
-
 let rainFrameRequestId=0;
-
 let playing=false;
-
 let playTimer=null;
-
 let oyaAllTimes=[];
 let oyaTimes=[];
 let oyaFrameCount=50;
 let oyaFrameIndex=0;
-
 let oyaImage=null;
 let oyaImageBlobUrl=null;
-
 const oyaLoadedTimes=
 new Set();
-
 const oyaFrameCache=
 new Map();
-
 const oyaPendingRequests=
 new Map();
-
 let oyaCapabilitiesLoaded=false;
 let oyaCapabilitiesLoading=false;
-
 let oyaCacheGeneration=0;
 let oyaPreloadGeneration=0;
-
 let oyaPreloading=false;
 let oyaViewportKey="";
-
 let viewportTimer=null;
 let oyaFrameRequestId=0;
-
 const OYA_PROXY="/api/oya";
-
 const OYA_LAYER=
 "bufr_phenomena,"+
 "bufr_novosib_phenomena,"+
 "bufr_vlad_phenomena";
-
 /* =====================================================
    OYA OPACITY
 ===================================================== */
-
 const OYA_OPACITY_STORAGE_KEY=
 "gptrad-oya-opacity";
-
 /*
  * 90% по умолчанию.
  *
@@ -2023,45 +1563,33 @@ const OYA_OPACITY_STORAGE_KEY=
  * 90%  = непрозрачность 0.90
  * 100% = полностью непрозрачный
  */
-
 let oyaOpacity=
 Number(
 localStorage.getItem(
 OYA_OPACITY_STORAGE_KEY
 )
 );
-
 if(
 !Number.isFinite(oyaOpacity)||
 oyaOpacity<0||
 oyaOpacity>100
 ){
-
 oyaOpacity=90;
-
 }
-
 oyaOpacitySlider.value=
 oyaOpacity;
-
 oyaOpacityValue.textContent=
 oyaOpacity+"%";
-
 function setOyaOpacity(
 percent
 ){
-
 let value=
 Number(percent);
-
 if(
 !Number.isFinite(value)
 ){
-
 value=90;
-
 }
-
 value=
 Math.max(
 0,
@@ -2070,63 +1598,46 @@ Math.min(
 Math.round(value)
 )
 );
-
 oyaOpacity=
 value;
-
 oyaOpacitySlider.value=
 value;
-
 oyaOpacityValue.textContent=
 value+"%";
-
 localStorage.setItem(
 OYA_OPACITY_STORAGE_KEY,
 String(value)
 );
-
 if(oyaImage){
-
 oyaImage.setOpacity(
 value/100
 );
-
 }
-
 map.render();
-
 }
-
 oyaOpacitySlider.addEventListener(
 "input",
 ()=>{
-
 setOyaOpacity(
 oyaOpacitySlider.value
 );
-
 }
 );
-
 function getCurrentViewportData(){
-
 const size=
 map.getSize()||
 [
 window.innerWidth,
 window.innerHeight
 ];
-
 const extent=
 view.calculateExtent(size);
-
 const geoExtent=
 ol.proj.transformExtent(
 extent,
 "EPSG:3857",
 "EPSG:4326"
 );
-
 const width=
 Math.max(
 256,
@@ -2135,7 +1646,6 @@ Math.min(
 Math.round(size[0])
 )
 );
-
 const height=
 Math.max(
 256,
@@ -2144,7 +1654,6 @@ Math.min(
 Math.round(size[1])
 )
 );
-
 const key=[
 geoExtent[0].toFixed(5),
 geoExtent[1].toFixed(5),
@@ -2153,7 +1662,6 @@ geoExtent[3].toFixed(5),
 width,
 height
 ].join("|");
-
 return{
 extent,
 geoExtent,
@@ -2162,161 +1670,103 @@ height,
 viewportKey:key,
 key
 };
-
 }
-
 function getOyaRequestData(timeValue){
-
 const viewport=
 getCurrentViewportData();
-
 const params=
 new URLSearchParams({
-
 action:"image",
-
 SERVICE:"WMS",
-
 VERSION:"1.1.1",
-
 REQUEST:"GetMap",
-
 LAYERS:OYA_LAYER,
-
 STYLES:"",
-
 SRS:"EPSG:3857",
-
 BBOX:viewport.extent.join(","),
-
 WIDTH:String(viewport.width),
-
 HEIGHT:String(viewport.height),
-
 FORMAT:"image/png",
-
 TRANSPARENT:"true",
-
 EXCEPTIONS:
 "application/vnd.ogc.se_inimage",
-
 TIME:
 new Date(
 timeValue*1000
 ).toISOString()
-
 });
-
 return{
-
 url:
 OYA_PROXY+
 "?"+
 params.toString(),
-
 extent:
 viewport.extent,
-
 width:
 viewport.width,
-
 height:
 viewport.height,
-
 viewportKey:
 viewport.key
-
 };
-
 }
-
 function renderOyaTimeline(){
-
 oyaTimelineSegments.innerHTML="";
-
 oyaLongProgressFill.style.width="0%";
-
 oyaLongProgress.style.display="none";
-
 oyaTimelineSegments.style.display="none";
-
 if(
 activeLayer!=="oya"||
 !oyaTimes.length
 ){
-
 return;
-
 }
-
 if(oyaTimes.length<=65){
-
 oyaTimelineSegments.style.display="flex";
-
 for(
 let i=0;
 i<oyaTimes.length;
 i++
 ){
-
 const segment=
 document.createElement("div");
-
 segment.className=
 "oya-segment";
-
 if(
 oyaLoadedTimes.has(
 oyaTimes[i]
 )
 ){
-
 segment.classList.add(
 "loaded"
 );
-
 }
-
 if(i===oyaFrameIndex){
-
 segment.classList.add(
 "current"
 );
-
 }
-
 segment.title=
 formatTime(
 oyaTimes[i]
 );
-
 oyaTimelineSegments.appendChild(
 segment
 );
-
 }
-
 }else{
-
 oyaLongProgress.style.display=
 "block";
-
 let loaded=0;
-
 for(
 const time of oyaTimes
 ){
-
 if(
 oyaLoadedTimes.has(time)
 ){
-
 loaded++;
-
 }
-
 }
-
 oyaLongProgressFill.style.width=
 (
 loaded/
@@ -2324,56 +1774,39 @@ oyaTimes.length*
 100
 )+
 "%";
-
 }
-
 }
-
 function updatePreloadButton(){
-
 const enabled=
 activeLayer==="oya"&&
 oyaTimes.length>0&&
 oyaTimes.length<52;
-
 if(!enabled){
-
 preloadBtn.disabled=true;
-
 preloadBtn.classList.remove(
 "loading",
 "done"
 );
-
 return;
-
 }
-
 preloadBtn.disabled=
 oyaPreloading;
-
 const allLoaded=
 oyaTimes.length>0&&
 oyaTimes.every(
 t=>oyaLoadedTimes.has(t)
 );
-
 preloadBtn.classList.toggle(
 "loading",
 oyaPreloading
 );
-
 preloadBtn.classList.toggle(
 "done",
 !oyaPreloading&&allLoaded
 );
-
 }
-
 function updateTimeLabel(){
-
 if(activeLayer==="radar"){
-
 timeLabel.textContent=
 rainFrames[currentFrame]
 ?
@@ -2381,11 +1814,8 @@ formatTime(
 rainFrames[currentFrame].time
 )
 :"—";
-
 return;
-
 }
-
 timeLabel.textContent=
 oyaTimes[oyaFrameIndex]
 ?
@@ -2393,26 +1823,19 @@ formatTime(
 oyaTimes[oyaFrameIndex]
 )
 :"—";
-
 }
-
 function setRadarTimeline(){
-
 oyaTimelineSegments.innerHTML="";
 oyaTimelineSegments.style.display=
 "none";
-
 oyaLongProgress.style.display=
 "none";
-
 timeSlider.min=0;
-
 timeSlider.max=
 Math.max(
 0,
 rainFrames.length-1
 );
-
 currentFrame=
 Math.max(
 0,
@@ -2421,26 +1844,18 @@ rainFrames.length-1,
 currentFrame
 )
 );
-
 timeSlider.value=
 currentFrame;
-
 updateTimeLabel();
-
 updatePreloadButton();
-
 }
-
 function setOyaTimeline(){
-
 timeSlider.min=0;
-
 timeSlider.max=
 Math.max(
 0,
 oyaTimes.length-1
 );
-
 oyaFrameIndex=
 Math.max(
 0,
@@ -2449,37 +1864,24 @@ oyaTimes.length-1,
 oyaFrameIndex
 )
 );
-
 timeSlider.value=
 oyaFrameIndex;
-
 updateTimeLabel();
-
 renderOyaTimeline();
-
 updatePreloadButton();
-
 }
-
 function isoToUnix(value){
-
 const t=
 Date.parse(value);
-
 return Number.isNaN(t)
 ?
 null
 :
 Math.floor(t/1000);
-
 }
-
 function parseOyaTimes(text){
-
 if(!text)return[];
-
 const result=[];
-
 for(
 const value of
 text
@@ -2489,132 +1891,91 @@ x=>x.trim()
 )
 .filter(Boolean)
 ){
-
 const unix=
 isoToUnix(value);
-
 if(unix!==null){
-
 const date=
 new Date(
 unix*1000
 );
-
 const minute=
 date.getUTCMinutes();
-
 const second=
 date.getUTCSeconds();
-
 if(
 minute%10===0&&
 second===0
 ){
-
 result.push(
 unix
 );
-
 }
-
 }
-
 }
-
 return[
 ...new Set(result)
 ];
-
 }
-
 function normalizeOyaTimes(times){
-
 const now=
 Math.floor(
 Date.now()/1000
 );
-
 const result=[];
-
 for(
 const time of times
 ){
-
 if(!Number.isFinite(time)){
 continue;
 }
-
 if(time>now){
 continue;
 }
-
 const date=
 new Date(
 time*1000
 );
-
 const minute=
 date.getUTCMinutes();
-
 const second=
 date.getUTCSeconds();
-
 if(
 minute%10!==0||
 second!==0
 ){
-
 continue;
-
 }
-
 result.push(time);
-
 }
-
 return[
 ...new Set(result)
 ].sort(
 (a,b)=>a-b
 );
-
 }
-
 async function loadOyaCapabilities(){
-
 if(
 oyaCapabilitiesLoaded&&
 oyaAllTimes.length
 ){
-
 return true;
-
 }
-
 if(oyaCapabilitiesLoading){
-
 while(oyaCapabilitiesLoading){
-
 await new Promise(
 r=>setTimeout(
 r,
 50
 )
 );
-
 }
-
 return(
 oyaCapabilitiesLoaded&&
 oyaAllTimes.length
 );
-
 }
-
 oyaCapabilitiesLoading=true;
-
 try{
-
 const response=
 await fetch(
 OYA_PROXY+
@@ -2623,163 +1984,120 @@ OYA_PROXY+
 cache:"no-store"
 }
 );
-
 if(!response.ok){
-
 throw new Error(
 "Capabilities HTTP "+
 response.status
 );
-
 }
-
 const text=
 await response.text();
-
 const xml=
 new DOMParser()
 .parseFromString(
 text,
 "text/xml"
 );
-
 if(
 xml.querySelector(
 "parsererror"
 )
 ){
-
 throw new Error(
 "Ошибка XML"
 );
-
 }
-
 let times=[];
-
 for(
 const node of
 Array.from(
 xml.getElementsByTagName("*")
 )
 ){
-
 if(
 node.localName!=="Extent"&&
 node.localName!=="Dimension"
 ){
-
 continue;
-
 }
-
 const name=
 node.getAttribute(
 "name"
 );
-
 if(
 name&&
 name.toLowerCase()!=="time"
 ){
-
 continue;
-
 }
-
 const value=
 (
 node.textContent||
 ""
 ).trim();
-
 if(!value)continue;
-
 if(
 value.includes("/")
 ){
-
 const parts=
 value.split("/");
-
 const start=
 isoToUnix(
 parts[0]
 );
-
 const end=
 isoToUnix(
 parts[1]
 );
-
 if(
 start!==null&&
 end!==null&&
 end>=start
 ){
-
 const step=600;
-
 const alignedStart=
 Math.ceil(
 start/step
 )*step;
-
 const now=
 Math.floor(
 Date.now()/1000
 );
-
 const lastAllowed=
 Math.min(
 end,
 now
 );
-
 for(
 let t=alignedStart;
 t<=lastAllowed;
 t+=step
 ){
-
 times.push(t);
-
 }
-
 }
-
 }else{
-
 times.push(
 ...parseOyaTimes(value)
 );
-
 }
-
 }
-
 oyaAllTimes=
 normalizeOyaTimes(
 times
 );
-
 if(!oyaAllTimes.length){
-
 throw new Error(
 "В GetCapabilities нет актуального времени"
 );
-
 }
-
 oyaCapabilitiesLoaded=true;
-
 const saved=
 Number(
 localStorage.getItem(
 "gptrad-oya-frame-count"
 )
 );
-
 oyaFrameCount=
 Number.isFinite(saved)&&
 saved>=1
@@ -2793,71 +2111,50 @@ Math.min(
 50,
 oyaAllTimes.length
 );
-
 frameCountInput.min=1;
-
 frameCountInput.max=
 oyaAllTimes.length;
-
 frameCountInput.value=
 oyaFrameCount;
-
 applyOyaFrameCount(
 oyaFrameCount,
 false
 );
-
 return true;
-
 }catch(error){
-
 console.error(
 "OYA capabilities:",
 error
 );
-
 setStatus(
 "Ошибка загрузки ОЯ"
 );
-
 return false;
-
 }finally{
-
 oyaCapabilitiesLoading=false;
-
 }
-
 }
-
 function applyOyaFrameCount(
 count,
 preserve=true
 ){
-
 if(!oyaAllTimes.length)return;
-
 const oldTime=
 preserve&&oyaTimes.length
 ?
 oyaTimes[oyaFrameIndex]
 :
 null;
-
 let numeric=
 Number.parseInt(
 count,
 10
 );
-
 if(!Number.isFinite(numeric)){
-
 numeric=
 oyaFrameCount||
 50;
-
 }
-
 oyaFrameCount=
 Math.max(
 1,
@@ -2866,86 +2163,63 @@ numeric,
 oyaAllTimes.length
 )
 );
-
 oyaTimes=
 oyaAllTimes.slice(
 -oyaFrameCount
 );
-
 oyaFrameIndex=
 oyaTimes.length-1;
-
 if(oldTime!==null){
-
 const index=
 oyaTimes.indexOf(
 oldTime
 );
-
 if(index!==-1){
-
 oyaFrameIndex=index;
-
 }
-
 }
-
 localStorage.setItem(
 "gptrad-oya-frame-count",
 String(
 oyaFrameCount
 )
 );
-
 frameCountInput.min=1;
-
 frameCountInput.max=
 oyaAllTimes.length;
-
 frameCountInput.value=
 oyaFrameCount;
-
 setOyaTimeline();
-
 }
-
 function makeOyaCacheKey(
 time,
 data
 ){
-
 return[
 time,
 data.viewportKey
 ].join("|");
-
 }
-
+/* =====================================================
+   ИСПРАВЛЕННАЯ ОБРАБОТКА OYA PNG
+===================================================== */
 function createCleanOyaBlobUrl(
 blobUrl
 ){
-
 return new Promise(
 (resolve,reject)=>{
-
 const image=
 new Image();
-
 image.onload=()=>{
-
 try{
-
 const canvas=
 document.createElement(
 "canvas"
 );
-
 canvas.width=
 image.naturalWidth;
-
 canvas.height=
 image.naturalHeight;
-
 const ctx=
 canvas.getContext(
 "2d",
@@ -2953,32 +2227,25 @@ canvas.getContext(
 willReadFrequently:true
 }
 );
-
 if(!ctx){
-
 reject(
 new Error(
 "Canvas unavailable"
 )
 );
-
 return;
-
 }
-
 ctx.clearRect(
 0,
 0,
 canvas.width,
 canvas.height
 );
-
 ctx.drawImage(
 image,
 0,
 0
 );
-
 const imageData=
 ctx.getImageData(
 0,
@@ -2986,38 +2253,33 @@ ctx.getImageData(
 canvas.width,
 canvas.height
 );
-
 const pixels=
 imageData.data;
-
 for(
 let i=0;
 i<pixels.length;
 i+=4
 ){
-
 const r=pixels[i];
-
 const g=
 pixels[i+1];
-
 const b=
 pixels[i+2];
-
 const a=
 pixels[i+3];
-
-if(a===0)continue;
-
+if(a===0){
+continue;
+}
 const max=
 Math.max(r,g,b);
-
 const min=
 Math.min(r,g,b);
-
 const diff=
 max-min;
-
+/*
+ * Удаляем серый фон.
+ * Эта логика сохранена.
+ */
 if(
 diff<=22&&
 r>=125&&
@@ -3027,71 +2289,68 @@ r<=250&&
 g<=250&&
 b<=250
 ){
-
 pixels[i+3]=0;
-
+continue;
 }
-
+/*
+ * ВАЖНО:
+ *
+ * У исходного PNG ОЯ цветные пиксели
+ * могут иметь собственную прозрачность.
+ *
+ * Раньше она сохранялась, поэтому даже
+ * при 100% через слой просвечивала карта.
+ *
+ * Теперь любой оставшийся цветной пиксель
+ * получает альфа 255.
+ *
+ * Поэтому:
+ *
+ * 100% = полностью непрозрачный ОЯ
+ * 90%  = непрозрачность 0.90 через OL layer
+ * 0%   = полностью прозрачный OL layer
+ */
+pixels[i+3]=255;
 }
-
 ctx.putImageData(
 imageData,
 0,
 0
 );
-
 canvas.toBlob(
 blob=>{
-
 if(!blob){
-
 reject(
 new Error(
 "PNG creation failed"
 )
 );
-
 return;
-
 }
-
 resolve(
 URL.createObjectURL(
 blob
 )
 );
-
 },
 "image/png"
 );
-
 }catch(error){
-
 reject(error);
-
 }
-
 };
-
 image.onerror=()=>{
-
 reject(
 new Error(
 "OYA image error"
 )
 );
-
 };
-
 image.src=
 blobUrl;
-
 });
-
 }
-
 function wait(ms){
-
 return new Promise(
 resolve=>
 setTimeout(
@@ -3099,24 +2358,18 @@ resolve,
 ms
 )
 );
-
 }
-
 async function fetchOyaBlob(
 url,
 attempts=3
 ){
-
 let lastError=null;
-
 for(
 let attempt=1;
 attempt<=attempts;
 attempt++
 ){
-
 try{
-
 const response=
 await fetch(
 url,
@@ -3124,792 +2377,529 @@ url,
 cache:"force-cache"
 }
 );
-
 if(!response.ok){
-
 throw new Error(
 "OYA HTTP "+
 response.status
 );
-
 }
-
 const blob=
 await response.blob();
-
 if(
 !blob||
 blob.size===0
 ){
-
 throw new Error(
 "OYA empty response"
 );
-
 }
-
 return blob;
-
 }catch(error){
-
 lastError=error;
-
 console.warn(
 `OYA request attempt ${attempt}/${attempts}:`,
 error
 );
-
 if(
 attempt<attempts
 ){
-
 await wait(
 250*attempt
 );
-
 }
-
 }
-
 }
-
 throw lastError||
 new Error(
 "OYA request failed"
 );
-
 }
-
 async function createOyaImageLayer(
 originalBlobUrl,
 extent
 ){
-
 const cleanedUrl=
 await createCleanOyaBlobUrl(
 originalBlobUrl
 );
-
 const source=
 new ol.source.ImageStatic({
-
 url:cleanedUrl,
-
 imageExtent:extent,
-
 projection:"EPSG:3857",
-
 interpolate:false
-
 });
-
 const layer=
 new ol.layer.Image({
-
 source:source,
-
 opacity:
 oyaOpacity/100,
-
 zIndex:60
-
 });
-
 layer.__oyaCleanUrl=
 cleanedUrl;
-
 return layer;
-
 }
-
 function waitForOyaLayerReady(
 layer,
 timeout=15000
 ){
-
 return new Promise(
 (resolve,reject)=>{
-
 const source=
 layer.getSource();
-
 let finished=false;
-
 let timer=null;
-
 const cleanup=()=>{
-
 source.un(
 "imageloadend",
 onLoadEnd
 );
-
 source.un(
 "imageloaderror",
 onLoadError
 );
-
 if(timer){
-
 clearTimeout(
 timer
 );
-
 timer=null;
-
 }
-
 };
-
 const finish=(
 error
 )=>{
-
 if(finished)return;
-
 finished=true;
-
 cleanup();
-
 if(error){
-
 reject(error);
-
 }else{
-
 resolve();
-
 }
-
 };
-
 const onLoadEnd=()=>finish();
-
 const onLoadError=()=>{
-
 finish(
 new Error(
 "OYA ImageStatic load error"
 )
 );
-
 };
-
 source.on(
 "imageloadend",
 onLoadEnd
 );
-
 source.on(
 "imageloaderror",
 onLoadError
 );
-
 timer=setTimeout(
 ()=>{
-
 finish(
 new Error(
 "OYA image timeout"
 )
 );
-
 },
 timeout
 );
-
 map.addLayer(
 layer
 );
-
 map.renderSync();
-
 });
-
 }
-
 function swapOyaLayer(
 newLayer
 ){
-
 const oldLayer=
 oyaImage;
-
 const oldCleanUrl=
 oyaImageBlobUrl;
-
 newLayer.setOpacity(
 oyaOpacity/100
 );
-
 oyaImage=
 newLayer;
-
 oyaImageBlobUrl=
 newLayer.__oyaCleanUrl||
 null;
-
 map.renderSync();
-
 requestAnimationFrame(
 ()=>{
-
 if(
 oldLayer&&
 oldLayer!==newLayer
 ){
-
 map.removeLayer(
 oldLayer
 );
-
 }
-
 if(
 oldCleanUrl&&
 oldCleanUrl!==oyaImageBlobUrl
 ){
-
 try{
-
 URL.revokeObjectURL(
 oldCleanUrl
 );
-
 }catch(e){}
-
 }
-
 }
 );
-
 }
-
 async function loadOyaFrame(
 index
 ){
-
 if(
 activeLayer!=="oya"
 )return;
-
 if(!oyaTimes.length){
-
 if(
 !(await loadOyaCapabilities())
 ){
-
 return;
-
 }
-
 }
-
 if(
 index<0||
 index>=oyaTimes.length
 ){
-
 return;
-
 }
-
 const requestId=
 ++oyaFrameRequestId;
-
 const generation=
 oyaCacheGeneration;
-
 oyaFrameIndex=index;
-
 timeSlider.value=index;
-
 updateTimeLabel();
-
 renderOyaTimeline();
-
 const timeValue=
 oyaTimes[index];
-
 const requestData=
 getOyaRequestData(
 timeValue
 );
-
 const cacheKey=
 makeOyaCacheKey(
 timeValue,
 requestData
 );
-
 let newLayer=null;
-
 try{
-
 let result=
 oyaFrameCache.get(
 cacheKey
 );
-
 if(!result){
-
 setStatus(
 "Загрузка ОЯ…"
 );
-
 let pending=
 oyaPendingRequests.get(
 cacheKey
 );
-
 if(!pending){
-
 pending=(async()=>{
-
 const blob=
 await fetchOyaBlob(
 requestData.url,
 3
 );
-
 if(
 generation!==oyaCacheGeneration
 ){
-
 return null;
-
 }
-
 const blobUrl=
 URL.createObjectURL(
 blob
 );
-
 const value={
-
 blobUrl,
-
 extent:
 requestData.extent,
-
 timeValue
-
 };
-
 oyaFrameCache.set(
 cacheKey,
 value
 );
-
 return value;
-
 })();
-
 oyaPendingRequests.set(
 cacheKey,
 pending
 );
-
 }
-
 try{
-
 result=
 await pending;
-
 }finally{
-
 oyaPendingRequests.delete(
 cacheKey
 );
-
 }
-
 }
-
 if(!result)return;
-
 if(
 requestId!==oyaFrameRequestId||
 generation!==oyaCacheGeneration||
 activeLayer!=="oya"||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
-
 return;
-
 }
-
 newLayer=
 await createOyaImageLayer(
 result.blobUrl,
 result.extent
 );
-
 if(
 requestId!==oyaFrameRequestId||
 generation!==oyaCacheGeneration||
 activeLayer!=="oya"||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
-
 if(newLayer.__oyaCleanUrl){
-
 try{
-
 URL.revokeObjectURL(
 newLayer.__oyaCleanUrl
 );
-
 }catch(e){}
-
 }
-
 return;
-
 }
-
 try{
-
 await waitForOyaLayerReady(
 newLayer,
 15000
 );
-
 }catch(error){
-
 console.error(
 "OYA layer load:",
 error
 );
-
 try{
-
 map.removeLayer(
 newLayer
 );
-
 }catch(e){}
-
 if(
 newLayer.__oyaCleanUrl
 ){
-
 try{
-
 URL.revokeObjectURL(
 newLayer.__oyaCleanUrl
 );
-
 }catch(e){}
-
 }
-
 throw error;
-
 }
-
 if(
 requestId!==oyaFrameRequestId||
 generation!==oyaCacheGeneration||
 activeLayer!=="oya"||
 oyaTimes[oyaFrameIndex]!==timeValue
 ){
-
 try{
-
 map.removeLayer(
 newLayer
 );
-
 }catch(e){}
-
 if(
 newLayer.__oyaCleanUrl
 ){
-
 try{
-
 URL.revokeObjectURL(
 newLayer.__oyaCleanUrl
 );
-
 }catch(e){}
-
 }
-
 return;
-
 }
-
 swapOyaLayer(
 newLayer
 );
-
 oyaLoadedTimes.add(
 timeValue
 );
-
 renderOyaTimeline();
-
 setStatus(
 "Опасные явления"
 );
-
 }catch(error){
-
 oyaPendingRequests.delete(
 cacheKey
 );
-
 if(newLayer){
-
 try{
-
 map.removeLayer(
 newLayer
 );
-
 }catch(e){}
-
 if(
 newLayer.__oyaCleanUrl
 ){
-
 try{
-
 URL.revokeObjectURL(
 newLayer.__oyaCleanUrl
 );
-
 }catch(e){}
-
 }
-
 }
-
 console.error(
 "OYA frame:",
 error
 );
-
 if(
 requestId===oyaFrameRequestId
 ){
-
 setStatus(
 "Кадр ОЯ не загрузился"
 );
-
 }
-
 }
-
 }
-
 async function preloadOyaFrame(
 timeValue,
 generation,
 cacheGeneration
 ){
-
 if(
 generation!==oyaPreloadGeneration||
 cacheGeneration!==oyaCacheGeneration||
 activeLayer!=="oya"
 ){
-
 return false;
-
 }
-
 const data=
 getOyaRequestData(
 timeValue
 );
-
 const key=
 makeOyaCacheKey(
 timeValue,
 data
 );
-
 if(
 oyaFrameCache.has(key)
 ){
-
 oyaLoadedTimes.add(
 timeValue
 );
-
 return true;
-
 }
-
 let pending=
 oyaPendingRequests.get(
 key
 );
-
 if(!pending){
-
 pending=(async()=>{
-
 const blob=
 await fetchOyaBlob(
 data.url,
 3
 );
-
 if(
 generation!==oyaPreloadGeneration||
 cacheGeneration!==oyaCacheGeneration||
 activeLayer!=="oya"
 ){
-
 return null;
-
 }
-
 const blobUrl=
 URL.createObjectURL(
 blob
 );
-
 oyaFrameCache.set(
 key,
 {
-
 blobUrl,
-
 extent:data.extent,
-
 timeValue
-
 }
 );
-
 oyaLoadedTimes.add(
 timeValue
 );
-
 return true;
-
 })();
-
 oyaPendingRequests.set(
 key,
 pending
 );
-
 }
-
 try{
-
 return !!(
 await pending
 );
-
 }catch(error){
-
 console.error(
 "Preload:",
 error
 );
-
 return false;
-
 }finally{
-
 oyaPendingRequests.delete(
 key
 );
-
 }
-
 }
-
 async function preloadAllOyaFrames(){
-
 if(
 activeLayer!=="oya"||
 oyaTimes.length<1||
 oyaTimes.length>=52||
 oyaPreloading
 ){
-
 return;
-
 }
-
 oyaPreloading=true;
-
 const generation=
 ++oyaPreloadGeneration;
-
 const cacheGeneration=
 oyaCacheGeneration;
-
 updatePreloadButton();
-
 const times=
 oyaTimes.slice();
-
 let cursor=0;
-
 async function worker(){
-
 while(true){
-
 if(
 generation!==oyaPreloadGeneration||
 cacheGeneration!==oyaCacheGeneration||
 activeLayer!=="oya"
 ){
-
 return;
-
 }
-
 const index=
 cursor++;
-
 if(index>=times.length)return;
-
 await preloadOyaFrame(
 times[index],
 generation,
 cacheGeneration
 );
-
 let loaded=0;
-
 for(
 const time of times
 ){
-
 if(
 oyaLoadedTimes.has(time)
 ){
-
 loaded++;
-
 }
-
 }
-
 setStatus(
 `Загрузка кадров: ${loaded}/${times.length}`
 );
-
 renderOyaTimeline();
-
 }
-
 }
-
 try{
-
 await Promise.all(
 Array.from(
 {
@@ -3922,17 +2912,14 @@ times.length
 ()=>worker()
 )
 );
-
 if(
 generation===oyaPreloadGeneration&&
 activeLayer==="oya"
 ){
-
 const complete=
 times.every(
 t=>oyaLoadedTimes.has(t)
 );
-
 setStatus(
 complete
 ?
@@ -3940,263 +2927,159 @@ complete
 :
 "Загрузка ОЯ завершена"
 );
-
 }
-
 }catch(error){
-
 console.error(error);
-
 setStatus(
 "Ошибка загрузки ОЯ"
 );
-
 }finally{
-
 if(
 generation===oyaPreloadGeneration
 ){
-
 oyaPreloading=false;
-
 }
-
 renderOyaTimeline();
-
 updatePreloadButton();
-
 }
-
 }
-
 function invalidateOyaViewport(){
-
 if(
 activeLayer!=="oya"
 )return;
-
 const viewport=
 getCurrentViewportData();
-
 if(
 oyaViewportKey===
 viewport.key
 ){
-
 return;
-
 }
-
 oyaViewportKey=
 viewport.key;
-
 oyaCacheGeneration++;
-
 oyaPreloadGeneration++;
-
 oyaFrameRequestId++;
-
 oyaPreloading=false;
-
 for(
 const value of
 oyaFrameCache.values()
 ){
-
 if(value.blobUrl){
-
 try{
-
 URL.revokeObjectURL(
 value.blobUrl
 );
-
 }catch(e){}
-
 }
-
 }
-
 oyaFrameCache.clear();
-
 oyaPendingRequests.clear();
-
 oyaLoadedTimes.clear();
-
 renderOyaTimeline();
-
 updatePreloadButton();
-
 }
-
 function scheduleOyaViewportReload(){
-
 if(
 activeLayer!=="oya"
 )return;
-
 clearTimeout(
 viewportTimer
 );
-
 viewportTimer=
 setTimeout(
 ()=>{
-
 invalidateOyaViewport();
-
 if(oyaTimes.length){
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 },
 180
 );
-
 }
-
 map.on(
 "moveend",
 scheduleOyaViewportReload
 );
-
 async function showOya(){
-
 stopPlayback();
-
 rainFrameRequestId++;
-
 oyaFrameRequestId++;
-
 oyaPreloadGeneration++;
-
 oyaPreloading=false;
-
 if(radarLayer){
-
 map.removeLayer(
 radarLayer
 );
-
 radarLayer=null;
-
 }
-
 if(oyaImage){
-
 map.removeLayer(
 oyaImage
 );
-
 oyaImage=null;
-
 }
-
 if(oyaImageBlobUrl){
-
 try{
-
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
-
 }catch(e){}
-
 }
-
 oyaImageBlobUrl=null;
-
 for(
 const value of
 oyaFrameCache.values()
 ){
-
 if(value.blobUrl){
-
 try{
-
 URL.revokeObjectURL(
 value.blobUrl
 );
-
 }catch(e){}
-
 }
-
 }
-
 oyaFrameCache.clear();
-
 oyaPendingRequests.clear();
-
 oyaLoadedTimes.clear();
-
 oyaCacheGeneration++;
-
 const viewport=
 getCurrentViewportData();
-
 oyaViewportKey=
 viewport.key;
-
 setStatus(
 "Получение данных ОЯ…"
 );
-
 const ready=
 await loadOyaCapabilities();
-
 if(!ready){
-
 setStatus(
 "Не удалось получить ОЯ"
 );
-
 return;
-
 }
-
 setOyaTimeline();
-
 oyaFrameIndex=
 oyaTimes.length-1;
-
 timeSlider.value=
 oyaFrameIndex;
-
 updateTimeLabel();
-
 renderOyaTimeline();
-
 updatePreloadButton();
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
-/* =====================================================
-   RAINVIEWER
-   НЕ ТРОНУТО
-===================================================== */
-
 }
-
 async function loadRainViewer(){
-
 showLoading(
 "Загрузка радара…"
 );
-
 setStatus(
 "Получение RainViewer…"
 );
-
 try{
-
 const response=
 await fetch(
 "https://api.rainviewer.com/public/weather-maps.json",
@@ -4204,19 +3087,14 @@ await fetch(
 cache:"no-store"
 }
 );
-
 if(!response.ok){
-
 throw new Error(
 "RainViewer HTTP "+
 response.status
 );
-
 }
-
 const data=
 await response.json();
-
 const past=
 Array.isArray(
 data.radar?.past
@@ -4225,7 +3103,6 @@ data.radar?.past
 data.radar.past
 :
 [];
-
 const nowcast=
 Array.isArray(
 data.radar?.nowcast
@@ -4234,7 +3111,6 @@ data.radar?.nowcast
 data.radar.nowcast
 :
 [];
-
 rainFrames=[
 ...past,
 ...nowcast
@@ -4251,784 +3127,498 @@ frame.path.length>0
 .sort(
 (a,b)=>a.time-b.time
 );
-
 if(!rainFrames.length){
-
 throw new Error(
 "RainViewer не вернул кадры"
 );
-
 }
-
 currentFrame=
 rainFrames.length-1;
-
 setRadarTimeline();
-
 showRainFrame(
 currentFrame
 );
-
 setStatus(
 "Радар RainViewer"
 );
-
 }catch(error){
-
 console.error(
 "RainViewer:",
 error
 );
-
 setStatus(
 "Ошибка RainViewer"
 );
-
 }finally{
-
 hideLoading();
-
 }
-
 }
-
 function makeRainLayer(frame){
-
 let path=
 String(
 frame.path||""
 ).trim();
-
 if(!path){
-
 throw new Error(
 "Пустой RainViewer path"
 );
-
 }
-
 if(!path.startsWith("/")){
-
 path="/"+path;
-
 }
-
 const tileUrl=
 "https://tilecache.rainviewer.com"+
 path+
 "/256/{z}/{x}/{y}/2/1_1.png";
-
 const source=
 new ol.source.XYZ({
-
 url:tileUrl,
-
 tileSize:256,
-
 maxZoom:19,
-
 wrapX:true,
-
 transition:0
-
 });
-
 const layer=
 new ol.layer.Tile({
-
 source,
-
 opacity:.82,
-
 zIndex:20,
-
 preload:1
-
 });
-
 layer.__rainFrame=
 frame;
-
 return layer;
-
 }
-
 function showRainFrame(index){
-
 if(
 activeLayer!=="radar"||
 !rainFrames[index]
 ){
-
 return;
-
 }
-
 const frame=
 rainFrames[index];
-
 const requestId=
 ++rainFrameRequestId;
-
 let newLayer;
-
 try{
-
 newLayer=
 makeRainLayer(
 frame
 );
-
 }catch(error){
-
 console.error(error);
-
 setStatus(
 "Ошибка URL радара"
 );
-
 return;
-
 }
-
 const source=
 newLayer.getSource();
-
 let finished=false;
-
 let loadedTiles=0;
-
 let failedTiles=0;
-
 const cleanup=()=>{
-
 source.un(
 "tileloadend",
 onTileLoadEnd
 );
-
 source.un(
 "tileloaderror",
 onTileLoadError
 );
-
 };
-
 const removeNewLayer=()=>{
-
 cleanup();
-
 try{
-
 map.removeLayer(
 newLayer
 );
-
 }catch(e){}
-
 };
-
 const promote=()=>{
-
 if(finished)return;
-
 finished=true;
-
 cleanup();
-
 if(
 requestId!==rainFrameRequestId||
 activeLayer!=="radar"
 ){
-
 removeNewLayer();
-
 return;
-
 }
-
 const oldLayer=
 radarLayer;
-
 radarLayer=
 newLayer;
-
 if(
 oldLayer&&
 oldLayer!==newLayer
 ){
-
 map.removeLayer(
 oldLayer
 );
-
 }
-
 map.render();
-
 setStatus(
 "Радар RainViewer"
 );
-
 };
-
 const onTileLoadEnd=()=>{
-
 loadedTiles++;
-
 if(!finished){
-
 promote();
-
 }
-
 };
-
 const onTileLoadError=()=>{
-
 failedTiles++;
-
 if(
 !finished&&
 loadedTiles===0&&
 failedTiles>=4
 ){
-
 removeNewLayer();
-
 if(
 requestId===rainFrameRequestId
 ){
-
 setStatus(
 "Кадр радара недоступен"
 );
-
 }
-
 }
-
 };
-
 source.on(
 "tileloadend",
 onTileLoadEnd
 );
-
 source.on(
 "tileloaderror",
 onTileLoadError
 );
-
 map.addLayer(
 newLayer
 );
-
 map.render();
-
 updateTimeLabel();
-
 setTimeout(
 ()=>{
-
 if(
 finished||
 requestId!==rainFrameRequestId
 ){
-
 return;
-
 }
-
 if(loadedTiles>0){
-
 promote();
-
 }else{
-
 removeNewLayer();
-
 setStatus(
 "Кадр радара не загрузился"
 );
-
 }
-
 },
 5000
 );
-
 }
-
 function showRadar(){
-
 stopPlayback();
-
 oyaFrameRequestId++;
-
 oyaPreloadGeneration++;
-
 oyaPreloading=false;
-
 if(oyaImage){
-
 map.removeLayer(
 oyaImage
 );
-
 oyaImage=null;
-
 }
-
 if(oyaImageBlobUrl){
-
 try{
-
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
-
 }catch(e){}
-
 }
-
 oyaImageBlobUrl=null;
-
 if(rainFrames.length){
-
 setRadarTimeline();
-
 showRainFrame(
 currentFrame
 );
-
 setStatus(
 "Радар RainViewer"
 );
-
 }else{
-
 loadRainViewer();
-
 }
-
 }
-
 timeSlider.addEventListener(
 "input",
 ()=>{
-
 const index=
 Number(
 timeSlider.value
 );
-
 if(activeLayer==="radar"){
-
 if(!rainFrames.length)return;
-
 currentFrame=index;
-
 updateTimeLabel();
-
 showRainFrame(index);
-
 }else{
-
 if(!oyaTimes.length)return;
-
 oyaFrameIndex=index;
-
 updateTimeLabel();
-
 renderOyaTimeline();
-
 loadOyaFrame(index);
-
 }
-
 });
-
 document
 .getElementById("backBtn")
 .addEventListener(
 "click",
 ()=>{
-
 if(activeLayer==="radar"){
-
 if(!rainFrames.length)return;
-
 currentFrame=
 Math.max(
 0,
 currentFrame-1
 );
-
 timeSlider.value=
 currentFrame;
-
 showRainFrame(
 currentFrame
 );
-
 }else{
-
 if(!oyaTimes.length)return;
-
 oyaFrameIndex=
 Math.max(
 0,
 oyaFrameIndex-1
 );
-
 timeSlider.value=
 oyaFrameIndex;
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 }
 );
-
 document
 .getElementById("forwardBtn")
 .addEventListener(
 "click",
 ()=>{
-
 if(activeLayer==="radar"){
-
 if(!rainFrames.length)return;
-
 currentFrame=
 Math.min(
 rainFrames.length-1,
 currentFrame+1
 );
-
 timeSlider.value=
 currentFrame;
-
 showRainFrame(
 currentFrame
 );
-
 }else{
-
 if(!oyaTimes.length)return;
-
 oyaFrameIndex=
 Math.min(
 oyaTimes.length-1,
 oyaFrameIndex+1
 );
-
 timeSlider.value=
 oyaFrameIndex;
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 }
 );
-
 playBtn.addEventListener(
 "click",
 ()=>{
-
 const total=
 activeLayer==="radar"
 ?
 rainFrames.length
 :
 oyaTimes.length;
-
 if(!total)return;
-
 playing=!playing;
-
 playBtn.textContent=
 playing
 ?
 "Ⅱ"
 :
 "▶";
-
 clearInterval(
 playTimer
 );
-
 if(!playing)return;
-
 playTimer=
 setInterval(
 ()=>{
-
 if(activeLayer==="radar"){
-
 currentFrame++;
-
 if(
 currentFrame>=
 rainFrames.length
 ){
-
 currentFrame=0;
-
 }
-
 timeSlider.value=
 currentFrame;
-
 showRainFrame(
 currentFrame
 );
-
 }else{
-
 oyaFrameIndex++;
-
 if(
 oyaFrameIndex>=
 oyaTimes.length
 ){
-
 oyaFrameIndex=0;
-
 }
-
 timeSlider.value=
 oyaFrameIndex;
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 },
 600
 );
-
 });
-
 function stopPlayback(){
-
 playing=false;
-
 clearInterval(
 playTimer
 );
-
 playTimer=null;
-
 playBtn.textContent=
 "▶";
-
 }
-
 preloadBtn.addEventListener(
 "click",
 ()=>{
-
 if(
 !preloadBtn.disabled
 ){
-
 preloadAllOyaFrames();
-
 }
-
 });
-
 document
 .getElementById("locateBtn")
 .addEventListener(
 "click",
 ()=>{
-
 if(!navigator.geolocation){
-
 setStatus(
 "Геолокация недоступна"
 );
-
 return;
-
 }
-
 setStatus(
 "Определение местоположения…"
 );
-
 navigator.geolocation.getCurrentPosition(
-
 position=>{
-
 view.animate({
-
 center:
 ol.proj.fromLonLat([
-
 position.coords.longitude,
-
 position.coords.latitude
-
 ]),
-
 zoom:
 Math.max(
 view.getZoom(),
 8
 ),
-
 duration:800
-
 });
-
 setStatus(
 "Ваше местоположение"
 );
-
 },
-
 ()=>{
-
 setStatus(
 "Не удалось определить местоположение"
 );
-
 },
-
 {
-
 enableHighAccuracy:true,
-
 timeout:10000,
-
 maximumAge:30000
-
 }
-
 );
-
 });
-
 document
 .getElementById("reloadBtn")
 .addEventListener(
 "click",
 ()=>{
-
 stopPlayback();
-
 updateRadarPositions();
-
 if(activeLayer==="oya"){
-
 oyaFrameRequestId++;
-
 if(oyaImage){
-
 map.removeLayer(
 oyaImage
 );
-
 }
-
 oyaImage=null;
-
 if(oyaImageBlobUrl){
-
 try{
-
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
-
 }catch(e){}
-
 }
-
 oyaImageBlobUrl=null;
-
 for(
 const value of
 oyaFrameCache.values()
 ){
-
 if(value.blobUrl){
-
 try{
-
 URL.revokeObjectURL(
 value.blobUrl
 );
-
 }catch(e){}
-
 }
-
 }
-
 oyaFrameCache.clear();
-
 oyaPendingRequests.clear();
-
 oyaLoadedTimes.clear();
-
 oyaCapabilitiesLoaded=false;
-
 oyaCapabilitiesLoading=false;
-
 oyaAllTimes=[];
-
 oyaTimes=[];
-
 oyaFrameIndex=0;
-
 frameCountInput.min=1;
-
 frameCountInput.max=1;
-
 frameCountInput.value=
 oyaFrameCount||50;
-
 showOya();
-
 }else{
-
 loadRainViewer();
-
 }
-
 });
-
 document
 .getElementById("settingsBtn")
 .addEventListener(
 "click",
 ()=>{
-
 settings.classList.toggle(
 "open"
 );
-
 });
-
 document
 .getElementById("appearanceToggle")
 .addEventListener(
 "click",
 ()=>{
-
 document
 .getElementById(
 "appearanceSection"
@@ -5036,15 +3626,12 @@ document
 .classList.toggle(
 "open"
 );
-
 });
-
 document
 .getElementById("mapToggle")
 .addEventListener(
 "click",
 ()=>{
-
 document
 .getElementById(
 "mapSection"
@@ -5052,15 +3639,12 @@ document
 .classList.toggle(
 "open"
 );
-
 });
-
 document
 .getElementById("opacityToggle")
 .addEventListener(
 "click",
 ()=>{
-
 document
 .getElementById(
 "opacitySection"
@@ -5068,53 +3652,39 @@ document
 .classList.toggle(
 "open"
 );
-
 });
-
 document
 .getElementById("resetMapBtn")
 .addEventListener(
 "click",
 ()=>{
-
 view.animate({
-
 center:
 ol.proj.fromLonLat(
 DEFAULT_MAP_CENTER
 ),
-
 zoom:
 DEFAULT_MAP_ZOOM,
-
 rotation:0,
-
 duration:600
-
 });
-
 });
-
 document
 .getElementById("frameCountToggle")
 .addEventListener(
 "click",
 async()=>{
-
 const section=
 document.getElementById(
 "frameCountSection"
 );
-
 const opening=
 !section.classList.contains(
 "open"
 );
-
 section.classList.toggle(
 "open"
 );
-
 if(
 opening&&
 !(
@@ -5122,41 +3692,28 @@ oyaCapabilitiesLoaded&&
 oyaAllTimes.length
 )
 ){
-
 await loadOyaCapabilities();
-
 }
-
 });
-
 function commitOyaFrameCount(){
-
 if(!oyaAllTimes.length){
-
 frameCountInput.value=
 oyaFrameCount||50;
-
 return;
-
 }
-
 let count=
 Number.parseInt(
 frameCountInput.value,
 10
 );
-
 if(!Number.isFinite(count)){
-
 count=
 oyaFrameCount||
 Math.min(
 50,
 oyaAllTimes.length
 );
-
 }
-
 count=
 Math.max(
 1,
@@ -5165,44 +3722,31 @@ count,
 oyaAllTimes.length
 )
 );
-
 applyOyaFrameCount(
 count,
 true
 );
-
 if(activeLayer==="oya"){
-
 oyaFrameRequestId++;
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 }
-
 function changeOyaFrameCount(
 delta
 ){
-
 if(!oyaAllTimes.length)return;
-
 let count=
 Number.parseInt(
 frameCountInput.value,
 10
 );
-
 if(!Number.isFinite(count)){
-
 count=
 oyaFrameCount||
 50;
-
 }
-
 count=
 Math.max(
 1,
@@ -5211,118 +3755,84 @@ oyaAllTimes.length,
 count+delta
 )
 );
-
 applyOyaFrameCount(
 count,
 true
 );
-
 if(activeLayer==="oya"){
-
 oyaFrameRequestId++;
-
 loadOyaFrame(
 oyaFrameIndex
 );
-
 }
-
 }
-
 frameCountInput.addEventListener(
 "change",
 commitOyaFrameCount
 );
-
 frameCountInput.addEventListener(
 "keydown",
 event=>{
-
 if(event.key==="Enter"){
-
 event.preventDefault();
-
 commitOyaFrameCount();
-
 frameCountInput.blur();
-
 }
-
 });
-
 document
 .getElementById("frameCountPrev")
 .addEventListener(
 "click",
 ()=>changeOyaFrameCount(-1)
 );
-
 document
 .getElementById("frameCountNext")
 .addEventListener(
 "click",
 ()=>changeOyaFrameCount(1)
 );
-
 function setInterfaceTheme(theme){
-
 const light=
 theme==="light";
-
 document.body.classList.toggle(
 "light",
 light
 );
-
 document
 .querySelectorAll(".theme-btn")
 .forEach(
 button=>{
-
 button.classList.toggle(
 "active",
 button.dataset.theme===theme
 );
-
 }
 );
-
 localStorage.setItem(
 "gptrad-interface-theme",
 theme
 );
-
 map.render();
-
 resizeMap();
-
 }
-
 document
 .querySelectorAll(".theme-btn")
 .forEach(
 button=>{
-
 button.addEventListener(
 "click",
 ()=>{
-
 setInterfaceTheme(
 button.dataset.theme
 );
-
 }
-
 );
-
 });
-
 const savedInterfaceTheme=
 localStorage.getItem(
 "gptrad-interface-theme"
 )||
 "dark";
-
 setInterfaceTheme(
 savedInterfaceTheme==="light"
 ?
@@ -5330,69 +3840,50 @@ savedInterfaceTheme==="light"
 :
 "dark"
 );
-
 function setMapTheme(theme){
-
 const dark=
 theme==="dark";
-
 osmLayer.setVisible(
 !dark
 );
-
 darkOsmLayer.setVisible(
 dark
 );
-
 document
 .querySelectorAll(".map-theme-btn")
 .forEach(
 button=>{
-
 button.classList.toggle(
 "active",
 button.dataset.mapTheme===theme
 );
-
 }
 );
-
 localStorage.setItem(
 "gptrad-map-theme",
 theme
 );
-
 map.render();
-
 resizeMap();
-
 }
-
 document
 .querySelectorAll(".map-theme-btn")
 .forEach(
 button=>{
-
 button.addEventListener(
 "click",
 ()=>{
-
 setMapTheme(
 button.dataset.mapTheme
 );
-
 }
-
 );
-
 });
-
 const savedMapTheme=
 localStorage.getItem(
 "gptrad-map-theme"
 )||
 "light";
-
 setMapTheme(
 savedMapTheme==="dark"
 ?
@@ -5400,35 +3891,27 @@ savedMapTheme==="dark"
 :
 "light"
 );
-
 selectedLayer.addEventListener(
 "click",
 ()=>{
-
 const open=
 layerDrawer.classList.toggle(
 "open"
 );
-
 selectedLayer.classList.toggle(
 "open",
 open
 );
-
 });
-
 document
 .querySelectorAll(".layer-item")
 .forEach(
 button=>{
-
 button.addEventListener(
 "click",
 ()=>{
-
 const type=
 button.dataset.layer;
-
 document
 .querySelectorAll(
 ".layer-item"
@@ -5440,86 +3923,56 @@ x.classList.remove(
 );
 }
 );
-
 button.classList.add(
 "active"
 );
-
 activeLayer=type;
-
 if(type==="oya"){
-
 selectedLayerName.textContent=
 "Опасные явления";
-
 showOya();
-
 }else{
-
 selectedLayerName.textContent=
 "Радар (RainViewer)";
-
 showRadar();
-
 }
-
 layerDrawer.classList.remove(
 "open"
 );
-
 selectedLayer.classList.remove(
 "open"
 );
-
 }
-
 );
-
 });
-
 setOyaOpacity(
 oyaOpacity
 );
-
 setStatus(
 "Загрузка карты…"
 );
-
 requestAnimationFrame(
 ()=>{
-
 resizeMap();
-
 setStatus(
 "Загрузка радара…"
 );
-
 loadRainViewer();
-
 }
 );
-
 setTimeout(
 async()=>{
-
 try{
-
 await loadOyaCapabilities();
-
 }catch(error){
-
 console.warn(
 "OYA background:",
 error
 );
-
 }
-
 },
 1500
 );
-
 </script>
-
 </body>
 </html>
