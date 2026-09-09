@@ -34,10 +34,6 @@ z-index:1;
 background:#d8d8d8;
 }
 
-/* =====================================================
-   ТЁМНАЯ КОПИЯ КАРТЫ
-===================================================== */
-
 .dark-osm-layer img,
 .dark-osm-layer canvas{
 filter:
@@ -293,7 +289,7 @@ opacity:1;
 visibility:visible;
 pointer-events:auto;
 transform:translateY(0) scale(1);
-max-height:560px;
+max-height:680px;
 transition:
 opacity .25s ease,
 transform .28s cubic-bezier(.22,.61,.36,1),
@@ -358,14 +354,15 @@ padding:0 2px;
 }
 
 .settings-section.open .settings-subpanel{
-max-height:120px;
+max-height:160px;
 opacity:1;
 transform:translateY(0);
 padding-top:7px;
 padding-bottom:2px;
 }
 
-.theme-btn{
+.theme-btn,
+.map-action-btn{
 width:100%;
 border:0;
 outline:0;
@@ -378,7 +375,8 @@ text-align:left;
 font-size:13px;
 }
 
-.theme-btn:last-child{
+.theme-btn:last-child,
+.map-action-btn:last-child{
 margin-bottom:0;
 }
 
@@ -388,6 +386,10 @@ background:#3b3b3b;
 
 body.light .theme-btn.active{
 background:#d7d7d7;
+}
+
+.map-action-btn:active{
+transform:scale(.98);
 }
 
 .frame-count-row{
@@ -445,10 +447,6 @@ padding:0;
 opacity:.35;
 }
 
-/* =====================================================
-   РАДАРНЫЙ ЛУЧ
-===================================================== */
-
 .radar-beam-button{
 width:100%;
 height:40px;
@@ -486,10 +484,6 @@ background:#3b3b3b;
 color:#69d99a;
 opacity:1;
 }
-
-/* =====================================================
-   TIMELINE
-===================================================== */
 
 .timeline{
 position:absolute;
@@ -766,6 +760,7 @@ body.light .layer-item,
 body.light .timeline-arrow,
 body.light #playBtn,
 body.light .theme-btn,
+body.light .map-action-btn,
 body.light .settings-section-btn,
 body.light .frame-count-arrow,
 body.light #frameCountInput,
@@ -919,9 +914,7 @@ left:8px;
 
 <div class="settings-title">Настройки</div>
 
-<!-- ===================================================
-     ОФОРМЛЕНИЕ
-=================================================== -->
+<!-- ОФОРМЛЕНИЕ -->
 
 <div class="settings-section" id="appearanceSection">
 
@@ -944,9 +937,28 @@ left:8px;
 
 </div>
 
-<!-- ===================================================
-     КАДРЫ
-=================================================== -->
+<!-- КАРТА -->
+
+<div class="settings-section" id="mapSection">
+
+<button class="settings-section-btn" id="mapToggle">
+<span>Карта</span>
+<span class="settings-section-arrow">▾</span>
+</button>
+
+<div class="settings-subpanel">
+
+<button
+id="resetMapBtn"
+class="map-action-btn">
+Сбросить вид карты
+</button>
+
+</div>
+
+</div>
+
+<!-- КАДРЫ -->
 
 <div class="settings-section" id="frameCountSection">
 
@@ -978,10 +990,6 @@ class="frame-count-arrow">▶</button>
 </div>
 
 </div>
-
-<!-- ===================================================
-     РАДАРНЫЙ ЛУЧ
-=================================================== -->
 
 <button id="radarBeamToggle"
 class="radar-beam-button">
@@ -1206,6 +1214,11 @@ minute:"2-digit"
    MAP
 ===================================================== */
 
+const DEFAULT_MAP_CENTER=
+[37.61,55.75];
+
+const DEFAULT_MAP_ZOOM=5;
+
 const osmSource=
 new ol.source.XYZ({
 
@@ -1269,12 +1282,11 @@ const view=
 new ol.View({
 
 center:
-ol.proj.fromLonLat([
-37.61,
-55.75
-]),
+ol.proj.fromLonLat(
+DEFAULT_MAP_CENTER
+),
 
-zoom:5,
+zoom:DEFAULT_MAP_ZOOM,
 
 minZoom:2,
 
@@ -1355,11 +1367,37 @@ resizeMap,
 const RADAR_VECTOR_PROXY=
 "/api/oya?action=vector";
 
+/*
+ * 280 км — новый радиус луча.
+ */
+
 const RADAR_COVERAGE_RADIUS=
-300000;
+280000;
 
 const RADAR_UPDATE_INTERVAL=
 5*60*1000;
+
+/*
+ * Подтверждённые координаты ДМРЛ,
+ * опубликованные Центральным УГМС.
+ *
+ * Остальные точки берутся из vector endpoint.
+ * Поэтому этот массив не заменяет динамические данные.
+ */
+
+const KNOWN_RADAR_POSITIONS=[
+
+{
+lat:55.67,
+lon:37.55
+},
+
+{
+lat:56.28,
+lon:40.20
+}
+
+];
 
 let radarPositions=[];
 
@@ -1550,6 +1588,63 @@ map.render();
 }
 
 /* =====================================================
+   ОБЪЕДИНЕНИЕ РАДАРНЫХ ТОЧЕК
+===================================================== */
+
+function mergeRadarPositions(
+dynamicPositions
+){
+
+const result=[];
+const seen=new Set();
+
+const all=[
+...KNOWN_RADAR_POSITIONS,
+...dynamicPositions
+];
+
+for(
+const radar of all
+){
+
+if(
+!radar||
+!Number.isFinite(radar.lat)||
+!Number.isFinite(radar.lon)
+){
+
+continue;
+
+}
+
+const key=
+radar.lat.toFixed(6)+","+
+radar.lon.toFixed(6);
+
+if(
+seen.has(key)
+){
+
+continue;
+
+}
+
+seen.add(key);
+
+result.push({
+
+lat:radar.lat,
+lon:radar.lon
+
+});
+
+}
+
+return result;
+
+}
+
+/* =====================================================
    ПОЛУЧЕНИЕ КООРДИНАТ РАДАРОВ
 ===================================================== */
 
@@ -1635,34 +1730,10 @@ lon
 
 }
 
-/*
- * Удаляем только настоящие дубликаты.
- */
-
-const unique=[];
-const seen=new Set();
-
-for(
-const radar of result
-){
-
-const key=
-radar.lat.toFixed(6)+","+
-radar.lon.toFixed(6);
-
-if(
-seen.has(key)
-){
-
-continue;
-
-}
-
-seen.add(key);
-
-unique.push(radar);
-
-}
+const unique=
+mergeRadarPositions(
+result
+);
 
 console.log(
 "Radar positions:",
@@ -1678,7 +1749,7 @@ console.error(
 error
 );
 
-return[];
+return mergeRadarPositions([]);
 
 }
 
@@ -1855,20 +1926,12 @@ let oyaViewportKey="";
 let viewportTimer=null;
 let oyaFrameRequestId=0;
 
-/* =====================================================
-   OYA
-===================================================== */
-
 const OYA_PROXY="/api/oya";
 
 const OYA_LAYER=
 "bufr_phenomena,"+
 "bufr_novosib_phenomena,"+
 "bufr_vlad_phenomena";
-
-/* =====================================================
-   VIEWPORT
-===================================================== */
 
 function getCurrentViewportData(){
 
@@ -1921,14 +1984,11 @@ extent,
 geoExtent,
 width,
 height,
+viewportKey:key,
 key
 };
 
 }
-
-/* =====================================================
-   OYA REQUEST
-===================================================== */
 
 function getOyaRequestData(timeValue){
 
@@ -1994,10 +2054,6 @@ viewport.key
 };
 
 }
-
-/* =====================================================
-   TIMELINE
-===================================================== */
 
 function renderOyaTimeline(){
 
@@ -2230,10 +2286,6 @@ updatePreloadButton();
 
 }
 
-/* =====================================================
-   ISO
-===================================================== */
-
 function isoToUnix(value){
 
 const t=
@@ -2352,10 +2404,6 @@ return[
 );
 
 }
-
-/* =====================================================
-   OYA CAPABILITIES
-===================================================== */
 
 async function loadOyaCapabilities(){
 
@@ -2607,10 +2655,6 @@ oyaCapabilitiesLoading=false;
 
 }
 
-/* =====================================================
-   FRAME COUNT
-===================================================== */
-
 function applyOyaFrameCount(
 count,
 preserve=true
@@ -2690,10 +2734,6 @@ setOyaTimeline();
 
 }
 
-/* =====================================================
-   CACHE
-===================================================== */
-
 function makeOyaCacheKey(
 time,
 data
@@ -2705,10 +2745,6 @@ data.viewportKey
 ].join("|");
 
 }
-
-/* =====================================================
-   CLEAN OYA PNG
-===================================================== */
 
 function createCleanOyaBlobUrl(
 blobUrl
@@ -2799,25 +2835,21 @@ pixels[i+3];
 if(a===0)continue;
 
 const max=
-Math.max(
-r,g,b
-);
+Math.max(r,g,b);
 
 const min=
-Math.min(
-r,g,b
-);
+Math.min(r,g,b);
 
 const diff=
 max-min;
 
 if(
-diff<=22 &&
-r>=125 &&
-g>=125 &&
-b>=125 &&
-r<=250 &&
-g<=250 &&
+diff<=22&&
+r>=125&&
+g>=125&&
+b>=125&&
+r<=250&&
+g<=250&&
 b<=250
 ){
 
@@ -2882,10 +2914,6 @@ blobUrl;
 });
 
 }
-
-/* =====================================================
-   RETRY FETCH
-===================================================== */
 
 function wait(ms){
 
@@ -2977,10 +3005,6 @@ new Error(
 
 }
 
-/* =====================================================
-   CREATE OYA IMAGE
-===================================================== */
-
 async function createOyaImageLayer(
 originalBlobUrl,
 extent
@@ -3021,10 +3045,6 @@ cleanedUrl;
 return layer;
 
 }
-
-/* =====================================================
-   WAIT FOR OYA
-===================================================== */
 
 function waitForOyaLayerReady(
 layer,
@@ -3132,10 +3152,6 @@ map.renderSync();
 
 }
 
-/* =====================================================
-   SWAP OYA
-===================================================== */
-
 function swapOyaLayer(
 newLayer
 ){
@@ -3188,10 +3204,6 @@ oldCleanUrl
 );
 
 }
-
-/* =====================================================
-   LOAD OYA FRAME
-===================================================== */
 
 async function loadOyaFrame(
 index
@@ -3515,10 +3527,6 @@ setStatus(
 
 }
 
-/* =====================================================
-   PRELOAD
-===================================================== */
-
 async function preloadOyaFrame(
 timeValue,
 generation,
@@ -3781,10 +3789,6 @@ updatePreloadButton();
 
 }
 
-/* =====================================================
-   VIEWPORT
-===================================================== */
-
 function invalidateOyaViewport(){
 
 if(
@@ -3879,10 +3883,6 @@ map.on(
 "moveend",
 scheduleOyaViewportReload
 );
-
-/* =====================================================
-   SHOW OYA
-===================================================== */
 
 async function showOya(){
 
@@ -4112,10 +4112,6 @@ hideLoading();
 
 }
 
-/* =====================================================
-   RAIN LAYER
-===================================================== */
-
 function makeRainLayer(frame){
 
 let path=
@@ -4176,10 +4172,6 @@ frame;
 return layer;
 
 }
-
-/* =====================================================
-   SHOW RAIN
-===================================================== */
 
 function showRainFrame(index){
 
@@ -4388,10 +4380,6 @@ setStatus(
 
 }
 
-/* =====================================================
-   SHOW RADAR
-===================================================== */
-
 function showRadar(){
 
 stopPlayback();
@@ -4446,10 +4434,6 @@ loadRainViewer();
 
 }
 
-/* =====================================================
-   SLIDER
-===================================================== */
-
 timeSlider.addEventListener(
 "input",
 ()=>{
@@ -4484,10 +4468,6 @@ loadOyaFrame(index);
 }
 
 });
-
-/* =====================================================
-   BACK
-===================================================== */
 
 document
 .getElementById("backBtn")
@@ -4534,10 +4514,6 @@ oyaFrameIndex
 }
 );
 
-/* =====================================================
-   FORWARD
-===================================================== */
-
 document
 .getElementById("forwardBtn")
 .addEventListener(
@@ -4582,10 +4558,6 @@ oyaFrameIndex
 
 }
 );
-
-/* =====================================================
-   PLAY
-===================================================== */
 
 playBtn.addEventListener(
 "click",
@@ -4682,10 +4654,6 @@ playBtn.textContent=
 
 }
 
-/* =====================================================
-   PRELOAD
-===================================================== */
-
 preloadBtn.addEventListener(
 "click",
 ()=>{
@@ -4699,10 +4667,6 @@ preloadAllOyaFrames();
 }
 
 });
-
-/* =====================================================
-   LOCATION
-===================================================== */
 
 document
 .getElementById("locateBtn")
@@ -4776,10 +4740,6 @@ maximumAge:30000
 );
 
 });
-
-/* =====================================================
-   RELOAD
-===================================================== */
 
 document
 .getElementById("reloadBtn")
@@ -4887,10 +4847,6 @@ settings.classList.toggle(
 
 });
 
-/* =====================================================
-   ОФОРМЛЕНИЕ
-===================================================== */
-
 document
 .getElementById("appearanceToggle")
 .addEventListener(
@@ -4907,9 +4863,45 @@ document
 
 });
 
-/* =====================================================
-   FRAME COUNT
-===================================================== */
+document
+.getElementById("mapToggle")
+.addEventListener(
+"click",
+()=>{
+
+document
+.getElementById(
+"mapSection"
+)
+.classList.toggle(
+"open"
+);
+
+});
+
+document
+.getElementById("resetMapBtn")
+.addEventListener(
+"click",
+()=>{
+
+view.animate({
+
+center:
+ol.proj.fromLonLat(
+DEFAULT_MAP_CENTER
+),
+
+zoom:
+DEFAULT_MAP_ZOOM,
+
+rotation:0,
+
+duration:600
+
+});
+
+});
 
 document
 .getElementById("frameCountToggle")
@@ -4944,10 +4936,6 @@ await loadOyaCapabilities();
 }
 
 });
-
-/* =====================================================
-   FRAME COUNT
-===================================================== */
 
 function commitOyaFrameCount(){
 
@@ -5264,10 +5252,6 @@ loadRainViewer();
 
 }
 );
-
-/* =====================================================
-   OYA BACKGROUND
-===================================================== */
 
 setTimeout(
 async()=>{
