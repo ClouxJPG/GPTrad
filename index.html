@@ -288,6 +288,7 @@ visibility:visible;
 pointer-events:auto;
 transform:translateY(0) scale(1);
 max-height:760px;
+overflow-y:auto;
 transition:
 opacity .25s ease,
 transform .28s cubic-bezier(.22,.61,.36,1),
@@ -743,7 +744,7 @@ margin-bottom:11px;
 
 .palette-row{
 display:grid;
-grid-template-columns:1fr 48px;
+grid-template-columns:1fr 48px 30px;
 align-items:center;
 gap:9px;
 padding:7px 0;
@@ -759,36 +760,35 @@ font-size:12px;
 line-height:1.2;
 }
 
-.palette-color-wrap{
-width:48px;
-height:32px;
-position:relative;
-}
-
-.palette-color{
-position:absolute;
-inset:0;
-width:48px;
-height:32px;
-padding:0;
+.palette-swatch{
+width:42px;
+height:28px;
+border-radius:7px;
 border:2px solid rgba(255,255,255,.7);
-border-radius:8px;
-background:transparent;
-overflow:hidden;
+box-shadow:
+inset 0 0 0 1px rgba(0,0,0,.12);
 }
 
-.palette-color::-webkit-color-swatch-wrapper{
-padding:0;
-}
-
-.palette-color::-webkit-color-swatch{
+.palette-move{
+width:30px;
+height:30px;
 border:0;
-border-radius:5px;
+outline:0;
+border-radius:7px;
+background:#353535;
+color:white;
+font-size:11px;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
-.palette-color::-moz-color-swatch{
-border:0;
-border-radius:5px;
+.palette-move:active{
+transform:scale(.92);
+}
+
+.palette-move:disabled{
+opacity:.25;
 }
 
 .palette-reset{
@@ -818,7 +818,8 @@ background:#e5e5e5;
 color:#111;
 }
 
-body.light .palette-reset{
+body.light .palette-reset,
+body.light .palette-move{
 background:#e5e5e5;
 color:#111;
 }
@@ -827,7 +828,7 @@ body.light .palette-row{
 border-bottom-color:rgba(0,0,0,.08);
 }
 
-body.light .palette-color{
+body.light .palette-swatch{
 border-color:rgba(0,0,0,.35);
 }
 
@@ -1234,12 +1235,11 @@ font-size:11px;
 }
 
 .palette-row{
-grid-template-columns:1fr 45px;
+grid-template-columns:1fr 43px 28px;
 }
 
-.palette-color-wrap,
-.palette-color{
-width:45px;
+.palette-swatch{
+width:40px;
 }
 }
 </style>
@@ -1502,8 +1502,8 @@ aria-label="Закрыть">
 </div>
 
 <div class="palette-description">
-Настройка цвета каждой категории опасных явлений OYA.
-Изменения применяются ко всем загружаемым кадрам.
+Можно менять порядок цветов исходной легенды OYA.
+Новые цвета добавлять нельзя.
 </div>
 
 <div id="paletteRows"></div>
@@ -1840,7 +1840,6 @@ function resizeMap(){
 try{
 
 map.updateSize();
-
 map.render();
 
 }catch(e){
@@ -1866,20 +1865,9 @@ resizeMap,
 }
 );
 
-setTimeout(
-resizeMap,
-100
-);
-
-setTimeout(
-resizeMap,
-500
-);
-
-setTimeout(
-resizeMap,
-1000
-);
+setTimeout(resizeMap,100);
+setTimeout(resizeMap,500);
+setTimeout(resizeMap,1000);
 
 /* =====================================================
    РАДАРЫ
@@ -1913,13 +1901,13 @@ new ol.style.Style({
 fill:
 new ol.style.Fill({
 color:
-"rgba(125,125,125,0.10)"
+"rgba(125,125,125,0.13)"
 }),
 
 stroke:
 new ol.style.Stroke({
 color:
-"rgba(205,205,205,0.48)",
+"rgba(205,205,205,0.58)",
 width:1
 })
 
@@ -1968,7 +1956,7 @@ radarBeamLayer
 );
 
 /* =====================================================
-   МАСКА РАДАРНОГО ПОКРЫТИЯ
+   МАСКА ФАКТИЧЕСКИХ ДАННЫХ OYA
 ===================================================== */
 
 const radarMaskSource=
@@ -1990,88 +1978,142 @@ map.addLayer(
 radarMaskLayer
 );
 
-function createRadarMaskGeometry(radars){
-
-const outer=[
-[-20037508,-20037508],
-[20037508,-20037508],
-[20037508,20037508],
-[-20037508,20037508],
-[-20037508,-20037508]
-];
-
-const holes=[];
-
-for(
-const radar of radars
-){
-
-if(
-!Number.isFinite(radar.lat)||
-!Number.isFinite(radar.lon)
-){
-continue;
-}
-
-const center=
-ol.proj.fromLonLat([
-radar.lon,
-radar.lat
-]);
-
-const ring=[];
-
-const points=96;
-
-for(
-let i=0;
-i<=points;
-i++
-){
-
-const angle=
-(i/points)*
-Math.PI*2;
-
-ring.push([
-center[0]+
-Math.cos(angle)*
-RADAR_COVERAGE_RADIUS,
-
-center[1]+
-Math.sin(angle)*
-RADAR_COVERAGE_RADIUS
-]);
-
-}
-
-holes.push(ring);
-
-}
-
-return new ol.geom.Polygon([
-outer,
-...holes
-]);
-
-}
-
-function renderRadarMask(radars){
+function clearRadarDataMask(){
 
 radarMaskSource.clear();
 
-if(
-!Array.isArray(radars)||
-!radars.length
-){
-return;
+map.render();
+
 }
+
+function createDataMaskFeatureFromImage(
+image,
+extent
+){
+
+const canvas=
+document.createElement("canvas");
+
+const width=
+image.naturalWidth||
+image.width;
+
+const height=
+image.naturalHeight||
+image.height;
+
+if(
+!width||
+!height
+){
+return null;
+}
+
+canvas.width=width;
+canvas.height=height;
+
+const ctx=
+canvas.getContext(
+"2d",
+{
+willReadFrequently:true
+}
+);
+
+if(!ctx){
+return null;
+}
+
+ctx.clearRect(
+0,
+0,
+width,
+height
+);
+
+ctx.drawImage(
+image,
+0,
+0
+);
+
+let imageData;
+
+try{
+
+imageData=
+ctx.getImageData(
+0,
+0,
+width,
+height
+);
+
+}catch(error){
+
+console.error(
+"Radar data mask:",
+error
+);
+
+return null;
+
+}
+
+const pixels=
+imageData.data;
+
+for(
+let i=0;
+i<pixels.length;
+i+=4
+){
+
+const a=
+pixels[i+3];
+
+if(a>0){
+
+pixels[i]=0;
+pixels[i+1]=0;
+pixels[i+2]=0;
+pixels[i+3]=255;
+
+}else{
+
+pixels[i+3]=0;
+
+}
+
+}
+
+ctx.putImageData(
+imageData,
+0,
+0
+);
 
 const feature=
 new ol.Feature(
-createRadarMaskGeometry(
-radars
-)
+new ol.geom.Polygon([
+[
+[extent[0],extent[1]],
+[extent[2],extent[1]],
+[extent[2],extent[3]],
+[extent[0],extent[3]],
+[extent[0],extent[1]]
+]
+])
+);
+
+feature.set(
+"radarDataMask",
+true
+);
+
+feature.set(
+"radarMaskCanvas",
+canvas
 );
 
 feature.setStyle(
@@ -2079,8 +2121,7 @@ new ol.style.Style({
 
 fill:
 new ol.style.Fill({
-color:
-"rgba(0,0,0,0.24)"
+color:"rgba(0,0,0,0.24)"
 }),
 
 stroke:null
@@ -2088,9 +2129,358 @@ stroke:null
 })
 );
 
-radarMaskSource.addFeature(
-feature
+return feature;
+
+}
+
+/*
+ * Векторная маска выше используется только как единый
+ * геометрический слой. Она строится из фактической
+ * прозрачности OYA, а не из кругов покрытия.
+ */
+
+function renderRadarDataMaskFromCanvas(
+canvas,
+extent
+){
+
+radarMaskSource.clear();
+
+if(
+!canvas||
+!extent
+){
+return;
+}
+
+const width=canvas.width;
+const height=canvas.height;
+
+if(!width||!height){
+return;
+}
+
+const ctx=
+canvas.getContext("2d",{
+willReadFrequently:true
+});
+
+if(!ctx){
+return;
+}
+
+let data;
+
+try{
+
+data=
+ctx.getImageData(
+0,
+0,
+width,
+height
 );
+
+}catch(error){
+
+console.error(
+"Radar mask image:",
+error
+);
+
+return;
+
+}
+
+const pixels=
+data.data;
+
+let hasData=false;
+
+for(
+let i=3;
+i<pixels.length;
+i+=4
+){
+
+if(pixels[i]>0){
+
+hasData=true;
+break;
+
+}
+
+}
+
+if(!hasData){
+
+map.render();
+return;
+
+}
+
+const imageCanvas=
+document.createElement("canvas");
+
+imageCanvas.width=width;
+imageCanvas.height=height;
+
+const imageCtx=
+imageCanvas.getContext("2d");
+
+if(!imageCtx){
+return;
+}
+
+const maskData=
+imageCtx.createImageData(
+width,
+height
+);
+
+for(
+let i=0;
+i<pixels.length;
+i+=4
+){
+
+if(pixels[i+3]>0){
+
+maskData.data[i]=0;
+maskData.data[i+1]=0;
+maskData.data[i+2]=0;
+maskData.data[i+3]=255;
+
+}
+
+}
+
+imageCtx.putImageData(
+maskData,
+0,
+0
+);
+
+const imageUrl=
+imageCanvas.toDataURL(
+"image/png"
+);
+
+const imageSource=
+new ol.source.ImageStatic({
+
+url:imageUrl,
+
+imageExtent:extent,
+
+projection:"EPSG:3857",
+
+interpolate:true
+
+});
+
+const layer=
+new ol.layer.Image({
+
+source:imageSource,
+
+opacity:1,
+
+zIndex:10
+
+});
+
+layer.__radarMaskImageUrl=
+imageUrl;
+
+radarMaskSource.addFeature(
+new ol.Feature(
+new ol.geom.GeometryCollection([])
+)
+);
+
+/*
+ * Вместо дополнительного слоя с каждым радаром
+ * создаём один ImageStatic и добавляем его
+ * напрямую в карту.
+ */
+
+radarMaskLayer.__imageLayer=
+layer;
+
+map.addLayer(layer);
+
+map.render();
+
+}
+
+function removeRadarDataMaskImage(){
+
+const layer=
+radarMaskLayer.__imageLayer;
+
+if(layer){
+
+try{
+
+map.removeLayer(layer);
+
+}catch(e){}
+
+radarMaskLayer.__imageLayer=null;
+
+}
+
+}
+
+function renderRadarMaskFromOya(
+sourceImage,
+extent
+){
+
+removeRadarDataMaskImage();
+
+if(
+!sourceImage||
+!extent
+){
+return;
+}
+
+const canvas=
+document.createElement("canvas");
+
+const width=
+sourceImage.naturalWidth||
+sourceImage.width;
+
+const height=
+sourceImage.naturalHeight||
+sourceImage.height;
+
+if(
+!width||
+!height
+){
+return;
+}
+
+canvas.width=width;
+canvas.height=height;
+
+const ctx=
+canvas.getContext(
+"2d",
+{
+willReadFrequently:true
+}
+);
+
+if(!ctx){
+return;
+}
+
+ctx.clearRect(
+0,
+0,
+width,
+height
+);
+
+ctx.drawImage(
+sourceImage,
+0,
+0
+);
+
+let data;
+
+try{
+
+data=
+ctx.getImageData(
+0,
+0,
+width,
+height
+);
+
+}catch(error){
+
+console.error(
+"Radar data mask:",
+error
+);
+
+return;
+
+}
+
+const pixels=
+data.data;
+
+for(
+let i=0;
+i<pixels.length;
+i+=4
+){
+
+if(pixels[i+3]>0){
+
+pixels[i]=0;
+pixels[i+1]=0;
+pixels[i+2]=0;
+pixels[i+3]=255;
+
+}else{
+
+pixels[i+3]=0;
+
+}
+
+}
+
+ctx.putImageData(
+data,
+0,
+0
+);
+
+const url=
+canvas.toDataURL(
+"image/png"
+);
+
+const source=
+new ol.source.ImageStatic({
+
+url,
+
+imageExtent:extent,
+
+projection:"EPSG:3857",
+
+interpolate:true
+
+});
+
+const layer=
+new ol.layer.Image({
+
+source,
+
+opacity:1,
+
+zIndex:10
+
+});
+
+layer.__radarMaskUrl=url;
+
+radarMaskLayer.__imageLayer=
+layer;
+
+map.addLayer(layer);
 
 map.render();
 
@@ -2190,10 +2580,6 @@ radarPoint
 
 }
 
-renderRadarMask(
-radars
-);
-
 map.render();
 
 }
@@ -2203,7 +2589,6 @@ dynamicPositions
 ){
 
 const result=[];
-
 const seen=new Set();
 
 const all=[
@@ -2320,17 +2705,7 @@ lon
 
 }
 
-const unique=
-mergeRadarPositions(
-result
-);
-
-console.log(
-"Radar positions:",
-unique.length
-);
-
-return unique;
+return mergeRadarPositions(result);
 
 }catch(error){
 
@@ -2350,9 +2725,7 @@ async function updateRadarPositions(){
 const radars=
 await loadRadarPositions();
 
-if(
-!radars.length
-){
+if(!radars.length){
 
 console.warn(
 "Radar coordinates were not received"
@@ -2457,6 +2830,16 @@ radarMaskLayer.setVisible(
 visible
 );
 
+if(
+radarMaskLayer.__imageLayer
+){
+
+radarMaskLayer.__imageLayer.setVisible(
+visible
+);
+
+}
+
 radarMaskToggle.classList.toggle(
 "active",
 visible
@@ -2501,9 +2884,9 @@ localStorage.getItem(
 if(
 savedRadarBeam==="1"
 ){
-setRadarBeamVisible(
-true
-);
+
+setRadarBeamVisible(true);
+
 }
 
 const savedRadarMask=
@@ -2514,9 +2897,9 @@ localStorage.getItem(
 if(
 savedRadarMask==="1"
 ){
-setRadarMaskVisible(
-true
-);
+
+setRadarMaskVisible(true);
+
 }
 
 /* =====================================================
@@ -2600,7 +2983,9 @@ if(
 oyaOpacity<0||
 oyaOpacity>100
 ){
+
 oyaOpacity=90;
+
 }
 
 oyaOpacitySlider.value=
@@ -2836,6 +3221,11 @@ Math.round(value)
 
 }
 
+/*
+ * Палитра теперь хранит только порядок цветов.
+ * Сам цвет каждой позиции неизменяемый.
+ */
+
 function loadOyaPalette(){
 
 try{
@@ -2848,30 +3238,41 @@ OYA_PALETTE_STORAGE_KEY
 );
 
 if(
-Array.isArray(saved) &&
+Array.isArray(saved)&&
 saved.length===
 DEFAULT_OYA_PALETTE.length
 ){
 
-return saved.map(
-(item,index)=>{
+const indexes=
+saved.map(
+item=>
+Number(item?.sourceIndex)
+);
 
-const color=
-typeof item?.color==="string"&&
-hexToRgb(item.color)
-?
-item.color
-:
-DEFAULT_OYA_PALETTE[index].color;
+if(
+indexes.length===
+DEFAULT_OYA_PALETTE.length&&
+indexes.every(
+index=>
+Number.isInteger(index)&&
+index>=0&&
+index<DEFAULT_OYA_PALETTE.length
+)&&
+new Set(indexes).size===
+DEFAULT_OYA_PALETTE.length
+){
 
-return{
+return indexes.map(
+index=>({
 name:
 DEFAULT_OYA_PALETTE[index].name,
-color
-};
+color:
+DEFAULT_OYA_PALETTE[index].color,
+sourceIndex:index
+})
+);
 
 }
-);
 
 }
 
@@ -2885,9 +3286,10 @@ error
 }
 
 return DEFAULT_OYA_PALETTE.map(
-item=>({
+(item,index)=>({
 name:item.name,
-color:item.color
+color:item.color,
+sourceIndex:index
 })
 );
 
@@ -2901,9 +3303,45 @@ function saveOyaPalette(){
 localStorage.setItem(
 OYA_PALETTE_STORAGE_KEY,
 JSON.stringify(
-oyaPalette
+oyaPalette.map(
+item=>({
+sourceIndex:item.sourceIndex
+})
+)
 )
 );
+
+}
+
+function movePaletteItem(
+index,
+direction
+){
+
+const target=
+index+direction;
+
+if(
+target<0||
+target>=oyaPalette.length
+){
+return;
+}
+
+const temp=
+oyaPalette[index];
+
+oyaPalette[index]=
+oyaPalette[target];
+
+oyaPalette[target]=
+temp;
+
+saveOyaPalette();
+
+renderPalette();
+
+invalidateOyaProcessing();
 
 }
 
@@ -2933,62 +3371,82 @@ name.className=
 name.textContent=
 item.name;
 
-const wrap=
+const swatch=
 document.createElement(
 "div"
 );
 
-wrap.className=
-"palette-color-wrap";
+swatch.className=
+"palette-swatch";
 
-const input=
-document.createElement(
-"input"
-);
-
-input.type="color";
-
-input.className=
-"palette-color";
-
-input.value=
+swatch.style.background=
 item.color;
 
-input.dataset.index=
-index;
-
-input.addEventListener(
-"input",
-()=>{
-
-const i=
-Number(input.dataset.index);
-
-oyaPalette[i].color=
-input.value;
-
-saveOyaPalette();
-
-invalidateOyaProcessing();
-
-}
+const controls=
+document.createElement(
+"div"
 );
 
-wrap.appendChild(
-input
+controls.style.display=
+"flex";
+
+controls.style.flexDirection=
+"column";
+
+controls.style.gap=
+"2px";
+
+const up=
+document.createElement(
+"button"
 );
 
-row.appendChild(
-name
+up.className=
+"palette-move";
+
+up.textContent="▲";
+
+up.disabled=
+index===0;
+
+up.addEventListener(
+"click",
+()=>movePaletteItem(
+index,
+-1
+)
 );
 
-row.appendChild(
-wrap
+const down=
+document.createElement(
+"button"
 );
 
-paletteRows.appendChild(
-row
+down.className=
+"palette-move";
+
+down.textContent="▼";
+
+down.disabled=
+index===
+oyaPalette.length-1;
+
+down.addEventListener(
+"click",
+()=>movePaletteItem(
+index,
+1
+)
 );
+
+controls.appendChild(up);
+controls.appendChild(down);
+
+row.appendChild(name);
+row.appendChild(swatch);
+row.appendChild(controls);
+
+paletteRows.appendChild(row);
 
 }
 );
@@ -2999,9 +3457,10 @@ function resetOyaPalette(){
 
 oyaPalette=
 DEFAULT_OYA_PALETTE.map(
-item=>({
+(item,index)=>({
 name:item.name,
-color:item.color
+color:item.color,
+sourceIndex:index
 })
 );
 
@@ -3088,7 +3547,9 @@ if(
 oyaSmoothing<0||
 oyaSmoothing>100
 ){
+
 oyaSmoothing=0;
+
 }
 
 oyaSmoothingSlider.value=
@@ -3226,9 +3687,20 @@ bestDistance>2600
 continue;
 }
 
+const paletteItem=
+oyaPalette.find(
+item=>
+item.sourceIndex===
+bestIndex
+);
+
+if(!paletteItem){
+continue;
+}
+
 const rgb=
 hexToRgb(
-oyaPalette[bestIndex].color
+paletteItem.color
 );
 
 if(!rgb){
@@ -3243,6 +3715,12 @@ pixels[i+3]=255;
 }
 
 }
+
+/*
+ * Настоящее пиксельное сглаживание.
+ * В отличие от CSS blur, здесь перерабатываются
+ * соседние пиксели самого радарного изображения.
+ */
 
 function applyCanvasSmoothing(
 canvas,
@@ -3261,46 +3739,221 @@ canvas.width;
 const height=
 canvas.height;
 
-const radius=
-Math.max(
-1,
-Math.min(
-6,
-Math.round(
-level/18
-)
-)
+const srcCtx=
+canvas.getContext(
+"2d",
+{
+willReadFrequently:true
+}
 );
+
+if(!srcCtx){
+return canvas;
+}
+
+let srcData;
+
+try{
+
+srcData=
+srcCtx.getImageData(
+0,
+0,
+width,
+height
+);
+
+}catch(error){
+
+console.error(
+"Smoothing source:",
+error
+);
+
+return canvas;
+
+}
 
 const output=
 document.createElement(
 "canvas"
 );
 
-output.width=
-width;
+output.width=width;
+output.height=height;
 
-output.height=
-height;
-
-const ctx=
+const outCtx=
 output.getContext(
-"2d"
+"2d",
+{
+willReadFrequently:true
+}
 );
 
-if(!ctx){
+if(!outCtx){
 return canvas;
 }
 
-ctx.imageSmoothingEnabled=true;
+const dstData=
+outCtx.createImageData(
+width,
+height
+);
 
-ctx.filter=
-"blur("+
-radius+
-"px)";
+const src=
+srcData.data;
+const dst=
+dstData.data;
 
-ctx.drawImage(
-canvas,
+const strength=
+Math.max(
+0,
+Math.min(
+1,
+level/100
+)
+);
+
+const radius=
+Math.max(
+1,
+Math.min(
+5,
+Math.round(
+1+
+strength*4
+)
+)
+);
+
+const radius2=
+radius*radius;
+
+for(
+let y=0;
+y<height;
+y++
+){
+
+for(
+let x=0;
+x<width;
+x++
+){
+
+const index=
+(y*width+x)*4;
+
+let rr=0;
+let gg=0;
+let bb=0;
+let aa=0;
+let weightSum=0;
+
+for(
+let yy=
+Math.max(0,y-radius);
+yy<=
+Math.min(height-1,y+radius);
+yy++
+){
+
+for(
+let xx=
+Math.max(0,x-radius);
+xx<=
+Math.min(width-1,x+radius);
+xx++
+){
+
+const dx=
+xx-x;
+
+const dy=
+yy-y;
+
+const distance2=
+dx*dx+dy*dy;
+
+if(
+distance2>radius2
+){
+continue;
+}
+
+const sourceIndex=
+(yy*width+xx)*4;
+
+const alpha=
+src[sourceIndex+3];
+
+if(alpha===0){
+continue;
+}
+
+const weight=
+1+
+(
+strength*
+(
+1-
+Math.sqrt(distance2)/
+Math.max(1,radius)
+)
+);
+
+rr+=
+src[sourceIndex]*
+weight;
+
+gg+=
+src[sourceIndex+1]*
+weight;
+
+bb+=
+src[sourceIndex+2]*
+weight;
+
+aa+=
+alpha*
+weight;
+
+weightSum+=
+weight;
+
+}
+
+}
+
+if(weightSum>0){
+
+dst[index]=
+rr/weightSum;
+
+dst[index+1]=
+gg/weightSum;
+
+dst[index+2]=
+bb/weightSum;
+
+dst[index+3]=
+aa/weightSum;
+
+}else{
+
+dst[index]=src[index];
+dst[index+1]=src[index+1];
+dst[index+2]=src[index+2];
+dst[index+3]=src[index+3];
+
+}
+
+}
+
+}
+
+outCtx.putImageData(
+dstData,
 0,
 0
 );
@@ -3379,7 +4032,7 @@ const pixels=
 imageData.data;
 
 /*
- * Сначала удаляем серый фон.
+ * Удаляем серый фон.
  */
 
 for(
@@ -3430,8 +4083,7 @@ continue;
 }
 
 /*
- * Цветной пиксель делаем полностью
- * непрозрачным на уровне исходного изображения.
+ * Цветные данные полностью непрозрачные.
  */
 
 pixels[i+3]=255;
@@ -3439,7 +4091,7 @@ pixels[i+3]=255;
 }
 
 /*
- * Затем применяем пользовательскую палитру.
+ * Применяем порядок палитры.
  */
 
 applyOyaPalette(
@@ -3453,8 +4105,7 @@ imageData,
 );
 
 /*
- * И только после палитры применяем
- * пространственное сглаживание.
+ * Сглаживаем уже обработанные радарные пиксели.
  */
 
 canvas=
@@ -3526,9 +4177,11 @@ return;
 if(oyaImage){
 
 try{
+
 map.removeLayer(
 oyaImage
 );
+
 }catch(e){}
 
 oyaImage=null;
@@ -3538,14 +4191,16 @@ oyaImage=null;
 if(oyaImageBlobUrl){
 
 try{
+
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
+
 }catch(e){}
 
 oyaImageBlobUrl=null;
 
-}
+removeRadarDataMaskImage();
 
 loadOyaFrame(
 oyaFrameIndex
@@ -3814,7 +4469,7 @@ imageExtent:extent,
 
 projection:"EPSG:3857",
 
-interpolate:false
+interpolate:true
 
 });
 
@@ -3996,6 +4651,55 @@ oldCleanUrl
 }
 
 });
+
+}
+
+/*
+ * Строим маску по фактической картинке OYA.
+ * Она используется только при включённом переключателе.
+ */
+
+function updateOyaDataMask(
+blobUrl,
+extent
+){
+
+if(
+!radarMaskLayer.getVisible()
+){
+
+return;
+
+}
+
+const image=
+new Image();
+
+image.onload=()=>{
+
+if(
+activeLayer!=="oya"
+){
+return;
+}
+
+renderRadarMaskFromOya(
+image,
+extent
+);
+
+};
+
+image.onerror=()=>{
+
+console.warn(
+"Не удалось построить маску OYA"
+);
+
+};
+
+image.src=
+blobUrl;
 
 }
 
@@ -4265,6 +4969,22 @@ renderOyaTimeline();
 setStatus(
 "Опасные явления"
 );
+
+/*
+ * Маска строится из того же самого фактического
+ * изображения, которое содержит данные OYA.
+ */
+
+if(
+radarMaskLayer.getVisible()
+){
+
+updateOyaDataMask(
+result.blobUrl,
+result.extent
+);
+
+}
 
 }catch(error){
 
@@ -4579,7 +5299,8 @@ function invalidateOyaViewport(){
 
 if(
 activeLayer!=="oya"
-)return;
+)
+return;
 
 const viewport=
 getCurrentViewportData();
@@ -4629,6 +5350,8 @@ oyaPendingRequests.clear();
 
 oyaLoadedTimes.clear();
 
+removeRadarDataMaskImage();
+
 renderOyaTimeline();
 
 updatePreloadButton();
@@ -4639,7 +5362,8 @@ function scheduleOyaViewportReload(){
 
 if(
 activeLayer!=="oya"
-)return;
+)
+return;
 
 clearTimeout(
 viewportTimer
@@ -5406,6 +6130,8 @@ oyaImageBlobUrl
 
 oyaImageBlobUrl=null;
 
+removeRadarDataMaskImage();
+
 for(
 const value of
 oyaFrameCache.values()
@@ -5889,6 +6615,8 @@ oyaImageBlobUrl
 
 oyaImageBlobUrl=null;
 
+removeRadarDataMaskImage();
+
 if(rainFrames.length){
 
 setRadarTimeline();
@@ -6250,6 +6978,8 @@ oyaImageBlobUrl
 }
 
 oyaImageBlobUrl=null;
+
+removeRadarDataMaskImage();
 
 for(
 const value of
