@@ -1286,10 +1286,6 @@ const playBtn=document.getElementById("playBtn");
 const oyaOpacitySlider=document.getElementById("oyaOpacitySlider");
 const oyaOpacityValue=document.getElementById("oyaOpacityValue");
 
-/* =====================================================
-   ПАЛИТРА
-===================================================== */
-
 const paletteRows=document.getElementById("paletteRows");
 
 const OYA_PALETTE_STORAGE_KEY=
@@ -1549,10 +1545,6 @@ document.getElementById(
 resetOyaPalette
 );
 
-/* =====================================================
-   СОСТОЯНИЕ
-===================================================== */
-
 let activeLayer="radar";
 
 let radarLayer=null;
@@ -1626,10 +1618,6 @@ minute:"2-digit"
 );
 
 }
-
-/* =====================================================
-   КАРТА
-===================================================== */
 
 const DEFAULT_MAP_CENTER=[37.61,55.75];
 const DEFAULT_MAP_ZOOM=5;
@@ -1728,10 +1716,6 @@ setTimeout(resizeMap,250);
 setTimeout(resizeMap,100);
 setTimeout(resizeMap,500);
 setTimeout(resizeMap,1000);
-
-/* =====================================================
-   РАДАРЫ
-===================================================== */
 
 const RADAR_VECTOR_PROXY=
 "/api/oya?action=vector";
@@ -2363,10 +2347,6 @@ setRadarMaskVisible(true);
 
 }
 
-/* =====================================================
-   OYA
-===================================================== */
-
 const OYA_PROXY="/api/oya";
 
 const OYA_LAYER=
@@ -2447,10 +2427,6 @@ oyaOpacitySlider.value
 
 }
 );
-
-/* =====================================================
-   OYA PROCESSING
-===================================================== */
 
 function colorDistance(r,g,b,target){
 
@@ -2689,10 +2665,6 @@ image.src=sourceUrl;
 
 }
 
-/* =====================================================
-   WMS
-===================================================== */
-
 function getCurrentMapExtent(){
 
 const size=map.getSize();
@@ -2895,10 +2867,6 @@ return result.sort(
 );
 
 }
-
-/* =====================================================
-   CAPABILITIES
-===================================================== */
 
 async function loadOyaCapabilities(){
 
@@ -3208,10 +3176,6 @@ frameCountInput.value
 
 }
 );
-
-/* =====================================================
-   OYA FRAMES
-===================================================== */
 
 function getOyaCacheKey(time,extent){
 
@@ -3592,10 +3556,6 @@ hideLoading();
 
 }
 
-/* =====================================================
-   REFLECTIVITY
-===================================================== */
-
 function removeReflectivityLayer(){
 
 if(reflectivityLayer){
@@ -3769,10 +3729,6 @@ hideLoading();
 
 }
 
-/* =====================================================
-   CLEAR
-===================================================== */
-
 function clearOyaLayer(){
 
 if(oyaImage){
@@ -3809,10 +3765,6 @@ clearOyaLayer();
 removeReflectivityLayer();
 
 }
-
-/* =====================================================
-   RAINVIEWER
-===================================================== */
 
 const RAINVIEWER_API=
 "https://api.rainviewer.com/public/weather-maps.json";
@@ -4114,10 +4066,6 @@ map.render();
 
 }
 
-/* =====================================================
-   TIMELINE
-===================================================== */
-
 function updateTimeLabel(){
 
 if(activeLayer==="radar"){
@@ -4360,10 +4308,6 @@ loadReflectivityFrame(index);
 }
 );
 
-/* =====================================================
-   MAP MOVE
-===================================================== */
-
 map.on(
 "moveend",
 function(){
@@ -4408,10 +4352,6 @@ reflectivityFrameIndex
 
 }
 );
-
-/* =====================================================
-   UI
-===================================================== */
 
 selectedLayer.addEventListener(
 "click",
@@ -4496,10 +4436,6 @@ settings.classList.remove(
 
 }
 );
-
-/* =====================================================
-   SETTINGS
-===================================================== */
 
 function setupSection(
 sectionId,
@@ -4591,10 +4527,6 @@ document.querySelector(
 closePalette
 );
 
-/* =====================================================
-   INTERFACE THEME
-===================================================== */
-
 function setInterfaceTheme(theme){
 
 const light=
@@ -4645,10 +4577,6 @@ button.dataset.theme
 
 }
 );
-
-/* =====================================================
-   MAP THEME
-===================================================== */
 
 function setMapTheme(theme){
 
@@ -4727,10 +4655,6 @@ map.render();
 }
 );
 
-/* =====================================================
-   LOCATION
-===================================================== */
-
 document.getElementById(
 "locateBtn"
 ).addEventListener(
@@ -4803,10 +4727,6 @@ maximumAge:30000
 }
 );
 
-/* =====================================================
-   RELOAD
-===================================================== */
-
 document.getElementById(
 "reloadBtn"
 ).addEventListener(
@@ -4848,10 +4768,6 @@ reflectivityFrameIndex
 
 }
 );
-
-/* =====================================================
-   LAYERS
-===================================================== */
 
 function selectLayerButton(name){
 
@@ -5055,10 +4971,6 @@ button.dataset.layer
 }
 );
 
-/* =====================================================
-   START
-===================================================== */
-
 setOyaOpacity(
 oyaOpacity
 );
@@ -5113,10 +5025,6 @@ hideLoading();
 );
 
 }
-
-/* =====================================================
-   DOM READY
-===================================================== */
 
 if(
 document.readyState==="loading"
