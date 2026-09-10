@@ -8,7 +8,7 @@ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GPTrad</title>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css">
+href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css">
 
 <style>
 *{
@@ -1398,16 +1398,12 @@ value="0">
 
 <div id="loading">Загрузка…</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/dist/ol.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
 
 <script>
 "use strict";
 
 (function(){
-
-/* =====================================================
-   БЕЗОПАСНЫЙ ЗАПУСК
-===================================================== */
 
 function start(){
 
@@ -1424,10 +1420,6 @@ return;
 
 }
 
-/* =====================================================
-   ГЛОБАЛЬНЫЕ DOM
-===================================================== */
-
 const loading=document.getElementById("loading");
 const selectedLayer=document.getElementById("selectedLayer");
 const selectedLayerName=document.getElementById("selectedLayerName");
@@ -1443,6 +1435,9 @@ const preloadBtn=document.getElementById("preloadBtn");
 const playBtn=document.getElementById("playBtn");
 const oyaOpacitySlider=document.getElementById("oyaOpacitySlider");
 const oyaOpacityValue=document.getElementById("oyaOpacityValue");
+
+/* ЯВНО получаем контейнер палитры */
+const paletteRows=document.getElementById("paletteRows");
 
 function setStatus(text){
 if(status)status.textContent=text;
@@ -1723,10 +1718,6 @@ map.addLayer(
 radarBeamLayer
 );
 
-/* =====================================================
-   ЕДИНАЯ МАСКА ДАННЫХ
-===================================================== */
-
 const radarMaskSource=
 new ol.source.Vector();
 
@@ -1804,11 +1795,6 @@ width,
 height
 );
 
-/*
-   ЕДИНАЯ union-маска радиолокационного
-   покрытия. Круги не складываются.
-*/
-
 ctx.save();
 
 ctx.fillStyle="#000000";
@@ -1882,11 +1868,6 @@ ctx.fill();
 }
 
 ctx.restore();
-
-/*
-   Оставляем только реальные пиксели OYA
-   внутри единого покрытия.
-*/
 
 ctx.globalCompositeOperation=
 "destination-in";
@@ -2295,11 +2276,6 @@ error
 }
 
 }
-
-/*
-   Важно: это теперь запускается ПОСЛЕ
-   объявления всех переменных.
-*/
 
 setTimeout(
 updateRadarPositions,
@@ -2787,12 +2763,15 @@ const name=
 document.createElement("div");
 
 name.className="palette-name";
-name.textContent=item.name;
+
+name.textContent=
+item.name;
 
 const swatch=
 document.createElement("div");
 
 swatch.className="palette-swatch";
+
 swatch.style.background=
 item.color;
 
@@ -3004,10 +2983,6 @@ Math.min(r,g,b);
 
 const diff=
 max-min;
-
-/*
-   Серый служебный фон полностью прозрачен.
-*/
 
 if(
 diff<=22&&
@@ -3351,12 +3326,6 @@ Number.isFinite(start)&&
 Number.isFinite(end)&&
 end>=start
 ){
-
-/*
-   WMS диапазон.
-
-   Читаем его максимум с шагом 10 минут.
-*/
 
 const step=
 10*60*1000;
@@ -6009,12 +5978,6 @@ savedMapTheme
 );
 
 preloadBtn.disabled=true;
-
-/*
-   Главное изменение:
-   карта уже создана выше и интерфейс полностью
-   доступен независимо от RainViewer.
-*/
 
 map.updateSize();
 map.render();
