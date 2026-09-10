@@ -429,10 +429,6 @@ opacity:1;
 margin:0;
 }
 
-#frameCountInput:focus{
-box-shadow:0 0 0 2px rgba(69,201,239,.45);
-}
-
 .frame-count-arrow{
 width:26px;
 height:26px;
@@ -447,10 +443,6 @@ display:flex;
 align-items:center;
 justify-content:center;
 padding:0;
-}
-
-.frame-count-arrow:disabled{
-opacity:.35;
 }
 
 .opacity-panel{
@@ -500,20 +492,6 @@ background:#fff;
 box-shadow:0 1px 5px rgba(0,0,0,.45);
 }
 
-#oyaOpacitySlider::-moz-range-track{
-height:6px;
-border-radius:999px;
-background:#555;
-}
-
-#oyaOpacitySlider::-moz-range-thumb{
-width:18px;
-height:18px;
-border-radius:50%;
-border:2px solid white;
-background:#fff;
-}
-
 .opacity-hints{
 display:flex;
 justify-content:space-between;
@@ -546,7 +524,7 @@ transform .15s ease;
 transform:scale(.98);
 }
 
-.radar-beam-button .radar-beam-state{
+.radar-beam-state{
 font-size:12px;
 opacity:.55;
 }
@@ -580,9 +558,6 @@ visibility 0s linear .22s;
 opacity:1;
 visibility:visible;
 pointer-events:auto;
-transition:
-opacity .22s ease,
-visibility 0s linear 0s;
 }
 
 .palette-modal-backdrop{
@@ -643,10 +618,6 @@ align-items:center;
 justify-content:center;
 }
 
-.palette-close:active{
-transform:scale(.92);
-}
-
 .palette-description{
 font-size:11px;
 line-height:1.4;
@@ -663,10 +634,6 @@ padding:7px 0;
 border-bottom:1px solid rgba(255,255,255,.07);
 }
 
-.palette-row:last-child{
-border-bottom:0;
-}
-
 .palette-name{
 font-size:12px;
 line-height:1.2;
@@ -677,7 +644,6 @@ width:42px;
 height:28px;
 border-radius:7px;
 border:2px solid rgba(255,255,255,.7);
-box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);
 }
 
 .palette-move{
@@ -694,14 +660,6 @@ align-items:center;
 justify-content:center;
 }
 
-.palette-move:active{
-transform:scale(.92);
-}
-
-.palette-move:disabled{
-opacity:.25;
-}
-
 .palette-reset{
 width:100%;
 height:38px;
@@ -715,10 +673,6 @@ font-size:13px;
 font-weight:650;
 }
 
-.palette-reset:active{
-transform:scale(.98);
-}
-
 body.light .palette-window{
 background:rgba(250,250,250,.97);
 color:#111;
@@ -729,14 +683,6 @@ body.light .palette-reset,
 body.light .palette-move{
 background:#e5e5e5;
 color:#111;
-}
-
-body.light .palette-row{
-border-bottom-color:rgba(0,0,0,.08);
-}
-
-body.light .palette-swatch{
-border-color:rgba(0,0,0,.35);
 }
 
 .timeline{
@@ -763,41 +709,29 @@ gap:7px;
 margin-bottom:6px;
 }
 
-#playBtn{
-width:38px;
-height:30px;
+#playBtn,
+#preloadBtn,
+.timeline-arrow{
 border:0;
 outline:0;
 border-radius:8px;
 background:#292929;
 color:white;
-font-size:14px;
-display:flex;
-align-items:center;
-justify-content:center;
 }
 
-#playBtn:active{
-transform:scale(.92);
+#playBtn{
+width:38px;
+height:30px;
+font-size:14px;
 }
 
 #preloadBtn{
 width:34px;
 height:30px;
-flex:none;
-border:0;
-outline:0;
-border-radius:8px;
-background:#292929;
-color:white;
 display:flex;
 align-items:center;
 justify-content:center;
 padding:0;
-}
-
-#preloadBtn:disabled{
-opacity:.3;
 }
 
 .download-icon{
@@ -806,15 +740,6 @@ height:18px;
 display:block;
 background:currentColor;
 clip-path:polygon(
-38% 0%,
-62% 0%,
-62% 55%,
-100% 55%,
-50% 100%,
-0% 55%,
-38% 55%
-);
--webkit-clip-path:polygon(
 38% 0%,
 62% 0%,
 62% 55%,
@@ -848,19 +773,10 @@ gap:7px;
 width:36px;
 height:32px;
 flex:none;
-border:0;
-outline:0;
-border-radius:8px;
-background:#292929;
-color:white;
 font-size:15px;
 display:flex;
 align-items:center;
 justify-content:center;
-}
-
-.timeline-arrow:active{
-transform:scale(.92);
 }
 
 .timeline-slider-wrap{
@@ -893,10 +809,6 @@ height:14px;
 border-radius:3px;
 background:#666;
 opacity:.95;
-transition:
-background .18s ease,
-transform .12s ease,
-opacity .18s ease;
 }
 
 .oya-segment.loaded{
@@ -906,30 +818,6 @@ background:#45c9ef;
 .oya-segment.current{
 transform:scaleY(1.08);
 filter:brightness(1.15);
-}
-
-#oyaLongProgress{
-position:absolute;
-left:0;
-right:0;
-top:5px;
-height:6px;
-border-radius:999px;
-background:#666;
-overflow:hidden;
-pointer-events:none;
-z-index:1;
-display:none;
-}
-
-#oyaLongProgressFill{
-position:absolute;
-left:0;
-top:0;
-bottom:0;
-width:0%;
-background:#45c9ef;
-border-radius:999px;
 }
 
 #timeSlider{
@@ -946,7 +834,6 @@ appearance:none;
 #timeSlider::-webkit-slider-runnable-track{
 height:14px;
 background:transparent;
-border:0;
 }
 
 #timeSlider::-webkit-slider-thumb{
@@ -960,34 +847,13 @@ background:#fff;
 box-shadow:0 1px 5px rgba(0,0,0,.45);
 }
 
-#timeSlider::-moz-range-track{
-height:14px;
-background:transparent;
-border:0;
-}
-
-#timeSlider::-moz-range-thumb{
-width:18px;
-height:18px;
-border-radius:50%;
-border:2px solid white;
-background:#fff;
-}
-
-body.light .oya-segment{
-background:#c8c8c8;
-}
-
-body.light .oya-segment.loaded{
-background:#49b9df;
-}
-
-body.light #oyaLongProgress{
-background:#c8c8c8;
-}
-
-body.light #oyaLongProgressFill{
-background:#49b9df;
+#timeLabel{
+width:100%;
+margin-top:5px;
+text-align:center;
+color:white;
+font-size:11px;
+opacity:.85;
 }
 
 body.light .top-panel,
@@ -1028,15 +894,6 @@ background:#ddd;
 body.light #preloadBtn{
 background:#eee;
 color:#111;
-}
-
-#timeLabel{
-width:100%;
-margin-top:5px;
-text-align:center;
-color:white;
-font-size:11px;
-opacity:.85;
 }
 
 body.light #timeLabel{
@@ -1375,10 +1232,6 @@ aria-label="Загрузить все кадры">
 
 <div id="oyaTimelineSegments"></div>
 
-<div id="oyaLongProgress">
-<div id="oyaLongProgressFill"></div>
-</div>
-
 <input
 id="timeSlider"
 type="range"
@@ -1417,7 +1270,6 @@ status.textContent="OpenLayers не загрузился";
 
 console.error("GPTrad: OpenLayers unavailable");
 return;
-
 }
 
 const loading=document.getElementById("loading");
@@ -1428,50 +1280,274 @@ const settings=document.getElementById("settings");
 const timeSlider=document.getElementById("timeSlider");
 const timeLabel=document.getElementById("timeLabel");
 const oyaTimelineSegments=document.getElementById("oyaTimelineSegments");
-const oyaLongProgress=document.getElementById("oyaLongProgress");
-const oyaLongProgressFill=document.getElementById("oyaLongProgressFill");
 const frameCountInput=document.getElementById("frameCountInput");
 const preloadBtn=document.getElementById("preloadBtn");
 const playBtn=document.getElementById("playBtn");
 const oyaOpacitySlider=document.getElementById("oyaOpacitySlider");
 const oyaOpacityValue=document.getElementById("oyaOpacityValue");
 
-/* ЯВНО получаем контейнер палитры */
+/* =====================================================
+   ПАЛИТРА
+===================================================== */
+
 const paletteRows=document.getElementById("paletteRows");
 
-function setStatus(text){
-if(status)status.textContent=text;
+const OYA_PALETTE_STORAGE_KEY=
+"gptrad-oya-palette";
+
+const DEFAULT_OYA_PALETTE=[
+{name:"обл. сред. яруса",color:"#bac1c7"},
+{name:"сл. образования",color:"#c1d5fa"},
+{name:"осадки слабые",color:"#9ffbb8"},
+{name:"осадки умеренные",color:"#74d091"},
+{name:"осадки сильные",color:"#69b35a"},
+{name:"кучевая обл",color:"#fdfeae"},
+{name:"ливень слабый",color:"#83aaf7"},
+{name:"ливень умеренный",color:"#5572f4"},
+{name:"ливень сильный",color:"#4d4c98"},
+{name:"гроза (R)",color:"#f4c5a9"},
+{name:"гроза R)",color:"#ef8da4"},
+{name:"гроза R",color:"#ea5b53"},
+{name:"град слабый",color:"#d09559"},
+{name:"град умеренный",color:"#a37c53"},
+{name:"град сильный",color:"#854f4d"},
+{name:"шквал слабый",color:"#f5c4fb"},
+{name:"шквал умеренный",color:"#ee8df8"},
+{name:"шквал сильный",color:"#c856d0"},
+{name:"смерч",color:"#77788c"}
+];
+
+const OYA_SOURCE_COLORS=[
+[186,193,199],
+[193,213,250],
+[159,251,184],
+[116,208,145],
+[105,179,90],
+[253,254,174],
+[131,170,247],
+[85,114,244],
+[77,76,152],
+[244,197,169],
+[239,141,164],
+[234,91,83],
+[208,149,89],
+[163,124,83],
+[133,79,77],
+[245,196,251],
+[238,141,248],
+[200,86,208],
+[119,120,140]
+];
+
+function hexToRgb(hex){
+
+const value=String(hex)
+.replace("#","")
+.trim();
+
+if(value.length!==6)return null;
+
+const r=parseInt(value.slice(0,2),16);
+const g=parseInt(value.slice(2,4),16);
+const b=parseInt(value.slice(4,6),16);
+
+if(
+!Number.isFinite(r)||
+!Number.isFinite(g)||
+!Number.isFinite(b)
+)return null;
+
+return[r,g,b];
 }
 
-function showLoading(text){
-if(!loading)return;
-loading.textContent=text;
-loading.style.display="block";
+function loadOyaPalette(){
+
+try{
+
+const saved=JSON.parse(
+localStorage.getItem(
+OYA_PALETTE_STORAGE_KEY
+)||"null"
+);
+
+if(
+Array.isArray(saved)&&
+saved.length===DEFAULT_OYA_PALETTE.length
+){
+
+const indexes=saved.map(
+item=>Number(item?.sourceIndex)
+);
+
+if(
+indexes.every(
+index=>
+Number.isInteger(index)&&
+index>=0&&
+index<DEFAULT_OYA_PALETTE.length
+)&&
+new Set(indexes).size===DEFAULT_OYA_PALETTE.length
+){
+
+return indexes.map(index=>({
+
+name:DEFAULT_OYA_PALETTE[index].name,
+color:DEFAULT_OYA_PALETTE[index].color,
+sourceIndex:index
+
+}));
+
 }
 
-function hideLoading(){
-if(loading)loading.style.display="none";
 }
 
-function formatDateTime(ts){
+}catch(error){
 
-if(!ts)return"—";
+console.warn("OYA palette:",error);
 
-const d=new Date(ts*1000);
-
-if(!Number.isFinite(d.getTime()))return"—";
-
-return d.toLocaleString(
-"ru-RU",
-{
-day:"2-digit",
-month:"2-digit",
-hour:"2-digit",
-minute:"2-digit"
 }
+
+return DEFAULT_OYA_PALETTE.map(
+(item,index)=>({
+
+name:item.name,
+color:item.color,
+sourceIndex:index
+
+})
 );
 
 }
+
+let oyaPalette=loadOyaPalette();
+
+function saveOyaPalette(){
+
+localStorage.setItem(
+OYA_PALETTE_STORAGE_KEY,
+JSON.stringify(
+oyaPalette.map(
+item=>({
+sourceIndex:item.sourceIndex
+})
+)
+)
+);
+
+}
+
+function invalidateOyaProcessing(){
+
+for(const item of oyaFrameCache.values()){
+
+if(item&&item.cleanUrl){
+
+try{
+URL.revokeObjectURL(item.cleanUrl);
+}catch(e){}
+
+}
+
+}
+
+oyaFrameCache.clear();
+oyaLoadedTimes.clear();
+
+}
+
+function movePaletteItem(index,direction){
+
+const target=index+direction;
+
+if(
+target<0||
+target>=oyaPalette.length
+)return;
+
+const temp=oyaPalette[index];
+
+oyaPalette[index]=oyaPalette[target];
+oyaPalette[target]=temp;
+
+saveOyaPalette();
+renderPalette();
+invalidateOyaProcessing();
+
+if(activeLayer==="oya"){
+loadOyaFrame(oyaFrameIndex);
+}
+
+}
+
+function renderPalette(){
+
+paletteRows.innerHTML="";
+
+oyaPalette.forEach((item,index)=>{
+
+const row=document.createElement("div");
+row.className="palette-row";
+
+const name=document.createElement("div");
+name.className="palette-name";
+name.textContent=item.name;
+
+const swatch=document.createElement("div");
+swatch.className="palette-swatch";
+swatch.style.background=item.color;
+
+const move=document.createElement("button");
+move.className="palette-move";
+move.textContent=index===0?"":"↑";
+move.disabled=index===0;
+
+move.addEventListener(
+"click",
+function(){
+movePaletteItem(index,-1);
+}
+);
+
+row.appendChild(name);
+row.appendChild(swatch);
+row.appendChild(move);
+
+paletteRows.appendChild(row);
+
+});
+
+}
+
+function resetOyaPalette(){
+
+oyaPalette=DEFAULT_OYA_PALETTE.map(
+(item,index)=>({
+
+name:item.name,
+color:item.color,
+sourceIndex:index
+
+})
+);
+
+saveOyaPalette();
+renderPalette();
+invalidateOyaProcessing();
+
+if(activeLayer==="oya"){
+loadOyaFrame(oyaFrameIndex);
+}
+
+}
+
+renderPalette();
+
+document.getElementById(
+"paletteReset"
+).addEventListener(
+"click",
+resetOyaPalette
+);
 
 /* =====================================================
    СОСТОЯНИЕ
@@ -1499,12 +1575,9 @@ let oyaImageBlobUrl=null;
 let reflectivityFrameIndex=0;
 let reflectivityRequestId=0;
 
-let oyaFrameRequestId=0;
-
 let oyaCapabilitiesLoaded=false;
 let oyaCapabilitiesLoading=false;
 
-let oyaPreloadGeneration=0;
 let oyaPreloading=false;
 
 let viewportTimer=null;
@@ -1512,6 +1585,47 @@ let viewportTimer=null;
 const oyaLoadedTimes=new Set();
 const oyaFrameCache=new Map();
 const oyaPendingRequests=new Map();
+
+function setStatus(text){
+
+if(status)status.textContent=text;
+
+}
+
+function showLoading(text){
+
+if(!loading)return;
+
+loading.textContent=text;
+loading.style.display="block";
+
+}
+
+function hideLoading(){
+
+if(loading)loading.style.display="none";
+
+}
+
+function formatDateTime(ts){
+
+if(!ts)return"—";
+
+const d=new Date(ts*1000);
+
+if(!Number.isFinite(d.getTime()))return"—";
+
+return d.toLocaleString(
+"ru-RU",
+{
+day:"2-digit",
+month:"2-digit",
+hour:"2-digit",
+minute:"2-digit"
+}
+);
+
+}
 
 /* =====================================================
    КАРТА
@@ -1523,12 +1637,10 @@ const DEFAULT_MAP_ZOOM=5;
 const osmSource=new ol.source.XYZ({
 
 url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-
 maxZoom:19,
 transition:0,
 wrapX:true,
 crossOrigin:"anonymous",
-
 attributions:"© OpenStreetMap contributors"
 
 });
@@ -1546,12 +1658,10 @@ const darkOsmLayer=new ol.layer.Tile({
 source:new ol.source.XYZ({
 
 url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-
 maxZoom:19,
 transition:0,
 wrapX:true,
 crossOrigin:"anonymous",
-
 attributions:"© OpenStreetMap contributors"
 
 }),
@@ -1606,20 +1716,12 @@ console.error("resizeMap:",error);
 
 }
 
-window.addEventListener(
-"resize",
-resizeMap
-);
+window.addEventListener("resize",resizeMap);
 
 window.addEventListener(
 "orientationchange",
 function(){
-
-setTimeout(
-resizeMap,
-250
-);
-
+setTimeout(resizeMap,250);
 }
 );
 
@@ -1660,17 +1762,12 @@ const radarCoverageStyle=
 new ol.style.Style({
 
 fill:new ol.style.Fill({
-
 color:"rgba(125,125,125,0.13)"
-
 }),
 
 stroke:new ol.style.Stroke({
-
 color:"rgba(205,205,205,0.58)",
-
 width:1
-
 })
 
 });
@@ -1683,17 +1780,12 @@ image:new ol.style.Circle({
 radius:3,
 
 fill:new ol.style.Fill({
-
 color:"#ffffff"
-
 }),
 
 stroke:new ol.style.Stroke({
-
 color:"#000000",
-
 width:1.2
-
 })
 
 })
@@ -1707,16 +1799,12 @@ const radarBeamLayer=
 new ol.layer.Vector({
 
 source:radarBeamSource,
-
 zIndex:80,
-
 visible:false
 
 });
 
-map.addLayer(
-radarBeamLayer
-);
+map.addLayer(radarBeamLayer);
 
 const radarMaskSource=
 new ol.source.Vector();
@@ -1725,21 +1813,16 @@ const radarMaskLayer=
 new ol.layer.Vector({
 
 source:radarMaskSource,
-
 zIndex:10,
-
 visible:false
 
 });
 
-map.addLayer(
-radarMaskLayer
-);
+map.addLayer(radarMaskLayer);
 
 function removeRadarDataMaskImage(){
 
-const layer=
-radarMaskLayer.__imageLayer;
+const layer=radarMaskLayer.__imageLayer;
 
 if(layer){
 
@@ -1753,10 +1836,7 @@ radarMaskLayer.__imageLayer=null;
 
 }
 
-function renderRadarMaskFromOya(
-sourceImage,
-extent
-){
+function renderRadarMaskFromOya(sourceImage,extent){
 
 removeRadarDataMaskImage();
 
@@ -1772,64 +1852,45 @@ sourceImage.height;
 
 if(!width||!height)return;
 
-const canvas=
-document.createElement("canvas");
+const canvas=document.createElement("canvas");
 
 canvas.width=width;
 canvas.height=height;
 
-const ctx=
-canvas.getContext(
+const ctx=canvas.getContext(
 "2d",
-{
-willReadFrequently:true
-}
+{willReadFrequently:true}
 );
 
 if(!ctx)return;
 
-ctx.clearRect(
-0,
-0,
-width,
-height
-);
+ctx.clearRect(0,0,width,height);
 
 ctx.save();
 
 ctx.fillStyle="#000000";
 
-for(
-const radar of radarPositions
-){
+for(const radar of radarPositions){
 
 if(
 !Number.isFinite(radar.lat)||
 !Number.isFinite(radar.lon)
-){
-continue;
-}
+)continue;
 
-const center=
-ol.proj.fromLonLat([
+const center=ol.proj.fromLonLat([
 radar.lon,
 radar.lat
 ]);
 
-const extentWidth=
-extent[2]-extent[0];
-
-const extentHeight=
-extent[3]-extent[1];
+const extentWidth=extent[2]-extent[0];
+const extentHeight=extent[3]-extent[1];
 
 if(
 !Number.isFinite(extentWidth)||
 !Number.isFinite(extentHeight)||
 extentWidth===0||
 extentHeight===0
-){
-continue;
-}
+)continue;
 
 const px=
 (center[0]-extent[0])/
@@ -1883,16 +1944,14 @@ height
 ctx.globalCompositeOperation=
 "source-over";
 
-const imageData=
-ctx.getImageData(
+const imageData=ctx.getImageData(
 0,
 0,
 width,
 height
 );
 
-const pixels=
-imageData.data;
+const pixels=imageData.data;
 
 let hasData=false;
 
@@ -1923,42 +1982,29 @@ imageData,
 0
 );
 
-const url=
-canvas.toDataURL("image/png");
+const url=canvas.toDataURL("image/png");
 
-const source=
-new ol.source.ImageStatic({
+const source=new ol.source.ImageStatic({
 
 url:url,
-
 imageExtent:extent,
-
 projection:"EPSG:3857",
-
 interpolate:false
 
 });
 
-const layer=
-new ol.layer.Image({
+const layer=new ol.layer.Image({
 
 source:source,
-
 opacity:.32,
-
 zIndex:10,
-
-visible:
-radarMaskLayer.getVisible()
+visible:radarMaskLayer.getVisible()
 
 });
 
-radarMaskLayer.__imageLayer=
-layer;
+radarMaskLayer.__imageLayer=layer;
 
-map.addLayer(
-layer
-);
+map.addLayer(layer);
 
 map.render();
 
@@ -1978,47 +2024,30 @@ return;
 
 }
 
-for(
-const radar of radars
-){
+for(const radar of radars){
 
 if(
 !Number.isFinite(radar.lat)||
 !Number.isFinite(radar.lon)
-){
-continue;
-}
+)continue;
 
-const center=
-ol.proj.fromLonLat([
+const center=ol.proj.fromLonLat([
 radar.lon,
 radar.lat
 ]);
 
-const circle=
-new ol.geom.Circle(
+const circle=new ol.geom.Circle(
 center,
 RADAR_COVERAGE_RADIUS
 );
 
-const coverageFeature=
-new ol.Feature(
+const coverageFeature=new ol.Feature(
 circle
 );
 
 coverageFeature.set(
 "radarType",
 "coverage"
-);
-
-coverageFeature.set(
-"radarLatitude",
-radar.lat
-);
-
-coverageFeature.set(
-"radarLongitude",
-radar.lon
 );
 
 coverageFeature.setStyle(
@@ -2029,24 +2058,13 @@ radarBeamSource.addFeature(
 coverageFeature
 );
 
-const radarPoint=
-new ol.Feature(
+const radarPoint=new ol.Feature(
 new ol.geom.Point(center)
 );
 
 radarPoint.set(
 "radarType",
 "radar"
-);
-
-radarPoint.set(
-"radarLatitude",
-radar.lat
-);
-
-radarPoint.set(
-"radarLongitude",
-radar.lon
 );
 
 radarPoint.setStyle(
@@ -2063,9 +2081,7 @@ map.render();
 
 }
 
-function mergeRadarPositions(
-dynamicPositions
-){
+function mergeRadarPositions(dynamicPositions){
 
 const result=[];
 const seen=new Set();
@@ -2075,17 +2091,13 @@ const all=[
 ...dynamicPositions
 ];
 
-for(
-const radar of all
-){
+for(const radar of all){
 
 if(
 !radar||
 !Number.isFinite(radar.lat)||
 !Number.isFinite(radar.lon)
-){
-continue;
-}
+)continue;
 
 const key=
 radar.lat.toFixed(6)+","+
@@ -2110,11 +2122,9 @@ async function loadRadarPositions(){
 
 try{
 
-const controller=
-new AbortController();
+const controller=new AbortController();
 
-const timeout=
-setTimeout(
+const timeout=setTimeout(
 ()=>controller.abort(),
 12000
 );
@@ -2123,8 +2133,7 @@ let response;
 
 try{
 
-response=
-await fetch(
+response=await fetch(
 RADAR_VECTOR_PROXY,
 {
 cache:"no-store",
@@ -2147,8 +2156,7 @@ response.status
 
 }
 
-const data=
-await response.json();
+const data=await response.json();
 
 if(!Array.isArray(data)){
 
@@ -2160,16 +2168,12 @@ throw new Error(
 
 const result=[];
 
-for(
-const item of data
-){
+for(const item of data){
 
 if(
 !Array.isArray(item)||
 item.length<2
-){
-continue;
-}
+)continue;
 
 const lat=Number(item[0]);
 const lon=Number(item[1]);
@@ -2177,18 +2181,14 @@ const lon=Number(item[1]);
 if(
 !Number.isFinite(lat)||
 !Number.isFinite(lon)
-){
-continue;
-}
+)continue;
 
 if(
 lat<-90||
 lat>90||
 lon<-180||
 lon>180
-){
-continue;
-}
+)continue;
 
 result.push({
 lat,
@@ -2197,9 +2197,7 @@ lon
 
 }
 
-return mergeRadarPositions(
-result
-);
+return mergeRadarPositions(result);
 
 }catch(error){
 
@@ -2229,51 +2227,11 @@ return;
 
 }
 
-radarPositions=
-radars;
+radarPositions=radars;
 
 renderRadarPositions(
 radarPositions
 );
-
-if(
-activeLayer==="oya"&&
-oyaImage&&
-oyaImage.__oyaCleanUrl&&
-oyaImage.getSource()
-){
-
-try{
-
-const extent=
-oyaImage.getSource()
-.getImageExtent();
-
-const image=
-new Image();
-
-image.onload=function(){
-
-renderRadarMaskFromOya(
-image,
-extent
-);
-
-};
-
-image.src=
-oyaImage.__oyaCleanUrl;
-
-}catch(error){
-
-console.warn(
-"Mask update:",
-error
-);
-
-}
-
-}
 
 }
 
@@ -2307,9 +2265,7 @@ document.getElementById(
 "radarMaskState"
 );
 
-function setRadarBeamVisible(
-visible
-){
+function setRadarBeamVisible(visible){
 
 radarBeamLayer.setVisible(
 visible
@@ -2343,9 +2299,7 @@ setRadarBeamVisible(
 }
 );
 
-function setRadarMaskVisible(
-visible
-){
+function setRadarMaskVisible(visible){
 
 radarMaskLayer.setVisible(
 visible
@@ -2495,367 +2449,10 @@ oyaOpacitySlider.value
 );
 
 /* =====================================================
-   ПАЛИТРА
-===================================================== */
-
-const OYA_PALETTE_STORAGE_KEY=
-"gptrad-oya-palette";
-
-const DEFAULT_OYA_PALETTE=[
-
-{name:"обл. сред. яруса",color:"#bac1c7"},
-{name:"сл. образования",color:"#c1d5fa"},
-{name:"осадки слабые",color:"#9ffbb8"},
-{name:"осадки умеренные",color:"#74d091"},
-{name:"осадки сильные",color:"#69b35a"},
-{name:"кучевая обл",color:"#fdfeae"},
-{name:"ливень слабый",color:"#83aaf7"},
-{name:"ливень умеренный",color:"#5572f4"},
-{name:"ливень сильный",color:"#4d4c98"},
-{name:"гроза (R)",color:"#f4c5a9"},
-{name:"гроза R)",color:"#ef8da4"},
-{name:"гроза R",color:"#ea5b53"},
-{name:"град слабый",color:"#d09559"},
-{name:"град умеренный",color:"#a37c53"},
-{name:"град сильный",color:"#854f4d"},
-{name:"шквал слабый",color:"#f5c4fb"},
-{name:"шквал умеренный",color:"#ee8df8"},
-{name:"шквал сильный",color:"#c856d0"},
-{name:"смерч",color:"#77788c"}
-
-];
-
-const OYA_SOURCE_COLORS=[
-
-[186,193,199],
-[193,213,250],
-[159,251,184],
-[116,208,145],
-[105,179,90],
-[253,254,174],
-[131,170,247],
-[85,114,244],
-[77,76,152],
-[244,197,169],
-[239,141,164],
-[234,91,83],
-[208,149,89],
-[163,124,83],
-[133,79,77],
-[245,196,251],
-[238,141,248],
-[200,86,208],
-[119,120,140]
-
-];
-
-function hexToRgb(hex){
-
-const value=
-String(hex)
-.replace("#","")
-.trim();
-
-if(value.length!==6){
-return null;
-}
-
-const r=parseInt(
-value.slice(0,2),
-16
-);
-
-const g=parseInt(
-value.slice(2,4),
-16
-);
-
-const b=parseInt(
-value.slice(4,6),
-16
-);
-
-if(
-!Number.isFinite(r)||
-!Number.isFinite(g)||
-!Number.isFinite(b)
-){
-return null;
-}
-
-return[r,g,b];
-
-}
-
-function loadOyaPalette(){
-
-try{
-
-const saved=
-JSON.parse(
-localStorage.getItem(
-OYA_PALETTE_STORAGE_KEY
-)||"null"
-);
-
-if(
-Array.isArray(saved)&&
-saved.length===
-DEFAULT_OYA_PALETTE.length
-){
-
-const indexes=
-saved.map(
-item=>Number(
-item?.sourceIndex
-)
-);
-
-if(
-indexes.length===
-DEFAULT_OYA_PALETTE.length&&
-indexes.every(
-index=>
-Number.isInteger(index)&&
-index>=0&&
-index<DEFAULT_OYA_PALETTE.length
-)&&
-new Set(indexes).size===
-DEFAULT_OYA_PALETTE.length
-){
-
-return indexes.map(
-index=>({
-
-name:
-DEFAULT_OYA_PALETTE[index].name,
-
-color:
-DEFAULT_OYA_PALETTE[index].color,
-
-sourceIndex:index
-
-})
-);
-
-}
-
-}
-
-}catch(error){
-
-console.warn(
-"OYA palette:",
-error
-);
-
-}
-
-return DEFAULT_OYA_PALETTE.map(
-(item,index)=>({
-
-name:item.name,
-color:item.color,
-sourceIndex:index
-
-})
-);
-
-}
-
-let oyaPalette=
-loadOyaPalette();
-
-function saveOyaPalette(){
-
-localStorage.setItem(
-OYA_PALETTE_STORAGE_KEY,
-JSON.stringify(
-oyaPalette.map(
-item=>({
-sourceIndex:item.sourceIndex
-})
-)
-)
-);
-
-}
-
-function invalidateOyaProcessing(){
-
-for(
-const item of oyaFrameCache.values()
-){
-
-if(
-item&&
-item.cleanUrl
-){
-
-try{
-URL.revokeObjectURL(
-item.cleanUrl
-);
-}catch(e){}
-
-}
-
-}
-
-oyaFrameCache.clear();
-oyaLoadedTimes.clear();
-
-}
-
-function movePaletteItem(
-index,
-direction
-){
-
-const target=
-index+direction;
-
-if(
-target<0||
-target>=oyaPalette.length
-){
-return;
-}
-
-const temp=
-oyaPalette[index];
-
-oyaPalette[index]=
-oyaPalette[target];
-
-oyaPalette[target]=
-temp;
-
-saveOyaPalette();
-
-renderPalette();
-
-invalidateOyaProcessing();
-
-if(activeLayer==="oya"){
-
-loadOyaFrame(
-oyaFrameIndex
-);
-
-}
-
-}
-
-function renderPalette(){
-
-paletteRows.innerHTML="";
-
-oyaPalette.forEach(
-(item,index)=>{
-
-const row=
-document.createElement("div");
-
-row.className="palette-row";
-
-const name=
-document.createElement("div");
-
-name.className="palette-name";
-
-name.textContent=
-item.name;
-
-const swatch=
-document.createElement("div");
-
-swatch.className="palette-swatch";
-
-swatch.style.background=
-item.color;
-
-const move=
-document.createElement("button");
-
-move.className="palette-move";
-
-move.textContent=
-index===0
-?""
-:"↑";
-
-move.disabled=
-index===0;
-
-move.addEventListener(
-"click",
-function(){
-
-movePaletteItem(
-index,
--1
-);
-
-}
-);
-
-row.appendChild(name);
-row.appendChild(swatch);
-row.appendChild(move);
-
-paletteRows.appendChild(row);
-
-}
-);
-
-}
-
-function resetOyaPalette(){
-
-oyaPalette=
-DEFAULT_OYA_PALETTE.map(
-(item,index)=>({
-
-name:item.name,
-color:item.color,
-sourceIndex:index
-
-})
-);
-
-saveOyaPalette();
-
-renderPalette();
-
-invalidateOyaProcessing();
-
-if(activeLayer==="oya"){
-
-loadOyaFrame(
-oyaFrameIndex
-);
-
-}
-
-}
-
-renderPalette();
-
-document.getElementById(
-"paletteReset"
-).addEventListener(
-"click",
-resetOyaPalette
-);
-
-/* =====================================================
    OYA PROCESSING
 ===================================================== */
 
-function colorDistance(
-r,g,b,target
-){
+function colorDistance(r,g,b,target){
 
 return Math.sqrt(
 Math.pow(r-target[0],2)+
@@ -2865,9 +2462,7 @@ Math.pow(b-target[2],2)
 
 }
 
-function nearestOyaColor(
-r,g,b
-){
+function nearestOyaColor(r,g,b){
 
 let bestIndex=-1;
 let bestDistance=Infinity;
@@ -2878,8 +2473,7 @@ i<OYA_SOURCE_COLORS.length;
 i++
 ){
 
-const d=
-colorDistance(
+const d=colorDistance(
 r,
 g,
 b,
@@ -2902,58 +2496,27 @@ distance:bestDistance
 
 }
 
-function processOyaCanvas(
-canvas
-){
+function processOyaCanvas(canvas){
 
-const ctx=
-canvas.getContext(
+const ctx=canvas.getContext(
 "2d",
-{
-willReadFrequently:true
-}
+{willReadFrequently:true}
 );
 
 if(!ctx)return canvas;
 
-const width=
-canvas.width;
-
-const height=
-canvas.height;
-
-let imageData;
-
-try{
-
-imageData=
-ctx.getImageData(
+const imageData=ctx.getImageData(
 0,
 0,
-width,
-height
+canvas.width,
+canvas.height
 );
 
-}catch(error){
+const pixels=imageData.data;
 
-console.error(
-"OYA canvas:",
-error
-);
+const paletteMap=new Map();
 
-return canvas;
-
-}
-
-const pixels=
-imageData.data;
-
-const paletteMap=
-new Map();
-
-for(
-const item of oyaPalette
-){
+for(const item of oyaPalette){
 
 paletteMap.set(
 item.sourceIndex,
@@ -2975,14 +2538,9 @@ const a=pixels[i+3];
 
 if(a===0)continue;
 
-const max=
-Math.max(r,g,b);
-
-const min=
-Math.min(r,g,b);
-
-const diff=
-max-min;
+const max=Math.max(r,g,b);
+const min=Math.min(r,g,b);
+const diff=max-min;
 
 if(
 diff<=22&&
@@ -2995,13 +2553,11 @@ b<=250
 ){
 
 pixels[i+3]=0;
-
 continue;
 
 }
 
-const nearest=
-nearestOyaColor(
+const nearest=nearestOyaColor(
 r,
 g,
 b
@@ -3012,8 +2568,7 @@ nearest.index>=0&&
 nearest.distance<=95
 ){
 
-const mapped=
-paletteMap.get(
+const mapped=paletteMap.get(
 nearest.index
 );
 
@@ -3048,15 +2603,12 @@ return canvas;
 
 }
 
-async function createCleanOyaBlobUrl(
-sourceUrl
-){
+async function createCleanOyaBlobUrl(sourceUrl){
 
 return new Promise(
 (resolve,reject)=>{
 
-const image=
-new Image();
+const image=new Image();
 
 image.crossOrigin="anonymous";
 
@@ -3064,8 +2616,9 @@ image.onload=function(){
 
 try{
 
-const canvas=
-document.createElement("canvas");
+const canvas=document.createElement(
+"canvas"
+);
 
 canvas.width=
 image.naturalWidth||
@@ -3075,27 +2628,9 @@ canvas.height=
 image.naturalHeight||
 image.height;
 
-if(
-!canvas.width||
-!canvas.height
-){
-
-reject(
-new Error(
-"Invalid OYA image size"
-)
-);
-
-return;
-
-}
-
-const ctx=
-canvas.getContext(
+const ctx=canvas.getContext(
 "2d",
-{
-willReadFrequently:true
-}
+{willReadFrequently:true}
 );
 
 ctx.drawImage(
@@ -3104,9 +2639,7 @@ image,
 0
 );
 
-processOyaCanvas(
-canvas
-);
+processOyaCanvas(canvas);
 
 canvas.toBlob(
 function(blob){
@@ -3154,14 +2687,15 @@ image.src=sourceUrl;
 }
 );
 
+}
+
 /* =====================================================
    WMS
 ===================================================== */
 
 function getCurrentMapExtent(){
 
-const size=
-map.getSize();
+const size=map.getSize();
 
 if(
 !size||
@@ -3176,16 +2710,11 @@ return view.calculateExtent([
 
 }
 
-return view.calculateExtent(
-size
-);
+return view.calculateExtent(size);
 
 }
 
-function createWmsUrl(
-layerName,
-time
-){
+function createWmsUrl(layerName,time){
 
 const extent=
 getCurrentMapExtent();
@@ -3193,42 +2722,30 @@ getCurrentMapExtent();
 const size=
 map.getSize();
 
-const width=
-Math.max(
+const width=Math.max(
 256,
 Math.round(size?.[0]||1024)
 );
 
-const height=
-Math.max(
+const height=Math.max(
 256,
 Math.round(size?.[1]||768)
 );
 
-const params=
-new URLSearchParams({
+const params=new URLSearchParams({
 
 SERVICE:"WMS",
 VERSION:"1.1.1",
 REQUEST:"GetMap",
-
 LAYERS:layerName,
-
 STYLES:"",
-
 SRS:"EPSG:3857",
-
 BBOX:extent.join(","),
-
 WIDTH:String(width),
 HEIGHT:String(height),
-
 FORMAT:"image/png",
-
 TRANSPARENT:"true",
-
-TIME:
-new Date(
+TIME:new Date(
 time*1000
 ).toISOString()
 
@@ -3240,28 +2757,18 @@ params.toString();
 
 }
 
-/* =====================================================
-   ИСПРАВЛЕННЫЙ PARSER ВРЕМЕНИ
-===================================================== */
-
-function extractTimesFromCapabilities(
-xmlText
-){
+function extractTimesFromCapabilities(xmlText){
 
 const result=[];
 const seen=new Set();
 
 function addTime(value){
 
-const parsed=
-Date.parse(value);
+const parsed=Date.parse(value);
 
-if(!Number.isFinite(parsed)){
-return;
-}
+if(!Number.isFinite(parsed))return;
 
-const ts=
-Math.floor(parsed/1000);
+const ts=Math.floor(parsed/1000);
 
 if(!seen.has(ts)){
 
@@ -3285,39 +2792,29 @@ xml.querySelectorAll(
 "Dimension[name='time'],Extent[name='time'],dimension[name='time'],extent[name='time']"
 );
 
-for(
-const node of nodes
-){
+for(const node of nodes){
 
-const value=
-node.textContent||"";
+const value=node.textContent||"";
 
-const parts=
-value.split(",");
+const parts=value.split(",");
 
-for(
-const partRaw of parts
-){
+for(const partRaw of parts){
 
-const part=
-partRaw.trim();
+const part=partRaw.trim();
 
 if(!part)continue;
 
 if(part.includes("/")){
 
-const pieces=
-part.split("/");
+const pieces=part.split("/");
 
 if(pieces.length>=3){
 
-const start=
-Date.parse(
+const start=Date.parse(
 pieces[0]
 );
 
-const end=
-Date.parse(
+const end=Date.parse(
 pieces[1]
 );
 
@@ -3327,11 +2824,9 @@ Number.isFinite(end)&&
 end>=start
 ){
 
-const step=
-10*60*1000;
+const step=10*60*1000;
 
-const maxFrames=
-500;
+const maxFrames=500;
 
 let count=0;
 
@@ -3370,16 +2865,13 @@ xml.documentElement
 ?xml.documentElement.textContent||""
 :"";
 
-const matches=
-text.match(
+const matches=text.match(
 /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g
 );
 
 if(matches){
 
-for(
-const value of matches
-){
+for(const value of matches){
 
 addTime(value);
 
@@ -3445,8 +2937,7 @@ setStatus(
 const controller=
 new AbortController();
 
-const timeout=
-setTimeout(
+const timeout=setTimeout(
 ()=>controller.abort(),
 15000
 );
@@ -3455,8 +2946,7 @@ let response;
 
 try{
 
-response=
-await fetch(
+response=await fetch(
 OYA_PROXY+
 "?action=capabilities",
 {
@@ -3498,8 +2988,7 @@ throw new Error(
 
 oyaAllTimes=times;
 
-oyaTimes=
-times.slice(
+oyaTimes=times.slice(
 Math.max(
 0,
 times.length-oyaFrameCount
@@ -3507,14 +2996,6 @@ times.length-oyaFrameCount
 );
 
 oyaCapabilitiesLoaded=true;
-
-frameCountInput.max=
-String(
-Math.max(
-1,
-oyaAllTimes.length
-)
-);
 
 updateOyaTimes();
 
@@ -3550,8 +3031,7 @@ return;
 
 }
 
-const count=
-Math.max(
+const count=Math.max(
 1,
 Math.min(
 oyaFrameCount,
@@ -3559,17 +3039,18 @@ oyaAllTimes.length
 )
 );
 
-oyaTimes=
-oyaAllTimes.slice(
+oyaTimes=oyaAllTimes.slice(
 oyaAllTimes.length-count
 );
 
-oyaFrameIndex=
-Math.max(
+oyaFrameIndex=Math.max(
 0,
 Math.min(
 oyaFrameIndex,
-Math.max(0,oyaTimes.length-1)
+Math.max(
+0,
+oyaTimes.length-1
+)
 )
 );
 
@@ -3582,9 +3063,7 @@ oyaTimes.length-1
 );
 
 timeSlider.value=
-String(
-oyaFrameIndex
-);
+String(oyaFrameIndex);
 
 renderOyaTimeline();
 
@@ -3622,9 +3101,7 @@ if(
 oyaLoadedTimes.has(time)
 ){
 
-segment.classList.add(
-"loaded"
-);
+segment.classList.add("loaded");
 
 }
 
@@ -3632,9 +3109,7 @@ if(
 index===oyaFrameIndex
 ){
 
-segment.classList.add(
-"current"
-);
+segment.classList.add("current");
 
 }
 
@@ -3649,15 +3124,13 @@ segment
 
 function setFrameCount(value){
 
-let count=
-Number(value);
+let count=Number(value);
 
 if(!Number.isFinite(count)){
 count=50;
 }
 
-count=
-Math.max(
+count=Math.max(
 1,
 Math.min(
 oyaAllTimes.length||50,
@@ -3740,10 +3213,7 @@ frameCountInput.value
    OYA FRAMES
 ===================================================== */
 
-function getOyaCacheKey(
-time,
-extent
-){
+function getOyaCacheKey(time,extent){
 
 return[
 time,
@@ -3754,9 +3224,7 @@ v=>Math.round(v)
 
 }
 
-async function requestOyaFrame(
-time
-){
+async function requestOyaFrame(time){
 
 const extent=
 getCurrentMapExtent();
@@ -3775,11 +3243,7 @@ return oyaPendingRequests.get(key);
 
 }
 
-const requestId=
-++oyaFrameRequestId;
-
-const promise=
-(async function(){
+const promise=(async function(){
 
 const url=
 createWmsUrl(
@@ -3790,8 +3254,7 @@ time
 const controller=
 new AbortController();
 
-const timeout=
-setTimeout(
+const timeout=setTimeout(
 ()=>controller.abort(),
 20000
 );
@@ -3800,8 +3263,7 @@ let response;
 
 try{
 
-response=
-await fetch(
+response=await fetch(
 url,
 {
 cache:"no-store",
@@ -3840,8 +3302,7 @@ URL.createObjectURL(blob);
 
 return{
 url:blobUrl,
-extent,
-requestId
+extent
 };
 
 })();
@@ -3857,18 +3318,13 @@ return await promise;
 
 }finally{
 
-oyaPendingRequests.delete(
-key
-);
+oyaPendingRequests.delete(key);
 
 }
 
 }
 
-async function showOyaFrame(
-time,
-result
-){
+async function showOyaFrame(time,result){
 
 if(activeLayer!=="oya"){
 return;
@@ -3885,11 +3341,9 @@ oyaImageBlobUrl!==cleanUrl
 ){
 
 try{
-
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
-
 }catch(e){}
 
 }
@@ -3901,11 +3355,8 @@ const source=
 new ol.source.ImageStatic({
 
 url:cleanUrl,
-
 imageExtent:result.extent,
-
 projection:"EPSG:3857",
-
 interpolate:false
 
 });
@@ -3914,9 +3365,7 @@ const layer=
 new ol.layer.Image({
 
 source:source,
-
 opacity:oyaOpacity/100,
-
 zIndex:50
 
 });
@@ -3930,27 +3379,20 @@ time;
 if(oyaImage){
 
 try{
-
-map.removeLayer(
-oyaImage
-);
-
+map.removeLayer(oyaImage);
 }catch(e){}
 
 }
 
 oyaImage=layer;
 
-map.addLayer(
-oyaImage
-);
+map.addLayer(oyaImage);
 
 if(
 radarMaskLayer.getVisible()
 ){
 
-const image=
-new Image();
+const image=new Image();
 
 image.onload=function(){
 
@@ -3961,8 +3403,7 @@ result.extent
 
 };
 
-image.src=
-cleanUrl;
+image.src=cleanUrl;
 
 }
 
@@ -3970,9 +3411,7 @@ map.render();
 
 }
 
-async function loadOyaFrame(
-index
-){
+async function loadOyaFrame(index){
 
 if(activeLayer!=="oya"){
 return;
@@ -3990,8 +3429,7 @@ if(!oyaTimes.length){
 return;
 }
 
-index=
-Math.max(
+index=Math.max(
 0,
 Math.min(
 index,
@@ -4024,16 +3462,12 @@ await createCleanOyaBlobUrl(
 cached.rawUrl
 );
 
-if(
-oyaImageBlobUrl
-){
+if(oyaImageBlobUrl){
 
 try{
-
 URL.revokeObjectURL(
 oyaImageBlobUrl
 );
-
 }catch(e){}
 
 }
@@ -4045,11 +3479,8 @@ const source=
 new ol.source.ImageStatic({
 
 url:cleanUrl,
-
 imageExtent:cached.extent,
-
 projection:"EPSG:3857",
-
 interpolate:false
 
 });
@@ -4058,9 +3489,7 @@ const layer=
 new ol.layer.Image({
 
 source:source,
-
 opacity:oyaOpacity/100,
-
 zIndex:50
 
 });
@@ -4074,41 +3503,14 @@ time;
 if(oyaImage){
 
 try{
-
-map.removeLayer(
-oyaImage
-);
-
+map.removeLayer(oyaImage);
 }catch(e){}
 
 }
 
 oyaImage=layer;
 
-map.addLayer(
-oyaImage
-);
-
-if(
-radarMaskLayer.getVisible()
-){
-
-const image=
-new Image();
-
-image.onload=function(){
-
-renderRadarMaskFromOya(
-image,
-cached.extent
-);
-
-};
-
-image.src=
-cleanUrl;
-
-}
+map.addLayer(oyaImage);
 
 updateTimeLabel();
 
@@ -4141,11 +3543,9 @@ time
 if(activeLayer!=="oya"){
 
 try{
-
 URL.revokeObjectURL(
 result.url
 );
-
 }catch(e){}
 
 return;
@@ -4160,9 +3560,7 @@ extent:result.extent
 }
 );
 
-oyaLoadedTimes.add(
-time
-);
+oyaLoadedTimes.add(time);
 
 await showOyaFrame(
 time,
@@ -4193,130 +3591,6 @@ hideLoading();
 }
 
 }
-
-/* =====================================================
-   PRELOAD
-===================================================== */
-
-async function preloadOyaFrames(){
-
-if(
-activeLayer!=="oya"||
-!oyaTimes.length||
-oyaPreloading
-){
-
-return;
-
-}
-
-oyaPreloading=true;
-
-const generation=
-++oyaPreloadGeneration;
-
-preloadBtn.classList.add(
-"loading"
-);
-
-preloadBtn.classList.remove(
-"done"
-);
-
-try{
-
-for(
-let i=0;
-i<oyaTimes.length;
-i++
-){
-
-if(
-generation!==oyaPreloadGeneration||
-activeLayer!=="oya"
-){
-
-break;
-
-}
-
-const time=
-oyaTimes[i];
-
-if(
-oyaLoadedTimes.has(time)
-){
-
-continue;
-
-}
-
-try{
-
-const result=
-await requestOyaFrame(
-time
-);
-
-oyaFrameCache.set(
-time,
-{
-rawUrl:result.url,
-extent:result.extent
-}
-);
-
-oyaLoadedTimes.add(
-time
-);
-
-renderOyaTimeline();
-
-}catch(error){
-
-console.warn(
-"Preload frame:",
-time,
-error
-);
-
-}
-
-}
-
-if(
-generation===oyaPreloadGeneration
-){
-
-preloadBtn.classList.add(
-"done"
-);
-
-}
-
-}catch(error){
-
-console.error(
-"Preload:",
-error
-);
-
-}finally{
-
-oyaPreloading=false;
-
-preloadBtn.classList.remove(
-"loading"
-);
-
-}
-
-}
-
-preloadBtn.addEventListener(
-"click",
-preloadOyaFrames
-);
 
 /* =====================================================
    REFLECTIVITY
@@ -4354,9 +3628,7 @@ reflectivityLayer=null;
 
 }
 
-async function loadReflectivityFrame(
-index
-){
+async function loadReflectivityFrame(index){
 
 if(activeLayer!=="reflectivity"){
 return;
@@ -4380,8 +3652,7 @@ return;
 
 }
 
-index=
-Math.max(
+index=Math.max(
 0,
 Math.min(
 index,
@@ -4402,8 +3673,11 @@ String(index);
 const time=
 oyaTimes[index];
 
-const requestId=
-++reflectivityRequestId;
+const url=
+createWmsUrl(
+REFLECTIVITY_LAYER,
+time
+);
 
 showLoading(
 "Загрузка отражаемости…"
@@ -4411,39 +3685,13 @@ showLoading(
 
 try{
 
-const url=
-createWmsUrl(
-REFLECTIVITY_LAYER,
-time
-);
-
-const controller=
-new AbortController();
-
-const timeout=
-setTimeout(
-()=>controller.abort(),
-20000
-);
-
-let response;
-
-try{
-
-response=
+const response=
 await fetch(
 url,
 {
-cache:"no-store",
-signal:controller.signal
+cache:"no-store"
 }
 );
-
-}finally{
-
-clearTimeout(timeout);
-
-}
 
 if(!response.ok){
 
@@ -4457,19 +3705,8 @@ response.status
 const blob=
 await response.blob();
 
-if(
-requestId!==reflectivityRequestId||
-activeLayer!=="reflectivity"
-){
-
-return;
-
-}
-
 const objectUrl=
-URL.createObjectURL(
-blob
-);
+URL.createObjectURL(blob);
 
 const extent=
 getCurrentMapExtent();
@@ -4478,11 +3715,8 @@ const source=
 new ol.source.ImageStatic({
 
 url:objectUrl,
-
 imageExtent:extent,
-
 projection:"EPSG:3857",
-
 interpolate:false
 
 });
@@ -4491,18 +3725,13 @@ const layer=
 new ol.layer.Image({
 
 source:source,
-
 opacity:.86,
-
 zIndex:55
 
 });
 
 layer.__reflectivityUrl=
 objectUrl;
-
-layer.__reflectivityTime=
-time;
 
 removeReflectivityLayer();
 
@@ -4549,11 +3778,7 @@ function clearOyaLayer(){
 if(oyaImage){
 
 try{
-
-map.removeLayer(
-oyaImage
-);
-
+map.removeLayer(oyaImage);
 }catch(e){}
 
 oyaImage=null;
@@ -4572,6 +3797,8 @@ oyaImageBlobUrl
 
 oyaImageBlobUrl=null;
 
+}
+
 removeRadarDataMaskImage();
 
 }
@@ -4579,7 +3806,6 @@ removeRadarDataMaskImage();
 function clearAllDataLayers(){
 
 clearOyaLayer();
-
 removeReflectivityLayer();
 
 }
@@ -4596,8 +3822,6 @@ let rainViewerFrames=[];
 let rainViewerHost=
 "https://tilecache.rainviewer.com";
 
-let rainViewerMetaLoaded=false;
-
 async function loadRainViewer(){
 
 try{
@@ -4605,8 +3829,7 @@ try{
 const controller=
 new AbortController();
 
-const timeout=
-setTimeout(
+const timeout=setTimeout(
 ()=>controller.abort(),
 12000
 );
@@ -4615,8 +3838,7 @@ let response;
 
 try{
 
-response=
-await fetch(
+response=await fetch(
 RAINVIEWER_API,
 {
 cache:"no-store",
@@ -4665,19 +3887,9 @@ data.radar.nowcast
 :[])
 ];
 
-if(!rainViewerFrames.length){
-
-throw new Error(
-"No RainViewer frames"
-);
-
-}
-
 rainViewerHost=
 data.host||
 rainViewerHost;
-
-rainViewerMetaLoaded=true;
 
 return rainViewerFrames;
 
@@ -4694,9 +3906,7 @@ return[];
 
 }
 
-function rainViewerTileUrl(
-path
-){
+function rainViewerTileUrl(path){
 
 return rainViewerHost+
 path+
@@ -4706,21 +3916,13 @@ path+
 
 function removeRainLayer(){
 
-if(rainFrames.length){
-
 for(
 const layer of rainFrames
 ){
 
 try{
-
-map.removeLayer(
-layer
-);
-
+map.removeLayer(layer);
 }catch(e){}
-
-}
 
 }
 
@@ -4729,11 +3931,7 @@ rainFrames=[];
 if(radarLayer){
 
 try{
-
-map.removeLayer(
-radarLayer
-);
-
+map.removeLayer(radarLayer);
 }catch(e){}
 
 radarLayer=null;
@@ -4749,9 +3947,6 @@ activeLayer="radar";
 stopPlayback();
 
 clearAllDataLayers();
-
-oyaLongProgress.style.display=
-"none";
 
 preloadBtn.disabled=true;
 
@@ -4776,17 +3971,13 @@ return;
 
 }
 
-rainViewerFrames=
-frames;
-
 const tileLayers=[];
 
 for(
 const frame of frames
 ){
 
-const path=
-frame.path;
+const path=frame.path;
 
 if(!path)continue;
 
@@ -4797,11 +3988,8 @@ url:
 rainViewerTileUrl(path),
 
 maxZoom:19,
-
 transition:0,
-
 crossOrigin:"anonymous",
-
 tilePixelRatio:1
 
 });
@@ -4810,11 +3998,8 @@ const layer=
 new ol.layer.Tile({
 
 source:source,
-
 visible:false,
-
 opacity:1,
-
 zIndex:40
 
 });
@@ -4822,13 +4007,9 @@ zIndex:40
 layer.__rainTime=
 Number(frame.time)||0;
 
-tileLayers.push(
-layer
-);
+tileLayers.push(layer);
 
-map.addLayer(
-layer
-);
+map.addLayer(layer);
 
 }
 
@@ -4893,9 +4074,7 @@ hideLoading();
 
 }
 
-function showRainFrame(
-index
-){
+function showRainFrame(index){
 
 if(
 !rainFrames.length||
@@ -4906,8 +4085,7 @@ return;
 
 }
 
-index=
-Math.max(
+index=Math.max(
 0,
 Math.min(
 index,
@@ -5011,16 +4189,6 @@ playBtn.textContent=
 }
 
 function startPlayback(){
-
-if(
-activeLayer!=="radar"&&
-activeLayer!=="oya"&&
-activeLayer!=="reflectivity"
-){
-
-return;
-
-}
 
 playing=true;
 
@@ -5128,9 +4296,7 @@ loadOyaFrame(
 oyaFrameIndex-1
 );
 
-}else if(
-activeLayer==="reflectivity"
-){
+}else{
 
 loadReflectivityFrame(
 reflectivityFrameIndex-1
@@ -5159,9 +4325,7 @@ loadOyaFrame(
 oyaFrameIndex+1
 );
 
-}else if(
-activeLayer==="reflectivity"
-){
+}else{
 
 loadReflectivityFrame(
 reflectivityFrameIndex+1
@@ -5187,9 +4351,7 @@ showRainFrame(index);
 
 loadOyaFrame(index);
 
-}else if(
-activeLayer==="reflectivity"
-){
+}else{
 
 loadReflectivityFrame(index);
 
@@ -5307,12 +4469,8 @@ document.addEventListener(
 function(e){
 
 if(
-!e.target.closest(
-"#layerDrawer"
-)&&
-!e.target.closest(
-"#selectedLayer"
-)
+!e.target.closest("#layerDrawer")&&
+!e.target.closest("#selectedLayer")
 ){
 
 layerDrawer.classList.remove(
@@ -5326,12 +4484,8 @@ selectedLayer.classList.remove(
 }
 
 if(
-!e.target.closest(
-"#settings"
-)&&
-!e.target.closest(
-"#settingsBtn"
-)
+!e.target.closest("#settings")&&
+!e.target.closest("#settingsBtn")
 ){
 
 settings.classList.remove(
@@ -5441,9 +4595,7 @@ closePalette
    INTERFACE THEME
 ===================================================== */
 
-function setInterfaceTheme(
-theme
-){
+function setInterfaceTheme(theme){
 
 const light=
 theme==="light";
@@ -5498,9 +4650,7 @@ button.dataset.theme
    MAP THEME
 ===================================================== */
 
-function setMapTheme(
-theme
-){
+function setMapTheme(theme){
 
 const dark=
 theme==="dark";
@@ -5644,9 +4794,7 @@ setStatus(
 {
 
 enableHighAccuracy:true,
-
 timeout:10000,
-
 maximumAge:30000
 
 }
@@ -5667,8 +4815,6 @@ async function(){
 
 if(activeLayer==="radar"){
 
-rainViewerMetaLoaded=false;
-
 await showRadar();
 
 return;
@@ -5678,17 +4824,13 @@ return;
 if(activeLayer==="oya"){
 
 oyaCapabilitiesLoaded=false;
-oyaCapabilitiesLoading=false;
-
 oyaAllTimes=[];
 oyaTimes=[];
 
 invalidateOyaProcessing();
 
 await loadOyaCapabilities();
-
 updateOyaTimes();
-
 await loadOyaFrame(
 oyaFrameIndex
 );
@@ -5697,18 +4839,7 @@ return;
 
 }
 
-if(
-activeLayer==="reflectivity"
-){
-
-oyaCapabilitiesLoaded=false;
-oyaCapabilitiesLoading=false;
-
-oyaAllTimes=[];
-oyaTimes=[];
-
 await loadOyaCapabilities();
-
 updateOyaTimes();
 
 await loadReflectivityFrame(
@@ -5716,17 +4847,13 @@ reflectivityFrameIndex
 );
 
 }
-
-}
 );
 
 /* =====================================================
-   LAYER BUTTONS
+   LAYERS
 ===================================================== */
 
-function selectLayerButton(
-name
-){
+function selectLayerButton(name){
 
 document.querySelectorAll(
 ".layer-item"
@@ -5755,9 +4882,6 @@ clearOyaLayer();
 removeRainLayer();
 
 removeReflectivityLayer();
-
-oyaLongProgress.style.display=
-"none";
 
 preloadBtn.disabled=true;
 
@@ -5811,9 +4935,7 @@ reflectivityFrameIndex
 
 }
 
-async function selectLayer(
-layerName
-){
+async function selectLayer(layerName){
 
 if(layerName==="radar"){
 
@@ -5823,17 +4945,12 @@ stopPlayback();
 
 clearAllDataLayers();
 
-oyaLongProgress.style.display=
-"none";
-
 preloadBtn.disabled=true;
 
 selectedLayerName.textContent=
 "Радар (RainViewer)";
 
-selectLayerButton(
-"radar"
-);
+selectLayerButton("radar");
 
 await showRadar();
 
@@ -5856,9 +4973,7 @@ preloadBtn.disabled=false;
 selectedLayerName.textContent=
 "Опасные явления";
 
-selectLayerButton(
-"oya"
-);
+selectLayerButton("oya");
 
 layerDrawer.classList.remove(
 "open"
@@ -5888,15 +5003,6 @@ return;
 
 }
 
-oyaFrameIndex=
-Math.max(
-0,
-Math.min(
-oyaFrameIndex,
-oyaTimes.length-1
-)
-);
-
 await loadOyaFrame(
 oyaFrameIndex
 );
@@ -5922,9 +5028,7 @@ return;
 
 }
 
-if(
-layerName==="reflectivity"
-){
+if(layerName==="reflectivity"){
 
 await showReflectivity();
 
@@ -6020,10 +5124,7 @@ document.readyState==="loading"
 
 document.addEventListener(
 "DOMContentLoaded",
-start,
-{
-once:true
-}
+start
 );
 
 }else{
@@ -6033,7 +5134,6 @@ start();
 }
 
 })();
-
 </script>
 
 </body>
