@@ -2413,6 +2413,19 @@ value/100
 
 }
 
+/*
+ * Прозрачность теперь применяется и к отражаемости.
+ * При 100% opacity = 1, то есть слой полностью непрозрачный.
+ */
+
+if(reflectivityLayer){
+
+reflectivityLayer.setOpacity(
+value/100
+);
+
+}
+
 map.render();
 
 }
@@ -2729,16 +2742,33 @@ params.toString();
 
 }
 
+/*
+ * Извлекает только реально перечисленные/явно заданные
+ * WMS-времена.
+ *
+ * ВАЖНО:
+ * - больше нет жёсткого шага 10 минут;
+ * - 09:40 / 09:50 / 10:00 останутся именно этими кадрами;
+ * - 09:45 / 09:55 сами по себе не создаются;
+ * - будущие времена отбрасываются;
+ * - если WMS указал resolution в interval, используется
+ *   именно эта resolution, а не придуманные 10 минут.
+ */
+
 function extractTimesFromCapabilities(xmlText){
 
 const result=[];
 const seen=new Set();
 
+const now=Date.now()+2*60*1000;
+
 function addTime(value){
 
-const parsed=Date.parse(value);
+const parsed=Date.parse(String(value).trim());
 
 if(!Number.isFinite(parsed))return;
+
+if(parsed>now)return;
 
 const ts=Math.floor(parsed/1000);
 
@@ -2746,6 +2776,109 @@ if(!seen.has(ts)){
 
 seen.add(ts);
 result.push(ts);
+
+}
+
+}
+
+function parseIsoDuration(value){
+
+const text=String(value||"").trim();
+
+if(!text)return null;
+
+if(/^\d+$/.test(text)){
+
+const seconds=Number(text);
+
+return Number.isFinite(seconds)&&seconds>0
+?seconds*1000
+:null;
+
+}
+
+const match=text.match(
+/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i
+);
+
+if(!match)return null;
+
+const days=Number(match[1]||0);
+const hours=Number(match[2]||0);
+const minutes=Number(match[3]||0);
+const seconds=Number(match[4]||0);
+
+const milliseconds=
+days*24*60*60*1000+
+hours*60*60*1000+
+minutes*60*1000+
+seconds*1000;
+
+return milliseconds>0
+?milliseconds
+:null;
+
+}
+
+function parseIntervalPart(part){
+
+const pieces=part
+.split("/")
+.map(item=>item.trim());
+
+if(pieces.length<2)return;
+
+const start=Date.parse(pieces[0]);
+const end=Date.parse(pieces[1]);
+
+if(
+!Number.isFinite(start)||
+!Number.isFinite(end)||
+end<start
+)return;
+
+if(pieces.length<3){
+
+/*
+ * Без resolution нельзя честно создавать промежуточные
+ * кадры. Добавляем только реально указанные границы.
+ */
+
+addTime(pieces[0]);
+addTime(pieces[1]);
+
+return;
+
+}
+
+const step=parseIsoDuration(
+pieces[2]
+);
+
+if(!step){
+
+addTime(pieces[0]);
+addTime(pieces[1]);
+
+return;
+
+}
+
+const maxFrames=5000;
+
+let count=0;
+
+for(
+let t=start;
+t<=end&&t<=now&&count<maxFrames;
+t+=step
+){
+
+addTime(
+new Date(t).toISOString()
+);
+
+count++;
 
 }
 
@@ -2766,7 +2899,10 @@ xml.querySelectorAll(
 
 for(const node of nodes){
 
-const value=node.textContent||"";
+const value=
+(node.textContent||"").trim();
+
+if(!value)continue;
 
 const parts=value.split(",");
 
@@ -2778,47 +2914,7 @@ if(!part)continue;
 
 if(part.includes("/")){
 
-const pieces=part.split("/");
-
-if(pieces.length>=3){
-
-const start=Date.parse(
-pieces[0]
-);
-
-const end=Date.parse(
-pieces[1]
-);
-
-if(
-Number.isFinite(start)&&
-Number.isFinite(end)&&
-end>=start
-){
-
-const step=10*60*1000;
-
-const maxFrames=500;
-
-let count=0;
-
-for(
-let t=start;
-t<=end&&count<maxFrames;
-t+=step
-){
-
-addTime(
-new Date(t).toISOString()
-);
-
-count++;
-
-}
-
-}
-
-}
+parseIntervalPart(part);
 
 }else{
 
@@ -2830,6 +2926,11 @@ addTime(part);
 
 }
 
+/*
+ * Дополнительный fallback для capabilities,
+ * где времена оказались просто внутри текста.
+ */
+
 if(!result.length){
 
 const text=
@@ -2838,7 +2939,7 @@ xml.documentElement
 :"";
 
 const matches=text.match(
-/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g
+/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/g
 );
 
 if(matches){
@@ -2862,7 +2963,8 @@ error
 
 }
 
-return result.sort(
+return result
+.sort(
 (a,b)=>a-b
 );
 
@@ -3022,6 +3124,17 @@ oyaTimes.length-1
 )
 );
 
+reflectivityFrameIndex=Math.max(
+0,
+Math.min(
+reflectivityFrameIndex,
+Math.max(
+0,
+oyaTimes.length-1
+)
+)
+);
+
 timeSlider.max=
 String(
 Math.max(
@@ -3031,7 +3144,11 @@ oyaTimes.length-1
 );
 
 timeSlider.value=
-String(oyaFrameIndex);
+String(
+activeLayer==="reflectivity"
+?reflectivityFrameIndex
+:oyaFrameIndex
+);
 
 renderOyaTimeline();
 
@@ -3042,7 +3159,10 @@ function renderOyaTimeline(){
 oyaTimelineSegments.innerHTML="";
 
 if(
-activeLayer!=="oya"||
+(
+activeLayer!=="oya"&&
+activeLayer!=="reflectivity"
+)||
 !oyaTimes.length
 ){
 
@@ -3055,6 +3175,11 @@ return;
 
 oyaTimelineSegments.style.display=
 "flex";
+
+const currentIndex=
+activeLayer==="reflectivity"
+?reflectivityFrameIndex
+:oyaFrameIndex;
 
 oyaTimes.forEach(
 (time,index)=>{
@@ -3074,7 +3199,7 @@ segment.classList.add("loaded");
 }
 
 if(
-index===oyaFrameIndex
+index===currentIndex
 ){
 
 segment.classList.add("current");
@@ -3478,6 +3603,25 @@ map.addLayer(oyaImage);
 
 updateTimeLabel();
 
+if(
+radarMaskLayer.getVisible()
+){
+
+const image=new Image();
+
+image.onload=function(){
+
+renderRadarMaskFromOya(
+image,
+cached.extent
+);
+
+};
+
+image.src=cleanUrl;
+
+}
+
 map.render();
 
 return;
@@ -3630,14 +3774,53 @@ oyaTimes.length-1
 timeSlider.value=
 String(index);
 
+renderOyaTimeline();
+
 const time=
 oyaTimes[index];
 
-const url=
-createWmsUrl(
-REFLECTIVITY_LAYER,
-time
+const extent=
+getCurrentMapExtent();
+
+const size=
+map.getSize();
+
+const width=Math.max(
+256,
+Math.round(size?.[0]||1024)
 );
+
+const height=Math.max(
+256,
+Math.round(size?.[1]||768)
+);
+
+const params=new URLSearchParams({
+
+SERVICE:"WMS",
+VERSION:"1.1.1",
+REQUEST:"GetMap",
+LAYERS:REFLECTIVITY_LAYER,
+STYLES:"",
+SRS:"EPSG:3857",
+BBOX:extent.join(","),
+WIDTH:String(width),
+HEIGHT:String(height),
+FORMAT:"image/png",
+TRANSPARENT:"true",
+TIME:new Date(
+time*1000
+).toISOString()
+
+});
+
+const url=
+OYA_PROXY+
+"?action=image&"+
+params.toString();
+
+const requestId=
+++reflectivityRequestId;
 
 showLoading(
 "Загрузка отражаемости…"
@@ -3665,11 +3848,29 @@ response.status
 const blob=
 await response.blob();
 
+if(!blob.size){
+
+throw new Error(
+"Empty reflectivity frame"
+);
+
+}
+
 const objectUrl=
 URL.createObjectURL(blob);
 
-const extent=
-getCurrentMapExtent();
+if(
+activeLayer!=="reflectivity"||
+requestId!==reflectivityRequestId
+){
+
+try{
+URL.revokeObjectURL(objectUrl);
+}catch(e){}
+
+return;
+
+}
 
 const source=
 new ol.source.ImageStatic({
@@ -3685,7 +3886,14 @@ const layer=
 new ol.layer.Image({
 
 source:source,
-opacity:.86,
+
+/*
+ * Использует тот же ползунок прозрачности.
+ * 100% = 1.0, полностью непрозрачный слой.
+ */
+
+opacity:oyaOpacity/100,
+
 zIndex:55
 
 });
@@ -3694,6 +3902,19 @@ layer.__reflectivityUrl=
 objectUrl;
 
 removeReflectivityLayer();
+
+if(
+activeLayer!=="reflectivity"||
+requestId!==reflectivityRequestId
+){
+
+try{
+URL.revokeObjectURL(objectUrl);
+}catch(e){}
+
+return;
+
+}
 
 reflectivityLayer=
 layer;
@@ -3707,6 +3928,8 @@ setStatus(
 );
 
 updateTimeLabel();
+
+renderOyaTimeline();
 
 map.render();
 
@@ -4759,6 +4982,10 @@ return;
 
 }
 
+oyaCapabilitiesLoaded=false;
+oyaAllTimes=[];
+oyaTimes=[];
+
 await loadOyaCapabilities();
 updateOyaTimes();
 
@@ -4844,6 +5071,13 @@ reflectivityFrameIndex,
 oyaTimes.length-1
 )
 );
+
+timeSlider.value=
+String(
+reflectivityFrameIndex
+);
+
+renderOyaTimeline();
 
 await loadReflectivityFrame(
 reflectivityFrameIndex
@@ -4968,8 +5202,7 @@ button.dataset.layer
 }
 );
 
-}
-);
+});
 
 setOyaOpacity(
 oyaOpacity
