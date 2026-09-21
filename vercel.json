@@ -4,5 +4,13 @@
       "source": "/api/radar/:path*",
       "destination": "/api/baltrad?target=https://example.com/:path*"
     }
+  ],
+  "headers": [
+    {
+      "source": "/api/oya",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }

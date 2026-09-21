@@ -1,345 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#071827" />
-    <title>COOLrad | Real Russia radar</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css" />
-    <style>
-      :root {
-        --bg: #071827;
-        --panel: rgba(8, 18, 31, 0.84);
-        --panel-border: rgba(148, 163, 184, 0.22);
-        --primary: #64d2ff;
-        --primary-strong: #32b7ff;
-        --text: #e6f3ff;
-        --muted: #9bb4c9;
-        --shadow: rgba(2, 6, 23, 0.45);
-      }
-
-      * { box-sizing: border-box; }
-
-      html, body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        background: var(--bg);
-        color: var(--text);
-        font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        overflow: hidden;
-      }
-
-      #map {
-        position: absolute;
-        inset: 0;
-        background: #0d1a2d;
-      }
-
-      #brand {
-        position: absolute;
-        top: 18px;
-        left: 18px;
-        z-index: 10;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 16px;
-        border-radius: 14px;
-        background: rgba(7, 24, 39, 0.8);
-        border: 1px solid var(--panel-border);
-        box-shadow: 0 16px 32px var(--shadow);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-      }
-
-      #brand::before {
-        content: "";
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #8be9fd, #3cc8ff);
-        box-shadow: 0 0 14px rgba(100, 210, 255, 0.9);
-      }
-
-      #status {
-        position: absolute;
-        left: 18px;
-        top: 72px;
-        z-index: 10;
-        max-width: min(420px, calc(100vw - 200px));
-        padding: 8px 12px;
-        border-radius: 10px;
-        background: rgba(8, 18, 31, 0.8);
-        border: 1px solid var(--panel-border);
-        color: var(--muted);
-        font-size: 0.8rem;
-        backdrop-filter: blur(10px);
-      }
-
-      #controls {
-        position: absolute;
-        top: 18px;
-        right: 18px;
-        z-index: 10;
-        display: flex;
-        gap: 10px;
-      }
-
-      .control-btn {
-        appearance: none;
-        border: 1px solid rgba(148, 163, 184, 0.24);
-        background: rgba(8, 18, 31, 0.82);
-        color: var(--text);
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 10px 30px var(--shadow);
-        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-      }
-
-      .control-btn:hover {
-        transform: translateY(-1px);
-        border-color: rgba(100, 210, 255, 0.9);
-      }
-
-      .control-btn.primary {
-        background: linear-gradient(135deg, rgba(20, 126, 195, 0.68), rgba(17, 94, 146, 0.8));
-      }
-
-      .ol-zoom {
-        position: absolute;
-        left: 18px !important;
-        bottom: 18px !important;
-        top: auto !important;
-      }
-
-      .ol-control button {
-        background: rgba(9, 18, 31, 0.86) !important;
-        color: var(--text) !important;
-        border: 1px solid rgba(148, 163, 184, 0.25) !important;
-      }
-
-      .ol-attribution {
-        right: 10px !important;
-        bottom: 10px !important;
-        background: rgba(9, 18, 31, 0.7) !important;
-        border-radius: 8px;
-      }
-
-      .ol-attribution a {
-        color: #d9f4ff !important;
-      }
-
-      @media (max-width: 640px) {
-        #brand {
-          padding: 8px 12px;
-          font-size: 0.72rem;
-          letter-spacing: 0.06em;
-        }
-
-        #status {
-          top: 62px;
-          max-width: min(320px, calc(100vw - 140px));
-          font-size: 0.72rem;
-        }
-
-        #controls {
-          top: auto;
-          bottom: 18px;
-          right: 18px;
-        }
-
-        .control-btn {
-          padding: 8px 10px;
-          font-size: 0.78rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="brand">COOLrad</div>
-    <div id="status">Реальные радарные данные • nowcast.ru • Россия</div>
-
-    <div id="controls">
-      <button id="refreshBtn" class="control-btn primary">Обновить</button>
-      <button id="centerBtn" class="control-btn">Россия</button>
-    </div>
-
-    <div id="map" aria-label="Карта метеорадара"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
-    <script>
-      const OYA_PROXY = "/api/oya";
-      const FALLBACK_LAYER_NAMES = [
-        "radar",
-        "oya",
-        "precip",
-        "russia_radar",
-        "weather_radar",
-        "rain",
-        "reflectivity"
-      ];
-
-      let radarLayer = null;
-      let selectedLayerName = null;
-
-      const map = new ol.Map({
-        target: "map",
-        layers: [
-          new ol.layer.Tile({
-            source: new ol.source.OSM({
-              attributions: "© OpenStreetMap contributors"
-            })
-          })
-        ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([100, 61]),
-          zoom: 3,
-          minZoom: 2,
-          maxZoom: 9
-        })
-      });
-
-      const statusEl = document.getElementById("status");
-
-      function setStatus(message, isError = false) {
-        statusEl.textContent = message;
-        statusEl.style.color = isError ? "#ffd7d7" : "#9bb4c9";
-      }
-
-      function getCurrentExtent() {
-        const size = map.getSize() || [1200, 800];
-        return map.getView().calculateExtent(size);
-      }
-
-      function buildGetMapUrl(layerName, extent, size) {
-        const params = new URLSearchParams({
-          action: "image",
-          SERVICE: "WMS",
-          VERSION: "1.1.1",
-          REQUEST: "GetMap",
-          LAYERS: layerName,
-          STYLES: "",
-          SRS: "EPSG:3857",
-          BBOX: extent.join(","),
-          WIDTH: String(size[0]),
-          HEIGHT: String(size[1]),
-          FORMAT: "image/png",
-          TRANSPARENT: "true",
-          TIME: new Date().toISOString()
-        });
-
-        return `${OYA_PROXY}?${params.toString()}`;
-      }
-
-      function createRadarImageLayer(url, extent) {
-        const source = new ol.source.ImageStatic({
-          url,
-          imageExtent: extent,
-          projection: "EPSG:3857"
-        });
-
-        const layer = new ol.layer.Image({
-          source,
-          opacity: 0.9
-        });
-
-        return layer;
-      }
-
-      async function parseCapabilities() {
-        const response = await fetch(`${OYA_PROXY}?action=capabilities`, {
-          cache: "no-store"
-        });
-
-        if (!response.ok) {
-          throw new Error(`Nowcast capabilities: ${response.status}`);
-        }
-
-        const xmlText = await response.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(xmlText, "application/xml");
-        const allNames = [...xml.querySelectorAll("Name")].map((node) =>
-          node.textContent.trim()
-        );
-
-        const layered = allNames.filter(Boolean).map((name) => name.toLowerCase());
-
-        for (const candidate of FALLBACK_LAYER_NAMES) {
-          if (layered.some((item) => item.includes(candidate))) {
-            return allNames.find((name) => name.toLowerCase().includes(candidate));
-          }
-        }
-
-        return allNames[0] || null;
-      }
-
-      function renderRadarLayer() {
-        const size = map.getSize() || [1200, 800];
-        const extent = getCurrentExtent();
-
-        if (!selectedLayerName) {
-          return;
-        }
-
-        const radarUrl = buildGetMapUrl(selectedLayerName, extent, size);
-
-        const nextLayer = createRadarImageLayer(radarUrl, extent);
-
-        if (radarLayer) {
-          map.removeLayer(radarLayer);
-        }
-
-        radarLayer = nextLayer;
-        map.addLayer(radarLayer);
-      }
-
-      async function initRadar() {
-        try {
-          setStatus("Подключаю реальный радар Nowcast.ru…");
-          selectedLayerName = await parseCapabilities();
-
-          if (!selectedLayerName) {
-            throw new Error("Не удалось определить слой радарных данных");
-          }
-
-          renderRadarLayer();
-          setStatus(`Live radar • ${selectedLayerName.toUpperCase()} • Russia`);
-        } catch (error) {
-          console.error(error);
-          setStatus(
-            "Proxy Nowcast не отвечает. Проверьте /api/oya и доступность nowcast.ru.",
-            true
-          );
-        }
-      }
-
-      document.getElementById("refreshBtn").addEventListener("click", () => {
-        renderRadarLayer();
-        setStatus(`Обновление • ${selectedLayerName ? selectedLayerName.toUpperCase() : "radar"}`);
-      });
-
-      document.getElementById("centerBtn").addEventListener("click", () => {
-        map.getView().animate({
-          center: ol.proj.fromLonLat([100, 61]),
-          zoom: 3,
-          duration: 500
-        });
-      });
-
-      map.on("moveend", () => {
-        if (selectedLayerName) {
-          renderRadarLayer();
-        }
-      });
-
-      initRadar();
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071827" />
+  <title>COOLrad — радар осадков России</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css" />
+  <style>
+    :root{--bg:#071827;--panel:rgba(7,20,34,.9);--line:#24445b;--text:#e8f5ff;--muted:#9db8ca;--accent:#57d2ff}
+    *{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;font-family:Inter,Segoe UI,Arial,sans-serif}body{background:var(--bg);color:var(--text)}
+    #map{position:absolute;inset:0}.dark img,.dark canvas{filter:brightness(.72) saturate(.85)}
+    .glass{background:var(--panel);border:1px solid var(--line);box-shadow:0 15px 40px #02091299;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+    #top{position:absolute;z-index:5;top:16px;left:16px;right:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none}.brand,.tools{pointer-events:auto}.brand{padding:12px 16px;border-radius:15px;font-weight:850;letter-spacing:.1em}.brand b{color:var(--accent)}.brand small{display:block;margin-top:4px;color:var(--muted);font-size:11px;letter-spacing:0}.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);border-radius:10px;background:#0c2538dd;color:var(--text);padding:10px 13px;cursor:pointer;font-weight:650}.btn:hover,.btn.active{border-color:var(--accent);background:#123b55}.btn:disabled{opacity:.5;cursor:wait}
+    #panel{position:absolute;z-index:6;right:16px;top:82px;width:min(350px,calc(100vw - 32px));max-height:calc(100vh - 110px);overflow:auto;padding:18px;border-radius:16px;transform:translateX(calc(100% + 25px));transition:transform .2s ease}.open{transform:translateX(0)!important}.panel-title{font-size:18px;font-weight:800;margin-bottom:14px}.row{margin:15px 0}.row label{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:7px}select,input[type=range]{width:100%}select{padding:10px;border-radius:9px;background:#0b2639;color:var(--text);border:1px solid var(--line)}
+    #status{position:absolute;z-index:5;left:16px;bottom:16px;padding:10px 13px;border-radius:11px;font-size:12px;color:var(--muted);max-width:min(500px,calc(100vw - 32px))}.ok{color:#b7f7d0!important}.error{color:#ffd2d2!important}.loader{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;box-shadow:0 0 12px var(--accent)}
+    .ol-zoom{left:16px!important;top:50%!important}.ol-control{background:transparent!important}.ol-control button{background:#0a2032e8!important;color:white!important;border:1px solid var(--line)!important;border-radius:8px!important}.ol-attribution{right:8px!important;bottom:4px!important;background:#071827bb!important;border-radius:7px}.legend{display:flex;height:12px;border-radius:5px;overflow:hidden;margin-top:8px}.legend i{flex:1}.legend-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:4px}
+    @media(max-width:600px){#top{top:10px;left:10px;right:10px}.brand{padding:10px 12px;font-size:13px}.brand small{font-size:9px}.tools{gap:5px}.btn{padding:8px 9px;font-size:12px}#panel{right:10px;top:68px}.ol-zoom{left:10px!important}}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <header id="top"><div class="brand glass"><b>●</b> COOLrad<small>LIVE RADAR • РОССИЯ</small></div><div class="tools"><button class="btn glass" id="refresh">↻ Обновить</button><button class="btn glass" id="locate">⌖ Центр</button><button class="btn glass" id="settings">⚙ Настройки</button></div></header>
+  <aside id="panel" class="glass"><div class="panel-title">Настройки карты</div><div class="row"><label>Радарный слой</label><select id="layers"><option>Загрузка слоёв…</option></select></div><div class="row"><label>Прозрачность <span id="opacityValue">85%</span></label><input id="opacity" type="range" min="0" max="100" value="85" /></div><div class="row"><label>Период обновления</label><select id="interval"><option value="0">Вручную</option><option value="30000">30 секунд</option><option value="60000" selected>1 минута</option><option value="300000">5 минут</option></select></div><div class="row"><label>Интенсивность, dBZ</label><div class="legend"><i style="background:#59d7ff"></i><i style="background:#48e38b"></i><i style="background:#f6e34d"></i><i style="background:#ff8b3d"></i><i style="background:#ed3f54"></i><i style="background:#a82eaf"></i></div><div class="legend-labels"><span>слабая</span><span>сильная</span></div></div><div class="row" style="color:var(--muted);font-size:12px">Источник: <a href="https://nowcast.ru" target="_blank" rel="noreferrer" style="color:var(--accent)">nowcast.ru</a><br/>Карта использует WMS через серверный proxy.</div></aside>
+  <div id="status" class="glass"><span class="loader"></span>Подключение к Nowcast.ru…</div>
+  <script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
+  <script>
+    const API="/api/oya";let radar=null,layerName="",timer=null;
+    const status=document.getElementById("status"),select=document.getElementById("layers"),panel=document.getElementById("panel");
+    const map=new ol.Map({target:"map",layers:[new ol.layer.Tile({className:"dark",source:new ol.source.OSM()})],view:new ol.View({center:ol.proj.fromLonLat([100,61]),zoom:3,minZoom:2,maxZoom:10})});
+    const setStatus=(text,type="")=>{status.className=`glass ${type}`;status.innerHTML=type==="error"?`⚠ ${text}`:`<span class="loader"></span>${text}`};
+    function chooseLayer(layers){const keys=["radar","reflect","precip","rain","oya","composite","dbz"];return layers.find(x=>keys.some(k=>x.name.toLowerCase().includes(k)))||layers[0]}
+    async function getLayers(){const r=await fetch(`${API}?action=layers&t=${Date.now()}`,{cache:"no-store"});const data=await r.json();if(!r.ok||!data.ok)throw Error(data.error||`HTTP ${r.status}`);if(!data.layers.length)throw Error("Nowcast не вернул ни одного WMS-слоя");select.innerHTML="";data.layers.forEach(x=>{const o=document.createElement("option");o.value=x.name;o.textContent=x.title?`${x.title} (${x.name})`:x.name;select.append(o)});const preferred=chooseLayer(data.layers);select.value=preferred.name;layerName=preferred.name}
+    function load(){if(!layerName)return;const source=new ol.source.ImageWMS({url:`${API}?action=image`,params:{LAYERS:layerName,STYLES:"",FORMAT:"image/png",TRANSPARENT:true,VERSION:"1.1.1",SRS:"EPSG:3857",TIME:new Date().toISOString()},ratio:1,crossOrigin:"anonymous",serverType:"geoserver",hidpi:false});const next=new ol.layer.Image({source,opacity:Number(document.getElementById("opacity").value)/100});if(radar)map.removeLayer(radar);radar=next;map.addLayer(radar);setStatus(`Данные загружены • ${layerName}`,"ok")}
+    async function init(){try{setStatus("Получение списка радарных слоёв…");await getLayers();load()}catch(e){console.error(e);setStatus(`${e.message}. Откройте консоль браузера для деталей.`,"error")}}
+    select.addEventListener("change",()=>{layerName=select.value;load()});document.getElementById("refresh").onclick=()=>{if(radar)radar.getSource().updateParams({TIME:new Date().toISOString(),_t:Date.now()});else init()};document.getElementById("locate").onclick=()=>map.getView().animate({center:ol.proj.fromLonLat([100,61]),zoom:3,duration:450});document.getElementById("settings").onclick=()=>panel.classList.toggle("open");document.getElementById("opacity").oninput=e=>{document.getElementById("opacityValue").textContent=`${e.target.value}%`;if(radar)radar.setOpacity(e.target.value/100)};document.getElementById("interval").onchange=e=>{clearInterval(timer);if(Number(e.target.value))timer=setInterval(()=>document.getElementById("refresh").click(),Number(e.target.value))};map.on("moveend",()=>{if(radar)radar.getSource().updateParams({_t:Date.now()})});init();
+  </script>
+</body>
 </html>
