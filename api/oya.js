@@ -1,6 +1,8 @@
 const NOWCAST = "https://www.nowcast.ru";
 let cachedToken = null;
 let tokenExpires = 0;
+const capabilityCache = { expiresAt: 0, payload: null };
+const imageCache = new Map();
 
 async function getToken() {
   const now = Date.now();
@@ -46,7 +48,6 @@ function normalizeTime(value) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  // Nowcast's WMS parser rejects JavaScript's millisecond ISO form.
   return date.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
@@ -60,6 +61,14 @@ export default async function handler(req, res) {
     const token = await getToken();
 
     if (action === "capabilities" || action === "layers") {
+      const now = Date.now();
+      const cacheKey = "capabilities";
+      if (action === "capabilities" && capabilityCache.expiresAt > now && capabilityCache.payload) {
+        const body = capabilityCache.payload;
+        res.setHeader("Content-Type", "text/xml; charset=utf-8");
+        return res.status(200).send(body);
+      }
+
       const url = new URL(`${NOWCAST}/baltrad_wsgi`);
       url.searchParams.set("SERVICE", "WMS");
       url.searchParams.set("VERSION", "1.1.1");
@@ -68,6 +77,10 @@ export default async function handler(req, res) {
       const upstream = await request(url, "text/xml, application/xml, */*");
       const text = await upstream.text();
       if (!upstream.ok) return res.status(502).json({ ok: false, error: "Nowcast capabilities error", upstreamStatus: upstream.status, response: text.slice(0, 2000) });
+
+      capabilityCache.payload = text;
+      capabilityCache.expiresAt = Date.now() + 180000;
+
       if (action === "layers") return res.status(200).json({ ok: true, layers: extractLayers(text) });
       res.setHeader("Content-Type", upstream.headers.get("content-type") || "text/xml; charset=utf-8");
       return res.status(200).send(text);
@@ -87,12 +100,22 @@ export default async function handler(req, res) {
       if (time) url.searchParams.set("TIME", time);
       url.searchParams.set("token", token);
 
+      const cacheKey = url.toString();
+      const now = Date.now();
+      const cached = imageCache.get(cacheKey);
+      if (cached && cached.expiresAt > now) {
+        res.setHeader("Content-Type", cached.contentType);
+        return res.status(200).send(Buffer.from(cached.buffer));
+      }
+
       const upstream = await request(url, "image/png,image/*,*/*");
       const buffer = Buffer.from(await upstream.arrayBuffer());
       const contentType = upstream.headers.get("content-type") || "application/octet-stream";
       if (!upstream.ok || !contentType.toLowerCase().includes("image")) {
         return res.status(502).json({ ok: false, error: "Nowcast WMS image error", upstreamStatus: upstream.status, contentType, body: buffer.toString("utf8").slice(0, 2000) });
       }
+
+      imageCache.set(cacheKey, { buffer: buffer, contentType, expiresAt: Date.now() + 180000 });
       res.setHeader("Content-Type", contentType);
       return res.status(200).send(buffer);
     }

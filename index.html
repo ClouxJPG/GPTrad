@@ -6,15 +6,79 @@
 <style>
 :root{--bg:#071827;--panel:#091a2add;--line:#31526a;--text:#eaf7ff;--muted:#9db8ca;--accent:#59d5ff}*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;overflow:hidden}body{background:var(--bg);color:var(--text);font:14px Inter,Segoe UI,Arial,sans-serif}.glass{background:var(--panel);border:1px solid var(--line);box-shadow:0 16px 36px #02081788;backdrop-filter:blur(12px)}#map{position:absolute;inset:0}.dark img,.dark canvas{filter:brightness(.76) saturate(.85)}#top{position:absolute;z-index:5;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}.brand,.tools{pointer-events:auto}.brand{padding:12px 16px;border-radius:14px;font-weight:900;letter-spacing:.12em}.brand b{color:var(--accent)}.brand small{display:block;color:var(--muted);font-size:9px;margin-top:4px;letter-spacing:.08em}.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);border-radius:10px;background:#0d283ddd;color:var(--text);padding:10px 12px;font-weight:700;cursor:pointer}.btn:hover{border-color:var(--accent)}#panel{position:absolute;z-index:6;right:16px;top:80px;width:min(360px,calc(100vw - 32px));padding:16px;border-radius:15px;transform:translateX(calc(100% + 24px));transition:.2s}.open{transform:translateX(0)!important}.row{margin:14px 0}.row label{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:7px}select,input[type=range]{width:100%}select{padding:9px;border:1px solid var(--line);border-radius:9px;background:#0c293d;color:var(--text)}#status{position:absolute;z-index:7;left:16px;bottom:102px;padding:9px 12px;border-radius:10px;color:var(--muted);font-size:12px;max-width:calc(100% - 32px)}#status.ok{color:#b7f5cd}#status.error{color:#ffc5c5}#timeline{position:absolute;z-index:8;left:16px;right:16px;bottom:16px;padding:11px 14px 9px;border-radius:14px}#timeLabel{text-align:center;font-size:11px;color:var(--text);margin-bottom:6px;letter-spacing:.06em}#slider{width:100%;accent-color:var(--accent)}.ol-zoom{left:16px!important;top:120px!important}.ol-control button{background:#0b2438dd!important;color:white!important;border:1px solid var(--line)!important}.ol-attribution{right:8px!important;bottom:4px!important}@media(max-width:640px){#top{top:10px;left:10px;right:10px}.brand{padding:10px 12px;font-size:12px}.btn{padding:8px 9px;font-size:12px}#timeline{left:10px;right:10px;bottom:10px}#status{left:10px;bottom:88px}}
 </style></head>
-<body><div id="map"></div><header id="top"><div class="brand glass"><b>●</b> COOLrad<small>REAL COMPOSITE • NOWCAST.RU</small></div><div class="tools"><button class="btn glass" id="refresh">↻ Обновить</button><button class="btn glass" id="center">⌖ Россия</button><button class="btn glass" id="settings">⚙ Настройки</button></div></header><aside id="panel" class="glass"><div style="font-size:18px;font-weight:800;margin-bottom:12px">Настройки</div><div class="row"><label>Слой Nowcast</label><select id="layers"></select></div><div class="row"><label>Прозрачность <span id="opacityValue">85%</span></label><input id="opacity" type="range" min="0" max="100" value="85"/></div><div class="row" style="color:var(--muted);font-size:12px;line-height:1.55">Источник: <a href="https://nowcast.ru" target="_blank" rel="noreferrer" style="color:var(--accent)">nowcast.ru</a><br/>Оверлей размещается в географических координатах WMS, а не растягивается на экран.</div></aside><div id="status" class="glass">Подключение…</div><div id="timeline" class="glass"><div id="timeLabel">—</div><input id="slider" type="range" min="0" max="11" value="11"/></div>
+<body><div id="map"></div><header id="top"><div class="brand glass"><b>●</b> COOLrad<small>REAL COMPOSITE • NOWCAST.RU</small></div><div class="tools"><button class="btn glass" id="refresh">↻ Обновить</button><button class="btn glass" id="center">⌖ Россия</button><button class="btn glass" id="settings">⚙ Настройки</button></div></header><aside id="panel" class="glass"><div style="font-size:18px;font-weight:800;margin-bottom:12px">Настройки</div><div class="row"><label>Слой Nowcast</label><select id="layers"></select></div><div class="row"><label>Прозрачность <span id="opacityValue">85%</span></label><input id="opacity" type="range" min="0" max="100" value="85"/></div><div class="row" style="color:var(--muted);font-size:12px;line-height:1.55">Источник: <a href="https://nowcast.ru" target="_blank" rel="noreferrer" style="color:var(--accent)">nowcast.ru</a><br/>Фон и карта не обновляются постоянно; запросы идут только по кнопке/таймлайну.</div></aside><div id="status" class="glass">Подключение…</div><div id="timeline" class="glass"><div id="timeLabel">—</div><input id="slider" type="range" min="0" max="11" value="11"/></div>
 <script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script><script>
-const API="/api/oya";const state={layer:"",times:[],index:11,url:null,radar:null};const status=document.getElementById("status"),select=document.getElementById("layers"),slider=document.getElementById("slider"),label=document.getElementById("timeLabel"),opacity=document.getElementById("opacity");
+const API="/api/oya";
+const state={layer:"",times:[],index:11,url:null,radar:null,renderTimer:null,lastRenderTs:0,cache:new Map()};
+const status=document.getElementById("status"),select=document.getElementById("layers"),slider=document.getElementById("slider"),label=document.getElementById("timeLabel"),opacity=document.getElementById("opacity");
 const map=new ol.Map({target:"map",layers:[new ol.layer.Tile({className:"dark",source:new ol.source.OSM()})],view:new ol.View({center:ol.proj.fromLonLat([100,61]),zoom:3,minZoom:2,maxZoom:9})});
-function stat(text,type=""){status.className="glass "+type;status.textContent=text}function roundedNow(){const d=new Date();d.setUTCSeconds(0,0);d.setUTCMinutes(Math.floor(d.getUTCMinutes()/5)*5);return d}function buildTimes(){const now=roundedNow();state.times=[];for(let i=11;i>=0;i--)state.times.push(new Date(now.getTime()-i*5*60000).toISOString().replace(/\.\d{3}Z$/, "Z"));state.index=11;slider.max="11";slider.value="11";label.textContent=new Date(state.times[11]).toLocaleString([], {hour:"2-digit",minute:"2-digit"})}
+function stat(text,type=""){status.className="glass "+type;status.textContent=text}
+function roundedNow(){const d=new Date();d.setUTCSeconds(0,0);d.setUTCMinutes(Math.floor(d.getUTCMinutes()/5)*5);return d}
+function buildTimes(){const now=roundedNow();state.times=[];for(let i=11;i>=0;i--)state.times.push(new Date(now.getTime()-i*5*60000).toISOString().replace(/\.\d{3}Z$/, "Z"));state.index=11;slider.max="11";slider.value="11";label.textContent=new Date(state.times[11]).toLocaleString([], {hour:"2-digit",minute:"2-digit"})}
 function choose(a){const keys=["composite","radar","precip","rain","reflect","dbz","oya"];return a.find(x=>keys.some(k=>x.name.toLowerCase().includes(k)))||a[0]}
 async function loadLayers(){const r=await fetch(`${API}?action=layers&_=${Date.now()}`,{cache:"no-store"});const d=await r.json();if(!r.ok||!d.ok||!d.layers?.length)throw Error(d.error||"Nowcast не вернул WMS-слои");select.innerHTML="";d.layers.forEach(x=>{const o=document.createElement("option");o.value=x.name;o.textContent=x.title||x.name;select.append(o)});state.layer=choose(d.layers).name;select.value=state.layer}
-async function render(){if(!state.layer)return;const size=map.getSize()||[1200,800],extent=map.getView().calculateExtent(size),params=new URLSearchParams({action:"image",LAYERS:state.layer,STYLES:"",FORMAT:"image/png",TRANSPARENT:"true",SRS:"EPSG:3857",BBOX:extent.join(","),WIDTH:String(size[0]),HEIGHT:String(size[1]),TIME:state.times[state.index]});stat("Загрузка композита…");const r=await fetch(`${API}?${params}`,{cache:"no-store"});if(!r.ok){const t=await r.text();throw Error(t.slice(0,220))}const blob=await r.blob();if(!blob.type.toLowerCase().includes("image"))throw Error("Nowcast вернул не изображение");if(state.url)URL.revokeObjectURL(state.url);state.url=URL.createObjectURL(blob);const source=new ol.source.ImageStatic({url:state.url,imageExtent:extent,projection:"EPSG:3857"});const next=new ol.layer.Image({source,opacity:Number(opacity.value)/100});if(state.radar)map.removeLayer(state.radar);state.radar=next;map.addLayer(next);stat(`Композит отображён • ${state.layer}`,"ok")}
-async function safeRender(){try{await render()}catch(e){console.error(e);stat(`⚠ Композит не загружен: ${e.message}`,"error")}}
-async function init(){try{stat("Получение слоёв Nowcast…");buildTimes();await loadLayers();await safeRender()}catch(e){stat(`⚠ ${e.message}`,"error")}}
-select.onchange=()=>{state.layer=select.value;safeRender()};slider.oninput=()=>{state.index=Number(slider.value);label.textContent=new Date(state.times[state.index]).toLocaleString([], {hour:"2-digit",minute:"2-digit"});safeRender()};document.getElementById("refresh").onclick=safeRender;document.getElementById("center").onclick=()=>map.getView().animate({center:ol.proj.fromLonLat([100,61]),zoom:3,duration:400});document.getElementById("settings").onclick=()=>document.getElementById("panel").classList.toggle("open");opacity.oninput=()=>{document.getElementById("opacityValue").textContent=opacity.value+"%";if(state.radar)state.radar.setOpacity(Number(opacity.value)/100)};map.on("moveend",()=>{if(state.layer)safeRender()});init();
+function makeCacheKey(layer,time,extent){return [layer,time,extent.map(v=>Math.round(v*100)).join(",")].join("::");}
+async function renderMap(){
+  if(!state.layer) return;
+  const now = Date.now();
+  if (now - state.lastRenderTs < 3000) return;
+  state.lastRenderTs = now;
+
+  const size = map.getSize() || [1200,800];
+  const extent = map.getView().calculateExtent(size);
+  const time = state.times[state.index] || new Date().toISOString();
+  const cacheKey = makeCacheKey(state.layer, time, extent);
+  if (state.cache.has(cacheKey)) {
+    const cachedUrl = state.cache.get(cacheKey);
+    if (state.url) URL.revokeObjectURL(state.url);
+    state.url = cachedUrl;
+    const source = new ol.source.ImageStatic({ url: state.url, imageExtent: extent, projection: "EPSG:3857" });
+    const next = new ol.layer.Image({ source, opacity: Number(opacity.value)/100 });
+    if (state.radar) map.removeLayer(state.radar);
+    state.radar = next; map.addLayer(next); 
+    stat(`Композит отображён • ${state.layer}`,"ok");
+    return;
+  }
+
+  const params = new URLSearchParams({ action:"image", LAYERS:state.layer, STYLES:"", FORMAT:"image/png", TRANSPARENT:"true", SRS:"EPSG:3857", BBOX:extent.join(","), WIDTH:String(size[0]), HEIGHT:String(size[1]), TIME:time });
+  stat("Загрузка композита…");
+  const r = await fetch(`${API}?${params}`, { cache: "no-store" });
+  if(!r.ok){ const t=await r.text(); throw Error(t.slice(0,220)); }
+  const blob = await r.blob();
+  if(!blob.type.toLowerCase().includes("image")) throw Error("Nowcast вернул не изображение");
+  if (state.url) URL.revokeObjectURL(state.url);
+  const url = URL.createObjectURL(blob);
+  state.cache.set(cacheKey, url);
+  state.url = url;
+  const source = new ol.source.ImageStatic({ url: state.url, imageExtent: extent, projection: "EPSG:3857" });
+  const next = new ol.layer.Image({ source, opacity: Number(opacity.value)/100 });
+  if (state.radar) map.removeLayer(state.radar);
+  state.radar = next; map.addLayer(next);
+  stat(`Композит отображён • ${state.layer}`,"ok");
+}
+
+function scheduleRender(){
+  clearTimeout(state.renderTimer);
+  state.renderTimer = setTimeout(() => {
+    renderMap().catch((e)=>{ console.error(e); stat(`⚠ Композит не загружен: ${e.message}`,"error"); });
+  }, 800);
+}
+
+async function init(){
+  try {
+    stat("Получение слоёв Nowcast…");
+    buildTimes();
+    await loadLayers();
+    await renderMap();
+  } catch (e) { stat(`⚠ ${e.message}`,"error"); }
+}
+
+select.onchange=()=>{ state.layer = select.value; scheduleRender(); };
+slider.oninput=()=>{ state.index = Number(slider.value); label.textContent = new Date(state.times[state.index]).toLocaleString([], { hour:"2-digit", minute:"2-digit" }); scheduleRender(); };
+document.getElementById("refresh").onclick=()=> scheduleRender();
+document.getElementById("center").onclick=()=>map.getView().animate({center:ol.proj.fromLonLat([100,61]),zoom:3,duration:400});
+document.getElementById("settings").onclick=()=>document.getElementById("panel").classList.toggle("open");
+opacity.oninput=()=>{ document.getElementById("opacityValue").textContent=opacity.value+"%"; if(state.radar) state.radar.setOpacity(Number(opacity.value)/100); };
+map.on("moveend",()=>{ /* intentionally disabled: prevents constant load on weak servers */ });
+init();
 </script></body></html>
