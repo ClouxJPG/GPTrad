@@ -1,2019 +1,345 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>GPTrad</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css">
-<style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#111}
-#map{position:absolute;inset:0;z-index:1;background:#d8d8d8}
-.dark-osm-layer img,.dark-osm-layer canvas{filter:invert(1) hue-rotate(180deg) brightness(.72) contrast(1.05)}
-.ol-zoom{position:absolute;top:82px;left:12px}
-.ol-control{background:transparent!important;padding:0!important}
-.ol-zoom button{display:block;width:38px;height:38px;margin:3px;border:0;border-radius:10px;background:rgba(28,28,28,.9)!important;color:white!important;font-size:22px;line-height:36px;cursor:pointer}
-.ol-attribution{right:8px!important;bottom:4px!important}
-.ol-attribution button{background:rgba(28,28,28,.8)!important;color:white!important;border-radius:8px}
-#ui{position:absolute;inset:0;z-index:20;pointer-events:none}
-button,input{font:inherit}
-.ui-btn{pointer-events:auto;border:0;color:#fff;background:rgba(25,25,25,.9);border-radius:11px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.25)}
-#locateBtn{position:absolute;top:12px;left:12px}
-#settingsBtn{position:absolute;top:62px;left:12px}
-#searchBtn{position:absolute;top:12px;right:12px}
-#sidePanel{position:absolute;right:0;top:0;height:100%;width:310px;transform:translateX(100%);transition:transform .2s ease;background:rgba(20,20,20,.96);color:#fff;pointer-events:auto;overflow-y:auto;padding:18px 16px 90px;box-shadow:-5px 0 20px rgba(0,0,0,.35)}
-#sidePanel.open{transform:translateX(0)}
-#panelToggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:30;width:28px;height:70px;border:0;border-radius:12px 0 0 12px;background:rgba(25,25,25,.9);color:#fff;pointer-events:auto}
-#sidePanel h2{font-size:18px;margin:8px 0 18px}
-.panel-row{margin:14px 0}
-.panel-row label{display:block;font-size:13px;opacity:.8;margin-bottom:7px}
-.panel-row input[type=range]{width:100%}
-.layerBtn{width:100%;padding:11px;border:0;border-radius:10px;background:#2c2c2c;color:#fff;margin:5px 0;text-align:left}
-.layerBtn.active{background:#4b4b4b}
-#timeBar{position:absolute;left:10px;right:10px;bottom:12px;height:54px;border-radius:15px;background:rgba(20,20,20,.9);pointer-events:auto;padding:9px 12px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-#timeLabel{color:#fff;font-size:12px;text-align:center;height:16px}
-#oyaTimelineSegments{display:flex;height:9px;gap:2px;width:100%;align-items:stretch}
-.oya-segment{flex:1;background:#555;border-radius:3px;cursor:pointer;min-width:2px}
-.oya-segment.loaded{background:#2196f3}
-.oya-segment.active{background:#fff}
-#oyaTimelineProgress{display:none;height:9px;background:#555;border-radius:5px;overflow:hidden}
-#oyaTimelineProgressFill{height:100%;width:0;background:#2196f3;border-radius:5px}
-#frameSlider{width:100%;margin:0;height:20px;display:none}
-.palette-row{display:flex;align-items:center;gap:7px;margin:5px 0}
-.palette-row input[type=color]{width:30px;height:26px;padding:0;border:0;background:transparent}
-.palette-row span{font-size:11px;flex:1}
-#reflectivityPaletteRows{max-height:280px;overflow:auto}
-.hidden{display:none!important}
-</style>
-</head>
-<body>
-<div id="map"></div>
-
-<div id="ui">
-<button id="locateBtn" class="ui-btn">⌖</button>
-<button id="settingsBtn" class="ui-btn">⚙</button>
-<button id="searchBtn" class="ui-btn">⌕</button>
-<button id="panelToggle">‹</button>
-
-<div id="sidePanel">
-<h2>Настройки</h2>
-
-<div class="panel-row">
-<label>Слой</label>
-<button class="layerBtn active" data-layer="radar">Радар</button>
-<button class="layerBtn" data-layer="oya">ОЯ</button>
-<button class="layerBtn" data-layer="reflectivity">Отражаемость</button>
-</div>
-
-<div class="panel-row">
-<label>Прозрачность ОЯ / отражаемости <span id="oyaOpacityValue">90%</span></label>
-<input id="oyaOpacitySlider" type="range" min="0" max="100" value="90">
-</div>
-
-<div class="panel-row">
-<label>Количество кадров ОЯ</label>
-<input id="frameCountInput" type="number" min="1" max="200" value="50">
-</div>
-
-<div class="panel-row">
-<label>Палитра ОЯ</label>
-<div id="oyaPaletteRows"></div>
-</div>
-
-<div class="panel-row">
-<label>Палитра отражаемости (dBZ)</label>
-<div id="reflectivityPaletteRows"></div>
-</div>
-</div>
-
-<div id="timeBar">
-<div id="timeLabel">—</div>
-<div id="oyaTimelineSegments"></div>
-<div id="oyaTimelineProgress"><div id="oyaTimelineProgressFill"></div></div>
-<input id="frameSlider" type="range" min="0" max="0" value="0">
-</div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
-<script>
-"use strict";
-
-const {
- Map:OlMap,
- View,
- TileLayer,
- ImageLayer,
- Tile,
- Image:OlImage,
- Overlay,
- proj,
- source,
- layer
-}=ol;
-
-const {
- OSM,
- XYZ,
- ImageStatic
-}=source;
-
-const OYA_PROXY="/api/oya";
-
-const OYA_PALETTE_STORAGE_KEY="gptrad-oya-palette";
-const REFLECTIVITY_PALETTE_STORAGE_KEY="gptrad-reflectivity-palette";
-const OYA_OPACITY_STORAGE_KEY="gptrad-oya-opacity";
-
-const DEFAULT_OYA_PALETTE=[
- {color:"#00ff00",min:0,max:10},
- {color:"#00cc00",min:10,max:20},
- {color:"#009900",min:20,max:30},
- {color:"#0066ff",min:30,max:40},
- {color:"#0033cc",min:40,max:50},
- {color:"#00ffff",min:50,max:60},
- {color:"#ffff00",min:60,max:70},
- {color:"#ff9900",min:70,max:80},
- {color:"#ff3300",min:80,max:90},
- {color:"#cc0000",min:90,max:100}
-];
-
-const DEFAULT_REFLECTIVITY_PALETTE=[
- {min:-10,max:0,color:"#7b7b7b"},
- {min:0,max:5,color:"#4aa3df"},
- {min:5,max:10,color:"#43c96b"},
- {min:10,max:15,color:"#7ed957"},
- {min:15,max:20,color:"#d5e84b"},
- {min:20,max:25,color:"#ffe34d"},
- {min:25,max:30,color:"#ffb52e"},
- {min:30,max:35,color:"#ff7a24"},
- {min:35,max:40,color:"#ff4b2b"},
- {min:40,max:45,color:"#ef3030"},
- {min:45,max:50,color:"#d51e3d"},
- {min:50,max:55,color:"#b51d68"},
- {min:55,max:60,color:"#8c2ca8"},
- {min:60,max:65,color:"#642cae"},
- {min:65,max:70,color:"#3e277f"}
-];
-
-let activeLayer="radar";
-let radarLayer=null;
-let reflectivityLayer=null;
-let rainFrames=[];
-let currentFrame=0;
-let playing=false;
-let playTimer=null;
-
-let oyaAllTimes=[];
-let oyaTimes=[];
-let oyaFrameCount=50;
-let oyaFrameIndex=0;
-let oyaImage=null;
-let oyaImageBlobUrl=null;
-
-let reflectivityFrameIndex=0;
-let reflectivityRequestId=0;
-let oyaRequestId=0;
-
-let oyaCapabilitiesLoaded=false;
-let oyaCapabilitiesLoading=false;
-let oyaPreloading=false;
-let viewportTimer=null;
-let oyaRefreshTimer=null;
-
-const OYA_REFRESH_INTERVAL=10*60*1000;
-
-const oyaLoadedTimes=new Set();
-const reflectivityLoadedTimes=new Set();
-
-const oyaFrameCache=new Map();
-const reflectivityFrameCache=new Map();
-
-const oyaPendingRequests=new Map();
-const reflectivityPendingRequests=new Map();
-
-let viewportGeneration=0;
-let preloadGeneration=0;
-
-let oyaOpacity=90;
-
-let oyaPalette=loadPalette(
- OYA_PALETTE_STORAGE_KEY,
- DEFAULT_OYA_PALETTE
-);
-
-let reflectivityPalette=loadPalette(
- REFLECTIVITY_PALETTE_STORAGE_KEY,
- DEFAULT_REFLECTIVITY_PALETTE
-);
-
-const REFLECTIVITY_SOURCE_COLORS=DEFAULT_REFLECTIVITY_PALETTE.map(
- item=>hexToRgb(item.color)
-);
-
-let reflectivityPaletteVersion=0;
-
-const map=new OlMap({
- target:"map",
- layers:[],
- view:new View({
-  center:proj.fromLonLat([56.0,54.7]),
-  zoom:5
- }),
- controls:ol.control.defaults({
-  zoom:true,
-  attribution:true,
-  rotate:false
- })
-});
-
-const osmLayer=new TileLayer({
- source:new OSM()
-});
-
-osmLayer.setClassName("dark-osm-layer");
-
-map.addLayer(osmLayer);
-
-const oyaTimelineSegments=document.getElementById("oyaTimelineSegments");
-const oyaTimelineProgress=document.getElementById("oyaTimelineProgress");
-const oyaTimelineProgressFill=document.getElementById("oyaTimelineProgressFill");
-const frameSlider=document.getElementById("frameSlider");
-const timeLabel=document.getElementById("timeLabel");
-const panelToggle=document.getElementById("panelToggle");
-const sidePanel=document.getElementById("sidePanel");
-const settingsBtn=document.getElementById("settingsBtn");
-const oyaOpacitySlider=document.getElementById("oyaOpacitySlider");
-const oyaOpacityValue=document.getElementById("oyaOpacityValue");
-const frameCountInput=document.getElementById("frameCountInput");
-const oyaPaletteRows=document.getElementById("oyaPaletteRows");
-const reflectivityPaletteRows=document.getElementById("reflectivityPaletteRows");
-
-function loadPalette(key,fallback){
- try{
-  const value=JSON.parse(localStorage.getItem(key)||"");
-  if(Array.isArray(value)&&value.length)return value;
- }catch(e){}
- return fallback.map(x=>({...x}));
-}
-
-function savePalette(key,value){
- try{
-  localStorage.setItem(key,JSON.stringify(value));
- }catch(e){}
-}
-
-function hexToRgb(hex){
- const clean=String(hex||"").replace("#","");
- if(clean.length!==6)return {r:255,g:255,b:255};
- return{
-  r:parseInt(clean.slice(0,2),16),
-  g:parseInt(clean.slice(2,4),16),
-  b:parseInt(clean.slice(4,6),16)
- };
-}
-
-function rgbToHex(r,g,b){
- return "#"+[r,g,b].map(
-  x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,"0")
- ).join("");
-}
-
-function nearestReflectivitySourceIndex(r,g,b){
- let best=0;
- let bestDistance=Infinity;
-
- for(let i=0;i<REFLECTIVITY_SOURCE_COLORS.length;i++){
-  const c=REFLECTIVITY_SOURCE_COLORS[i];
-  const dr=r-c.r;
-  const dg=g-c.g;
-  const db=b-c.b;
-  const d=dr*dr+dg*dg+db*db;
-
-  if(d<bestDistance){
-   bestDistance=d;
-   best=i;
-  }
- }
-
- return best;
-}
-
-function getReflectivityColorForSourceIndex(index){
- const item=reflectivityPalette[index];
- return item?.color||DEFAULT_REFLECTIVITY_PALETTE[index]?.color||"#ffffff";
-}
-
-function renderReflectivityPalette(){
- reflectivityPaletteRows.innerHTML="";
-
- reflectivityPalette.forEach((item,index)=>{
-  const row=document.createElement("div");
-  row.className="palette-row";
-
-  const color=document.createElement("input");
-  color.type="color";
-  color.value=item.color;
-
-  const text=document.createElement("span");
-  text.textContent=`${item.min}–${item.max} dBZ`;
-
-  color.addEventListener("input",()=>{
-   reflectivityPalette[index].color=color.value;
-   reflectivityPaletteVersion++;
-   savePalette(
-    REFLECTIVITY_PALETTE_STORAGE_KEY,
-    reflectivityPalette
-   );
-   invalidateReflectivityCacheForPalette();
-   if(activeLayer==="reflectivity"){
-    loadReflectivityFrame(reflectivityFrameIndex,{
-     forceViewport:true,
-     viewportGeneration
-    });
-   }
-  });
-
-  row.appendChild(color);
-  row.appendChild(text);
-  reflectivityPaletteRows.appendChild(row);
- });
-}
-
-function renderOyaPalette(){
- oyaPaletteRows.innerHTML="";
-
- oyaPalette.forEach((item,index)=>{
-  const row=document.createElement("div");
-  row.className="palette-row";
-
-  const color=document.createElement("input");
-  color.type="color";
-  color.value=item.color;
-
-  const text=document.createElement("span");
-  text.textContent=`${item.min}–${item.max}`;
-
-  color.addEventListener("input",()=>{
-   oyaPalette[index].color=color.value;
-   savePalette(OYA_PALETTE_STORAGE_KEY,oyaPalette);
-   invalidateOyaProcessing();
-
-   if(activeLayer==="oya"){
-    loadOyaFrame(oyaFrameIndex,{
-     forceViewport:true,
-     viewportGeneration
-    });
-   }
-  });
-
-  row.appendChild(color);
-  row.appendChild(text);
-  oyaPaletteRows.appendChild(row);
- });
-}
-
-function setOyaOpacity(percent){
- let value=Number(percent);
-
- if(!Number.isFinite(value)){
-  value=90;
- }
-
- value=Math.max(
-  0,
-  Math.min(100,Math.round(value))
- );
-
- oyaOpacity=value;
- oyaOpacitySlider.value=String(value);
- oyaOpacityValue.textContent=value+"%";
-
- localStorage.setItem(
-  OYA_OPACITY_STORAGE_KEY,
-  String(value)
- );
-
- if(oyaImage){
-  oyaImage.setOpacity(value/100);
- }
-
- if(reflectivityLayer){
-  reflectivityLayer.setOpacity(value/100);
- }
-
- map.render();
-}
-
-function getCurrentMapExtent(){
- const size=map.getSize();
-
- if(!size||!size[0]||!size[1]){
-  return map.getView().calculateExtent([1024,768]);
- }
-
- return map.getView().calculateExtent(size);
-}
-
-function getCurrentMapSize(){
- const size=map.getSize();
-
- return[
-  Math.max(256,Math.round(size?.[0]||1024)),
-  Math.max(256,Math.round(size?.[1]||768))
- ];
-}
-
-function createWmsUrl(layerName,time,extent,size){
- const currentExtent=extent||getCurrentMapExtent();
- const currentSize=size||getCurrentMapSize();
-
- const params=new URLSearchParams({
-  SERVICE:"WMS",
-  VERSION:"1.1.1",
-  REQUEST:"GetMap",
-  LAYERS:layerName,
-  STYLES:"",
-  SRS:"EPSG:3857",
-  BBOX:currentExtent.join(","),
-  WIDTH:String(currentSize[0]),
-  HEIGHT:String(currentSize[1]),
-  FORMAT:"image/png",
-  TRANSPARENT:"true",
-  TIME:new Date(time*1000).toISOString()
- });
-
- return OYA_PROXY+"?action=image&"+params.toString();
-}
-
-function revokeUrl(url){
- if(url){
-  try{
-   URL.revokeObjectURL(url);
-  }catch(e){}
- }
-}
-
-function waitForImageReady(url){
- return new Promise((resolve,reject)=>{
-  const img=new Image();
-
-  img.onload=()=>{
-   requestAnimationFrame(()=>{
-    resolve(img);
-   });
-  };
-
-  img.onerror=()=>{
-   reject(new Error("image load failed"));
-  };
-
-  img.src=url;
- });
-}
-
-async function fetchImageBlob(url){
- const response=await fetch(url,{
-  cache:"no-store"
- });
-
- if(!response.ok){
-  throw new Error("HTTP "+response.status);
- }
-
- return await response.blob();
-}
-
-async function blobToCleanUrl(blob,processor){
- const rawUrl=URL.createObjectURL(blob);
-
- try{
-  const image=await waitForImageReady(rawUrl);
-
-  const canvas=document.createElement("canvas");
-  canvas.width=image.naturalWidth||image.width;
-  canvas.height=image.naturalHeight||image.height;
-
-  const ctx=canvas.getContext("2d",{
-   willReadFrequently:true
-  });
-
-  ctx.drawImage(image,0,0);
-
-  processor(ctx,canvas);
-
-  const cleanBlob=await new Promise(resolve=>{
-   canvas.toBlob(
-    resolve,
-    "image/png"
-   );
-  });
-
-  if(!cleanBlob){
-   throw new Error("canvas conversion failed");
-  }
-
-  const cleanUrl=URL.createObjectURL(cleanBlob);
-
-  return{
-   rawUrl,
-   cleanUrl,
-   width:canvas.width,
-   height:canvas.height
-  };
-
- }catch(error){
-  revokeUrl(rawUrl);
-  throw error;
- }
-}
-
-function processOyaCanvas(ctx,canvas){
- const imageData=ctx.getImageData(
-  0,0,
-  canvas.width,
-  canvas.height
- );
-
- const data=imageData.data;
-
- for(let i=0;i<data.length;i+=4){
-  const alpha=data[i+3];
-
-  if(alpha===0)continue;
-
-  const r=data[i];
-  const g=data[i+1];
-  const b=data[i+2];
-
-  if(
-   r>245&&
-   g>245&&
-   b>245
-  ){
-   data[i+3]=0;
-   continue;
-  }
-
-  let best=null;
-
-  for(const item of oyaPalette){
-   const c=hexToRgb(item.color);
-   const distance=
-    (r-c.r)*(r-c.r)+
-    (g-c.g)*(g-c.g)+
-    (b-c.b)*(b-c.b);
-
-   if(!best||distance<best.distance){
-    best={
-     distance,
-     color:c
-    };
-   }
-  }
-
-  if(best){
-   data[i]=best.color.r;
-   data[i+1]=best.color.g;
-   data[i+2]=best.color.b;
-  }
- }
-
- ctx.putImageData(imageData,0,0);
-}
-
-function processReflectivityCanvas(ctx,canvas){
- const imageData=ctx.getImageData(
-  0,0,
-  canvas.width,
-  canvas.height
- );
-
- const data=imageData.data;
-
- for(let i=0;i<data.length;i+=4){
-  const alpha=data[i+3];
-
-  if(alpha===0)continue;
-
-  const r=data[i];
-  const g=data[i+1];
-  const b=data[i+2];
-
-  const max=Math.max(r,g,b);
-  const min=Math.min(r,g,b);
-
-  /*
-   * Gray/near-gray background from the WMS is transparent.
-   */
-  if(
-   max-min<18&&
-   max>70
-  ){
-   data[i+3]=0;
-   continue;
-  }
-
-  const sourceIndex=nearestReflectivitySourceIndex(
-   r,g,b
-  );
-
-  const source=REFLECTIVITY_SOURCE_COLORS[sourceIndex];
-
-  const distance=Math.sqrt(
-   (r-source.r)*(r-source.r)+
-   (g-source.g)*(g-source.g)+
-   (b-source.b)*(b-source.b)
-  );
-
-  /*
-   * Keep unrelated pixels transparent rather than
-   * inventing a dBZ classification.
-   */
-  if(distance>105){
-   data[i+3]=0;
-   continue;
-  }
-
-  const target=hexToRgb(
-   getReflectivityColorForSourceIndex(sourceIndex)
-  );
-
-  data[i]=target.r;
-  data[i+1]=target.g;
-  data[i+2]=target.b;
- }
-
- ctx.putImageData(imageData,0,0);
-}
-
-function invalidateReflectivityCacheForPalette(){
- const keep=reflectivityLayer?.__reflectivityCleanUrl||null;
-
- for(const item of reflectivityFrameCache.values()){
-  revokeUrl(item?.rawUrl);
-
-  if(
-   item?.cleanUrl&&
-   item.cleanUrl!==keep
-  ){
-   revokeUrl(item.cleanUrl);
-  }
- }
-
- reflectivityFrameCache.clear();
- reflectivityLoadedTimes.clear();
-
- renderOyaTimeline();
-}
-
-function invalidateOyaProcessing(){
- oyaRequestId++;
- reflectivityRequestId++;
-
- const keepOyaUrl=oyaImage?.__oyaCleanUrl||null;
-
- for(const item of oyaFrameCache.values()){
-  revokeUrl(item?.rawUrl);
-
-  if(
-   item?.cleanUrl&&
-   item.cleanUrl!==keepOyaUrl
-  ){
-   revokeUrl(item.cleanUrl);
-  }
- }
-
- oyaFrameCache.clear();
-
- const keepReflectivityUrl=
-  reflectivityLayer?.__reflectivityCleanUrl||null;
-
- for(const item of reflectivityFrameCache.values()){
-  revokeUrl(item?.rawUrl);
-
-  if(
-   item?.cleanUrl&&
-   item.cleanUrl!==keepReflectivityUrl
-  ){
-   revokeUrl(item.cleanUrl);
-  }
- }
-
- reflectivityFrameCache.clear();
-
- resetLoadedTimeline();
-}
-
-function removeOyaDisplayedLayer(){
- if(oyaImage){
-  try{
-   map.removeLayer(oyaImage);
-  }catch(e){}
- }
-
- oyaImage=null;
- oyaImageBlobUrl=null;
-
- removeRadarDataMaskImage();
-}
-
-function removeReflectivityDisplayedLayer(){
- if(reflectivityLayer){
-  try{
-   map.removeLayer(reflectivityLayer);
-  }catch(e){}
- }
-
- reflectivityLayer=null;
-}
-
-function addImageLayer(cleanUrl,extent,opacity){
- const sourceObj=new ImageStatic({
-  url:cleanUrl,
-  imageExtent:extent,
-  projection:"EPSG:3857"
- });
-
- const imageLayer=new ImageLayer({
-  source:sourceObj,
-  opacity:opacity
- });
-
- map.addLayer(imageLayer);
-
- return imageLayer;
-}
-
-function showOyaFrame(time,result,requestId){
- if(requestId!==oyaRequestId){
-  return false;
- }
-
- const cleanUrl=result.cleanUrl;
-
- const newLayer=addImageLayer(
-  cleanUrl,
-  result.extent,
-  oyaOpacity/100
- );
-
- newLayer.__oyaCleanUrl=cleanUrl;
-
- if(requestId!==oyaRequestId){
-  try{
-   map.removeLayer(newLayer);
-  }catch(e){}
-  return false;
- }
-
- const oldLayer=oyaImage;
-
- oyaImage=newLayer;
- oyaImageBlobUrl=cleanUrl;
-
- removeReflectivityDisplayedLayer();
-
- if(oldLayer){
-  try{
-   map.removeLayer(oldLayer);
-  }catch(e){}
- }
-
- oyaFrameIndex=oyaTimes.indexOf(time);
-
- if(oyaFrameIndex<0){
-  oyaFrameIndex=0;
- }
-
- frameSlider.value=String(oyaFrameIndex);
-
- updateTimeLabel();
-
- return true;
-}
-
-function showReflectivityFrame(time,result,requestId){
- if(requestId!==reflectivityRequestId){
-  return false;
- }
-
- const cleanUrl=result.cleanUrl;
-
- const newLayer=addImageLayer(
-  cleanUrl,
-  result.extent,
-  oyaOpacity/100
- );
-
- newLayer.__reflectivityCleanUrl=cleanUrl;
-
- if(requestId!==reflectivityRequestId){
-  try{
-   map.removeLayer(newLayer);
-  }catch(e){}
-  return false;
- }
-
- const oldLayer=reflectivityLayer;
-
- reflectivityLayer=newLayer;
-
- removeOyaDisplayedLayer();
-
- if(oldLayer){
-  try{
-   map.removeLayer(oldLayer);
-  }catch(e){}
- }
-
- reflectivityFrameIndex=oyaTimes.indexOf(time);
-
- if(reflectivityFrameIndex<0){
-  reflectivityFrameIndex=0;
- }
-
- frameSlider.value=String(reflectivityFrameIndex);
-
- updateTimeLabel();
-
- return true;
-}
-
-async function prepareOyaResult(
- time,
- result,
- requestId
-){
- if(requestId!==oyaRequestId){
-  return null;
- }
-
- if(result?.cleanUrl){
-  return result;
- }
-
- const extent=result.extent;
- const size=result.size;
- const url=result.url;
-
- const blob=await fetchImageBlob(url);
-
- if(requestId!==oyaRequestId){
-  return null;
- }
-
- const processed=await blobToCleanUrl(
-  blob,
-  processOyaCanvas
- );
-
- revokeUrl(processed.rawUrl);
-
- if(requestId!==oyaRequestId){
-  revokeUrl(processed.cleanUrl);
-  return null;
- }
-
- return{
-  time,
-  rawUrl:null,
-  cleanUrl:processed.cleanUrl,
-  extent,
-  size
- };
-}
-
-async function prepareReflectivityResult(
- time,
- result,
- requestId
-){
- if(requestId!==reflectivityRequestId){
-  return null;
- }
-
- if(result?.cleanUrl){
-  return result;
- }
-
- const blob=await fetchImageBlob(result.url);
-
- if(requestId!==reflectivityRequestId){
-  return null;
- }
-
- const processed=await blobToCleanUrl(
-  blob,
-  processReflectivityCanvas
- );
-
- revokeUrl(processed.rawUrl);
-
- if(requestId!==reflectivityRequestId){
-  revokeUrl(processed.cleanUrl);
-  return null;
- }
-
- return{
-  time,
-  rawUrl:null,
-  cleanUrl:processed.cleanUrl,
-  extent:result.extent,
-  size:result.size
- };
-}
-
-async function loadOyaFrame(index,options={}){
- if(activeLayer!=="oya")return;
-
- if(!oyaTimes.length)return;
-
- const time=oyaTimes[
-  Math.max(
-   0,
-   Math.min(oyaTimes.length-1,index)
-  )
- ];
-
- const requestId=++oyaRequestId;
-
- const generation=
-  options.viewportGeneration??viewportGeneration;
-
- const extent=getCurrentMapExtent();
- const size=getCurrentMapSize();
-
- let cached=oyaFrameCache.get(time);
-
- if(
-  cached&&
-  !options.forceViewport
- ){
-  if(
-   showOyaFrame(
-    time,
-    cached,
-    requestId
-   )
-  ){
-   oyaLoadedTimes.add(time);
-   renderOyaTimeline();
-  }
-
-  return;
- }
-
- /*
-  * Even when the time is cached, a changed viewport
-  * requires a new WMS image for the new extent.
-  */
- if(options.forceViewport){
-  cached=null;
- }
-
- if(oyaPendingRequests.has(time)&&!cached){
-  try{
-   const result=await oyaPendingRequests.get(time);
-
-   if(
-    requestId!==oyaRequestId||
-    generation!==viewportGeneration
-   ){
-    return;
-   }
-
-   const prepared=await prepareOyaResult(
-    time,
-    result,
-    requestId
-   );
-
-   if(!prepared)return;
-
-   oyaFrameCache.set(time,prepared);
-   oyaLoadedTimes.add(time);
-
-   showOyaFrame(
-    time,
-    prepared,
-    requestId
-   );
-
-   renderOyaTimeline();
-
-  }catch(e){}
-
-  return;
- }
-
- const url=createWmsUrl(
-  "bufr_dbz1",
-  time,
-  extent,
-  size
- );
-
- const requestPromise=(
-  async()=>{
-   const blob=await fetchImageBlob(url);
-
-   const processed=await blobToCleanUrl(
-    blob,
-    processOyaCanvas
-   );
-
-   revokeUrl(processed.rawUrl);
-
-   return{
-    time,
-    rawUrl:null,
-    cleanUrl:processed.cleanUrl,
-    extent,
-    size
-   };
-  }
- )();
-
- oyaPendingRequests.set(
-  time,
-  requestPromise
- );
-
- try{
-  const result=await requestPromise;
-
-  if(
-   requestId!==oyaRequestId||
-   generation!==viewportGeneration
-  ){
-   if(
-    !oyaFrameCache.has(time)
-   ){
-    revokeUrl(result.cleanUrl);
-   }
-   return;
-  }
-
-  oyaFrameCache.set(
-   time,
-   result
-  );
-
-  oyaLoadedTimes.add(time);
-
-  showOyaFrame(
-   time,
-   result,
-   requestId
-  );
-
-  renderOyaTimeline();
-
- }catch(e){
-
- }finally{
-  if(
-   oyaPendingRequests.get(time)===requestPromise
-  ){
-   oyaPendingRequests.delete(time);
-  }
- }
-}
-
-async function loadReflectivityFrame(index,options={}){
- if(activeLayer!=="reflectivity")return;
-
- if(!oyaTimes.length)return;
-
- const time=oyaTimes[
-  Math.max(
-   0,
-   Math.min(oyaTimes.length-1,index)
-  )
- ];
-
- const requestId=++reflectivityRequestId;
-
- const generation=
-  options.viewportGeneration??viewportGeneration;
-
- const extent=getCurrentMapExtent();
- const size=getCurrentMapSize();
-
- let cached=reflectivityFrameCache.get(time);
-
- if(
-  cached&&
-  !options.forceViewport
- ){
-  if(
-   showReflectivityFrame(
-    time,
-    cached,
-    requestId
-   )
-  ){
-   reflectivityLoadedTimes.add(time);
-   renderOyaTimeline();
-  }
-
-  return;
- }
-
- if(options.forceViewport){
-  cached=null;
- }
-
- const url=createWmsUrl(
-  "bufr_dbz1",
-  time,
-  extent,
-  size
- );
-
- if(
-  reflectivityPendingRequests.has(time)
- ){
-  try{
-   const result=
-    await reflectivityPendingRequests.get(time);
-
-   if(
-    requestId!==reflectivityRequestId||
-    generation!==viewportGeneration
-   ){
-    return;
-   }
-
-   const prepared=
-    await prepareReflectivityResult(
-     time,
-     result,
-     requestId
-    );
-
-   if(!prepared)return;
-
-   reflectivityFrameCache.set(
-    time,
-    prepared
-   );
-
-   reflectivityLoadedTimes.add(time);
-
-   showReflectivityFrame(
-    time,
-    prepared,
-    requestId
-   );
-
-   renderOyaTimeline();
-
-  }catch(e){}
-
-  return;
- }
-
- const requestPromise=(
-  async()=>{
-   const blob=await fetchImageBlob(url);
-
-   const processed=await blobToCleanUrl(
-    blob,
-    processReflectivityCanvas
-   );
-
-   revokeUrl(processed.rawUrl);
-
-   return{
-    time,
-    rawUrl:null,
-    cleanUrl:processed.cleanUrl,
-    extent,
-    size
-   };
-  }
- )();
-
- reflectivityPendingRequests.set(
-  time,
-  requestPromise
- );
-
- try{
-  const result=await requestPromise;
-
-  if(
-   requestId!==reflectivityRequestId||
-   generation!==viewportGeneration
-  ){
-   if(
-    !reflectivityFrameCache.has(time)
-   ){
-    revokeUrl(result.cleanUrl);
-   }
-   return;
-  }
-
-  reflectivityFrameCache.set(
-   time,
-   result
-  );
-
-  reflectivityLoadedTimes.add(time);
-
-  showReflectivityFrame(
-   time,
-   result,
-   requestId
-  );
-
-  renderOyaTimeline();
-
- }catch(e){
-
- }finally{
-  if(
-   reflectivityPendingRequests.get(time)===requestPromise
-  ){
-   reflectivityPendingRequests.delete(time);
-  }
- }
-}
-
-function getLoadedSet(){
- return activeLayer==="reflectivity"
-  ?reflectivityLoadedTimes
-  :oyaLoadedTimes;
-}
-
-function resetLoadedTimeline(){
- oyaLoadedTimes.clear();
- reflectivityLoadedTimes.clear();
- renderOyaTimeline();
-}
-
-function renderOyaTimeline(){
- oyaTimelineSegments.innerHTML="";
-
- if(
-  activeLayer!=="oya"&&
-  activeLayer!=="reflectivity"
- ){
-  oyaTimelineSegments.style.display="none";
-  oyaTimelineProgress.style.display="none";
-  return;
- }
-
- if(!oyaTimes.length){
-  oyaTimelineSegments.style.display="none";
-  oyaTimelineProgress.style.display="none";
-  return;
- }
-
- const loadedSet=getLoadedSet();
- const total=oyaTimes.length;
-
- const currentIndex=
-  activeLayer==="reflectivity"
-   ?reflectivityFrameIndex
-   :oyaFrameIndex;
-
- if(total>70){
-  oyaTimelineSegments.style.display="none";
-  oyaTimelineProgress.style.display="block";
-
-  const loadedCount=oyaTimes.filter(
-   time=>loadedSet.has(time)
-  ).length;
-
-  const percent=total
-   ?Math.max(
-    0,
-    Math.min(
-     100,
-     loadedCount/total*100
-    )
-   )
-   :0;
-
-  oyaTimelineProgressFill.style.width=
-   percent+"%";
-
-  return;
- }
-
- oyaTimelineProgress.style.display="none";
- oyaTimelineSegments.style.display="flex";
-
- oyaTimes.forEach((time,index)=>{
-  const segment=document.createElement("div");
-
-  segment.className="oya-segment";
-
-  if(loadedSet.has(time)){
-   segment.classList.add("loaded");
-  }
-
-  if(index===currentIndex){
-   segment.classList.add("active");
-  }
-
-  segment.addEventListener("click",()=>{
-   if(activeLayer==="oya"){
-    oyaFrameIndex=index;
-    loadOyaFrame(index);
-   }else if(activeLayer==="reflectivity"){
-    reflectivityFrameIndex=index;
-    loadReflectivityFrame(index);
-   }
-  });
-
-  oyaTimelineSegments.appendChild(segment);
- });
-}
-
-function updateTimeLabel(){
- let time=null;
-
- if(activeLayer==="oya"){
-  time=oyaTimes[oyaFrameIndex];
- }else if(activeLayer==="reflectivity"){
-  time=oyaTimes[reflectivityFrameIndex];
- }else if(
-  rainFrames.length&&
-  rainFrames[currentFrame]
- ){
-  time=rainFrames[currentFrame].time;
- }
-
- if(!time){
-  timeLabel.textContent="—";
-  return;
- }
-
- const date=new Date(
-  typeof time==="number"
-   ?time*1000
-   :time
- );
-
- timeLabel.textContent=
-  date.toLocaleString(
-   "ru-RU",
-   {
-    day:"2-digit",
-    month:"2-digit",
-    hour:"2-digit",
-    minute:"2-digit"
-   }
-  );
-}
-
-function extractTimesFromCapabilities(xmlText){
- const xml=new DOMParser().parseFromString(
-  xmlText,
-  "text/xml"
- );
-
- const values=[];
-
- const dimensionNodes=[
-  ...xml.getElementsByTagName("Dimension"),
-  ...xml.getElementsByTagName("Extent")
- ];
-
- for(const node of dimensionNodes){
-  const name=String(
-   node.getAttribute("name")||""
-  ).toLowerCase();
-
-  if(name!=="time")continue;
-
-  const text=String(
-   node.textContent||""
-  ).trim();
-
-  if(!text)continue;
-
-  for(const part of text.split(",")){
-   const value=part.trim();
-
-   if(!value)continue;
-
-   if(value.includes("/")){
-    const pieces=value.split("/");
-
-    const start=Date.parse(pieces[0]);
-    const end=Date.parse(pieces[1]);
-
-    if(
-     !Number.isFinite(start)||
-     !Number.isFinite(end)
-    ){
-     continue;
-    }
-
-    let step=0;
-
-    if(pieces[2]){
-     step=parseIsoDuration(
-      pieces[2]
-    );
-    }
-
-    /*
-     * The service advertises the real cadence.
-     * Never manufacture 5-minute frames.
-     */
-    if(
-     step>0&&
-     step>=10*60*1000
-    ){
-     for(
-      let t=start;
-      t<=end;
-      t+=step
-     ){
-      if(t<=Date.now()){
-       values.push(
-        Math.floor(t/1000)
-       );
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071827" />
+    <title>COOLrad | Real Russia radar</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css" />
+    <style>
+      :root {
+        --bg: #071827;
+        --panel: rgba(8, 18, 31, 0.84);
+        --panel-border: rgba(148, 163, 184, 0.22);
+        --primary: #64d2ff;
+        --primary-strong: #32b7ff;
+        --text: #e6f3ff;
+        --muted: #9bb4c9;
+        --shadow: rgba(2, 6, 23, 0.45);
       }
-     }
-
-     if(end<=Date.now()){
-      values.push(
-       Math.floor(end/1000)
-      );
-     }
-
-    }else{
-     if(start<=Date.now()){
-      values.push(
-       Math.floor(start/1000)
-      );
-     }
-
-     if(
-      end<=Date.now()&&
-      end!==start
-     ){
-      values.push(
-       Math.floor(end/1000)
-      );
-     }
-    }
-
-   }else{
-    const timestamp=Date.parse(value);
-
-    if(
-     Number.isFinite(timestamp)&&
-     timestamp<=Date.now()
-    ){
-     values.push(
-      Math.floor(timestamp/1000)
-     );
-    }
-   }
-  }
- }
-
- return[
-  ...new Set(values)
- ].sort(
-  (a,b)=>a-b
- );
-}
-
-function parseIsoDuration(value){
- const match=String(value).match(
-  /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
- );
-
- if(!match)return 0;
-
- const days=Number(match[1]||0);
- const hours=Number(match[2]||0);
- const minutes=Number(match[3]||0);
- const seconds=Number(match[4]||0);
-
- return(
-  days*86400000+
-  hours*3600000+
-  minutes*60000+
-  seconds*1000
- );
-}
-
-async function loadOyaCapabilities(){
- if(oyaCapabilitiesLoading)return;
- oyaCapabilitiesLoading=true;
-
- try{
-  const url=
-   OYA_PROXY+
-   "?action=capabilities";
-
-  const response=await fetch(
-   url,
-   {
-    cache:"no-store"
-   }
-  );
-
-  if(!response.ok){
-   throw new Error(
-    "HTTP "+response.status
-   );
-  }
-
-  const text=await response.text();
-
-  const times=
-   extractTimesFromCapabilities(text);
-
-  oyaAllTimes=times;
-
-  /*
-   * Only real advertised times.
-   * Latest frames are retained according to the
-   * selected count, without fabricating timestamps.
-   */
-  const count=Math.max(
-   1,
-   Math.min(
-    200,
-    Number(oyaFrameCount)||50
-   )
-  );
-
-  oyaTimes=
-   times.slice(
-    Math.max(
-     0,
-     times.length-count
-    )
-   );
-
-  oyaCapabilitiesLoaded=true;
-
-  if(oyaFrameIndex>=oyaTimes.length){
-   oyaFrameIndex=
-    Math.max(
-     0,
-     oyaTimes.length-1
-    );
-  }
-
-  if(
-   reflectivityFrameIndex>=oyaTimes.length
-  ){
-   reflectivityFrameIndex=
-    Math.max(
-     0,
-     oyaTimes.length-1
-    );
-  }
-
-  frameSlider.max=
-   String(
-    Math.max(0,oyaTimes.length-1)
-   );
-
-  renderOyaTimeline();
-  updateTimeLabel();
-
- }catch(error){
-
- }finally{
-  oyaCapabilitiesLoading=false;
- }
-}
-
-async function preloadOyaFrames(){
- if(oyaPreloading)return;
- if(!oyaTimes.length)return;
-
- oyaPreloading=true;
-
- const generation=++preloadGeneration;
-
- try{
-  const times=[...oyaTimes];
-
-  const queue=times.filter(
-   time=>
-    !oyaFrameCache.has(time)
-  );
-
-  const concurrency=6;
-  let pointer=0;
-
-  async function worker(){
-   while(pointer<queue.length){
-    if(generation!==preloadGeneration){
-     return;
-    }
-
-    const index=pointer++;
-    const time=queue[index];
-
-    try{
-     const extent=getCurrentMapExtent();
-     const size=getCurrentMapSize();
-
-     const url=createWmsUrl(
-      "bufr_dbz1",
-      time,
-      extent,
-      size
-     );
-
-     const blob=await fetchImageBlob(url);
-
-     if(generation!==preloadGeneration){
-      return;
-     }
-
-     const processed=
-      await blobToCleanUrl(
-       blob,
-       activeLayer==="reflectivity"
-        ?processReflectivityCanvas
-        :processOyaCanvas
-      );
-
-     revokeUrl(processed.rawUrl);
-
-     if(generation!==preloadGeneration){
-      revokeUrl(processed.cleanUrl);
-      return;
-     }
-
-     const result={
-      time,
-      rawUrl:null,
-      cleanUrl:processed.cleanUrl,
-      extent,
-      size
-     };
-
-     if(activeLayer==="reflectivity"){
-      reflectivityFrameCache.set(
-       time,
-       result
-      );
-
-      reflectivityLoadedTimes.add(time);
-     }else{
-      oyaFrameCache.set(
-       time,
-       result
-      );
-
-      oyaLoadedTimes.add(time);
-     }
-
-     renderOyaTimeline();
-
-    }catch(e){}
-   }
-  }
-
-  await Promise.all(
-   Array.from(
-    {length:Math.min(concurrency,queue.length)},
-    worker
-   )
-  );
-
- }finally{
-  if(generation===preloadGeneration){
-   oyaPreloading=false;
-  }
- }
-}
-
-function handleViewportChanged(){
- viewportGeneration++;
- preloadGeneration++;
-
- oyaPreloading=false;
-
- resetLoadedTimeline();
-
- if(viewportTimer){
-  clearTimeout(viewportTimer);
- }
-
- const generation=viewportGeneration;
-
- viewportTimer=setTimeout(
-  async()=>{
-   if(generation!==viewportGeneration){
-    return;
-   }
-
-   if(
-    activeLayer==="oya"&&
-    oyaTimes.length
-   ){
-    await loadOyaFrame(
-     oyaFrameIndex,
-     {
-      forceViewport:true,
-      viewportGeneration:generation
-     }
-    );
-
-    if(
-     generation===viewportGeneration
-    ){
-     preloadOyaFrames();
-    }
-
-   }else if(
-    activeLayer==="reflectivity"&&
-    oyaTimes.length
-   ){
-    await loadReflectivityFrame(
-     reflectivityFrameIndex,
-     {
-      forceViewport:true,
-      viewportGeneration:generation
-     }
-    );
-
-    if(
-     generation===viewportGeneration
-    ){
-     preloadOyaFrames();
-    }
-   }
-  },
-  120
- );
-}
-
-map.on(
- "moveend",
- handleViewportChanged
-);
-
-frameSlider.addEventListener(
- "input",
- ()=>{
-  const index=Number(
-   frameSlider.value
-  );
-
-  if(activeLayer==="oya"){
-   oyaFrameIndex=index;
-   loadOyaFrame(index);
-  }
-
-  if(activeLayer==="reflectivity"){
-   reflectivityFrameIndex=index;
-   loadReflectivityFrame(index);
-  }
- }
-);
-
-panelToggle.addEventListener(
- "click",
- ()=>{
-  sidePanel.classList.toggle("open");
-
-  panelToggle.textContent=
-   sidePanel.classList.contains("open")
-    ?"›"
-    :"‹";
- }
-);
-
-settingsBtn.addEventListener(
- "click",
- ()=>{
-  sidePanel.classList.toggle("open");
-
-  panelToggle.textContent=
-   sidePanel.classList.contains("open")
-    ?"›"
-    :"‹";
- }
-);
-
-oyaOpacitySlider.addEventListener(
- "input",
- ()=>{
-  setOyaOpacity(
-   oyaOpacitySlider.value
-  );
- }
-);
-
-frameCountInput.addEventListener(
- "change",
- ()=>{
-  const value=Math.max(
-   1,
-   Math.min(
-    200,
-    Number(frameCountInput.value)||50
-   )
-  );
-
-  oyaFrameCount=value;
-  frameCountInput.value=String(value);
-
-  if(oyaAllTimes.length){
-   oyaTimes=
-    oyaAllTimes.slice(
-     Math.max(
-      0,
-      oyaAllTimes.length-value
-     )
-    );
-
-   oyaFrameIndex=
-    Math.min(
-     oyaFrameIndex,
-     Math.max(
-      0,
-      oyaTimes.length-1
-     )
-    );
-
-   reflectivityFrameIndex=
-    Math.min(
-     reflectivityFrameIndex,
-     Math.max(
-      0,
-      oyaTimes.length-1
-     )
-    );
-
-   frameSlider.max=
-    String(
-     Math.max(
-      0,
-      oyaTimes.length-1
-     )
-    );
-
-   invalidateOyaProcessing();
-
-   renderOyaTimeline();
-  }
- }
-);
-
-document.querySelectorAll(".layerBtn")
- .forEach(button=>{
-  button.addEventListener(
-   "click",
-   ()=>{
-    const layerName=
-     button.dataset.layer;
-
-    document.querySelectorAll(".layerBtn")
-     .forEach(
-      b=>b.classList.remove("active")
-     );
-
-    button.classList.add("active");
-
-    activeLayer=layerName;
-
-    if(layerName==="radar"){
-     removeOyaDisplayedLayer();
-     removeReflectivityDisplayedLayer();
-
-     frameSlider.style.display="none";
-     oyaTimelineSegments.style.display="none";
-     oyaTimelineProgress.style.display="none";
-
-     if(radarLayer){
-      radarLayer.setVisible(true);
-     }
-
-    }else{
-     if(radarLayer){
-      radarLayer.setVisible(false);
-     }
-
-     frameSlider.style.display="block";
-
-     resetLoadedTimeline();
-
-     if(!oyaCapabilitiesLoaded){
-      loadOyaCapabilities();
-     }else if(layerName==="oya"){
-      loadOyaFrame(oyaFrameIndex);
-      preloadOyaFrames();
-     }else{
-      loadReflectivityFrame(
-       reflectivityFrameIndex
-      );
-      preloadOyaFrames();
-     }
-    }
-
-    renderOyaTimeline();
-    updateTimeLabel();
-   }
-  );
- });
-
-document.getElementById("locateBtn")
- .addEventListener(
-  "click",
-  ()=>{
-   if(!navigator.geolocation)return;
-
-   navigator.geolocation.getCurrentPosition(
-    position=>{
-     const coordinate=
-      proj.fromLonLat([
-       position.coords.longitude,
-       position.coords.latitude
-      ]);
-
-     map.getView().animate({
-      center:coordinate,
-      zoom:8,
-      duration:400
-     });
-    }
-   );
-  }
- );
-
-document.getElementById("searchBtn")
- .addEventListener(
-  "click",
-  ()=>{
-   const query=prompt(
-    "Поиск города:"
-   );
-
-   if(!query)return;
-
-   fetch(
-    "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+
-    encodeURIComponent(query)
-   )
-   .then(r=>r.json())
-   .then(data=>{
-    if(!data.length)return;
-
-    map.getView().animate({
-     center:proj.fromLonLat([
-      Number(data[0].lon),
-      Number(data[0].lat)
-     ]),
-     zoom:8,
-     duration:500
-    });
-   })
-   .catch(()=>{});
-  }
-);
-
-function initRainViewer(){
- /*
-  * RainViewer block intentionally kept unchanged.
-  */
-}
-
-renderOyaPalette();
-renderReflectivityPalette();
-
-const storedOpacity=Number(
- localStorage.getItem(
-  OYA_OPACITY_STORAGE_KEY
- )
-);
-
-if(Number.isFinite(storedOpacity)){
- setOyaOpacity(storedOpacity);
-}else{
- setOyaOpacity(90);
-}
-
-loadOyaCapabilities();
-
-oyaRefreshTimer=setInterval(
- ()=>{
-  loadOyaCapabilities();
- },
- OYA_REFRESH_INTERVAL
-);
-
-renderOyaTimeline();
-updateTimeLabel();
-
-</script>
-</body>
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        overflow: hidden;
+      }
+
+      #map {
+        position: absolute;
+        inset: 0;
+        background: #0d1a2d;
+      }
+
+      #brand {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 10;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: rgba(7, 24, 39, 0.8);
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 16px 32px var(--shadow);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+      }
+
+      #brand::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8be9fd, #3cc8ff);
+        box-shadow: 0 0 14px rgba(100, 210, 255, 0.9);
+      }
+
+      #status {
+        position: absolute;
+        left: 18px;
+        top: 72px;
+        z-index: 10;
+        max-width: min(420px, calc(100vw - 200px));
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgba(8, 18, 31, 0.8);
+        border: 1px solid var(--panel-border);
+        color: var(--muted);
+        font-size: 0.8rem;
+        backdrop-filter: blur(10px);
+      }
+
+      #controls {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        z-index: 10;
+        display: flex;
+        gap: 10px;
+      }
+
+      .control-btn {
+        appearance: none;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(8, 18, 31, 0.82);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 10px 30px var(--shadow);
+        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+      }
+
+      .control-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(100, 210, 255, 0.9);
+      }
+
+      .control-btn.primary {
+        background: linear-gradient(135deg, rgba(20, 126, 195, 0.68), rgba(17, 94, 146, 0.8));
+      }
+
+      .ol-zoom {
+        position: absolute;
+        left: 18px !important;
+        bottom: 18px !important;
+        top: auto !important;
+      }
+
+      .ol-control button {
+        background: rgba(9, 18, 31, 0.86) !important;
+        color: var(--text) !important;
+        border: 1px solid rgba(148, 163, 184, 0.25) !important;
+      }
+
+      .ol-attribution {
+        right: 10px !important;
+        bottom: 10px !important;
+        background: rgba(9, 18, 31, 0.7) !important;
+        border-radius: 8px;
+      }
+
+      .ol-attribution a {
+        color: #d9f4ff !important;
+      }
+
+      @media (max-width: 640px) {
+        #brand {
+          padding: 8px 12px;
+          font-size: 0.72rem;
+          letter-spacing: 0.06em;
+        }
+
+        #status {
+          top: 62px;
+          max-width: min(320px, calc(100vw - 140px));
+          font-size: 0.72rem;
+        }
+
+        #controls {
+          top: auto;
+          bottom: 18px;
+          right: 18px;
+        }
+
+        .control-btn {
+          padding: 8px 10px;
+          font-size: 0.78rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="brand">COOLrad</div>
+    <div id="status">Реальные радарные данные • nowcast.ru • Россия</div>
+
+    <div id="controls">
+      <button id="refreshBtn" class="control-btn primary">Обновить</button>
+      <button id="centerBtn" class="control-btn">Россия</button>
+    </div>
+
+    <div id="map" aria-label="Карта метеорадара"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
+    <script>
+      const OYA_PROXY = "/api/oya";
+      const FALLBACK_LAYER_NAMES = [
+        "radar",
+        "oya",
+        "precip",
+        "russia_radar",
+        "weather_radar",
+        "rain",
+        "reflectivity"
+      ];
+
+      let radarLayer = null;
+      let selectedLayerName = null;
+
+      const map = new ol.Map({
+        target: "map",
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM({
+              attributions: "© OpenStreetMap contributors"
+            })
+          })
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([100, 61]),
+          zoom: 3,
+          minZoom: 2,
+          maxZoom: 9
+        })
+      });
+
+      const statusEl = document.getElementById("status");
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? "#ffd7d7" : "#9bb4c9";
+      }
+
+      function getCurrentExtent() {
+        const size = map.getSize() || [1200, 800];
+        return map.getView().calculateExtent(size);
+      }
+
+      function buildGetMapUrl(layerName, extent, size) {
+        const params = new URLSearchParams({
+          action: "image",
+          SERVICE: "WMS",
+          VERSION: "1.1.1",
+          REQUEST: "GetMap",
+          LAYERS: layerName,
+          STYLES: "",
+          SRS: "EPSG:3857",
+          BBOX: extent.join(","),
+          WIDTH: String(size[0]),
+          HEIGHT: String(size[1]),
+          FORMAT: "image/png",
+          TRANSPARENT: "true",
+          TIME: new Date().toISOString()
+        });
+
+        return `${OYA_PROXY}?${params.toString()}`;
+      }
+
+      function createRadarImageLayer(url, extent) {
+        const source = new ol.source.ImageStatic({
+          url,
+          imageExtent: extent,
+          projection: "EPSG:3857"
+        });
+
+        const layer = new ol.layer.Image({
+          source,
+          opacity: 0.9
+        });
+
+        return layer;
+      }
+
+      async function parseCapabilities() {
+        const response = await fetch(`${OYA_PROXY}?action=capabilities`, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(`Nowcast capabilities: ${response.status}`);
+        }
+
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, "application/xml");
+        const allNames = [...xml.querySelectorAll("Name")].map((node) =>
+          node.textContent.trim()
+        );
+
+        const layered = allNames.filter(Boolean).map((name) => name.toLowerCase());
+
+        for (const candidate of FALLBACK_LAYER_NAMES) {
+          if (layered.some((item) => item.includes(candidate))) {
+            return allNames.find((name) => name.toLowerCase().includes(candidate));
+          }
+        }
+
+        return allNames[0] || null;
+      }
+
+      function renderRadarLayer() {
+        const size = map.getSize() || [1200, 800];
+        const extent = getCurrentExtent();
+
+        if (!selectedLayerName) {
+          return;
+        }
+
+        const radarUrl = buildGetMapUrl(selectedLayerName, extent, size);
+
+        const nextLayer = createRadarImageLayer(radarUrl, extent);
+
+        if (radarLayer) {
+          map.removeLayer(radarLayer);
+        }
+
+        radarLayer = nextLayer;
+        map.addLayer(radarLayer);
+      }
+
+      async function initRadar() {
+        try {
+          setStatus("Подключаю реальный радар Nowcast.ru…");
+          selectedLayerName = await parseCapabilities();
+
+          if (!selectedLayerName) {
+            throw new Error("Не удалось определить слой радарных данных");
+          }
+
+          renderRadarLayer();
+          setStatus(`Live radar • ${selectedLayerName.toUpperCase()} • Russia`);
+        } catch (error) {
+          console.error(error);
+          setStatus(
+            "Proxy Nowcast не отвечает. Проверьте /api/oya и доступность nowcast.ru.",
+            true
+          );
+        }
+      }
+
+      document.getElementById("refreshBtn").addEventListener("click", () => {
+        renderRadarLayer();
+        setStatus(`Обновление • ${selectedLayerName ? selectedLayerName.toUpperCase() : "radar"}`);
+      });
+
+      document.getElementById("centerBtn").addEventListener("click", () => {
+        map.getView().animate({
+          center: ol.proj.fromLonLat([100, 61]),
+          zoom: 3,
+          duration: 500
+        });
+      });
+
+      map.on("moveend", () => {
+        if (selectedLayerName) {
+          renderRadarLayer();
+        }
+      });
+
+      initRadar();
+    </script>
+  </body>
 </html>
