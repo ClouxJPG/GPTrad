@@ -1,75 +1,113 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мониторинг ДМРЛ</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { width: 100%; height: 100%; background: #121212; font-family: sans-serif; }
-        #map { width: 100vw; height: 100vh; }
-        
-        .status-card {
-            position: absolute;
-            top: 15px; left: 50px;
-            z-index: 1000;
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(6px);
-            color: #fff;
-            padding: 12px 18px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.15);
-            font-size: 13px;
-        }
-        .status-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            background: #00ff88;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROCKET Radar</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0a0a0f; font-family: sans-serif; }
+  #map { position: absolute; inset: 0; background: #0a0a0f; z-index: 1; }
+  .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.4); }
+
+  #timeline {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; align-items: center; gap: 8px;
+    background: rgba(10,10,20,0.85); backdrop-filter: blur(12px);
+    padding: 10px 16px; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  #timeline button {
+    width: 32px; height: 32px; border: none; border-radius: 8px;
+    background: rgba(255,255,255,0.06); color: #fff; cursor: pointer;
+  }
+  #slider { width: 140px; accent-color: #4a9eff; }
+  #ts-label { color: #8892a0; font-size: 11px; min-width: 52px; text-align: center; }
+
+  #legend {
+    position: absolute; top: 16px; left: 16px; z-index: 1000;
+    background: rgba(10,10,20,0.85); backdrop-filter: blur(12px);
+    padding: 10px 12px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  #legend .row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  #legend .swatch { width: 14px; height: 14px; border-radius: 3px; }
+  #legend .label { color: #c0c8d4; font-size: 10px; }
+
+  @media (max-width: 480px) { #slider { width: 90px; } }
+</style>
 </head>
 <body>
+<div id="map"></div>
 
-<div class="status-card">
-    <div><span class="status-dot"></span><strong>Слой:</strong> Объединённый ДМРЛ (Эхо осадков)</div>
-    <div style="color: #aaa; margin-top: 4px;">Тип: Радарная отражаемость (dBZ)</div>
+<div id="legend">
+  <div class="row"><span class="swatch" style="background:#6495ed"></span><span class="label">слабые</span></div>
+  <div class="row"><span class="swatch" style="background:#32cd32"></span><span class="label">умеренные</span></div>
+  <div class="row"><span class="swatch" style="background:#ffd700"></span><span class="label">сильные</span></div>
+  <div class="row"><span class="swatch" style="background:#ff4500"></span><span class="label">ливни</span></div>
+  <div class="row"><span class="swatch" style="background:#8b0000"></span><span class="label">экстремальные</span></div>
 </div>
 
-<div id="map"></div>
+<div id="timeline">
+  <button id="playBtn">▶</button>
+  <button id="prevBtn">◀</button>
+  <input type="range" id="slider" min="0" max="0" value="0">
+  <button id="nextBtn">▶</button>
+  <span id="ts-label">--:>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // 1. Инициализация карты Leaflet
-    const map = L.map('map', {
-        center: [55.751244, 37.618423],
-        zoom: 6,
-        zoomControl: true
-    });
+let map, radarLayer, frames = [], idx = 0, playing = false, timer = null;
 
-    // 2. Тёмная контрастная подложка (чтобы радар выделялся)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18,
-        subdomains: 'abcd'
-    }).addTo(map);
+function initMap() {
+  map = L.map("map", { zoomControl: false }).setView([58, 50], 5);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
+    maxZoom: 10, subdomains: "abcd"
+  }).addTo(map);
+  radarLayer = L.layerGroup().addTo(map);
+}
 
-    // 3. Подключение WMS-слоя ДМРЛ
-    // Стандартный WMS-запрос, создающий тайлы на лету по BBOX координат
-    const dmrlRadar = L.tileLayer.wms('https://radar.rmc.ru/geoserver/wms', {
-        layers: 'dmrl:composite',
-        format: 'image/png',
-        transparent: true,
-        version: '1.1.1',
-        opacity: 0.75,
-        zIndex: 500
-    });
+async function loadFrames() {
+  const r = await fetch("/api/frames");
+  const data = await r.json();
+  frames = data.frames || [];
+  if (!frames.length) return;
+  document.getElementById("slider").max = frames.length - 1;
+  idx = frames.length - 1;
+  document.getElementById("slider").value = idx;
+  render();
+}
 
-    dmrlRadar.addTo(map);
+function render() {
+  radarLayer.clearLayers();
+  const f = frames[idx];
+  const bounds = [[41.0, 19.0], [82.0, 190.0]];
+  L.imageOverlay(f.url, bounds, { opacity: 0.9 }).addTo(radarLayer);
+  const d = new Date();
+  document.getElementById("ts-label").textContent =
+    `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+function goTo(i) {
+  idx = Math.max(0, Math.min(frames.length - 1, i));
+  document.getElementById("slider").value = idx;
+  render();
+}
+
+document.getElementById("playBtn").onclick = () => {
+  playing = !playing;
+  document.getElementById("playBtn").textContent = playing ? "❚❚" : "▶";
+  if (playing) timer = setInterval(() => goTo(idx + 1 >= frames.length ? 0 : idx + 1), 400);
+  else clearInterval(timer);
+};
+document.getElementById("prevBtn").onclick = () => goTo(idx - 1);
+document.getElementById("nextBtn").onclick = () => goTo(idx + 1);
+document.getElementById("slider").oninput = (e) => goTo(parseInt(e.target.value));
+
+initMap();
+loadFrames();
+setInterval(loadFrames, 600000);
 </script>
-
 </body>
 </html>
