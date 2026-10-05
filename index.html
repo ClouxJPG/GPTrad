@@ -2,51 +2,81 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Карта ДМРЛ Росгидромета</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивная карта Leaflet</title>
+    
+    <!-- Подключаем CSS Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; }
-        #map { height: 100vh; width: 100%; background: #242424; }
-        .info-panel {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            width: 100vw;
+            height: 100vh;
+            background: #191919;
+        }
+        .controls-panel {
             position: absolute;
-            top: 15px; right: 15px;
+            top: 20px;
+            right: 20px;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: sans-serif;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(8px);
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .controls-panel h3 {
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .controls-panel p {
             font-size: 13px;
+            color: #aaaaaa;
         }
     </style>
 </head>
 <body>
 
-<div class="info-panel">
-    <strong>Слой:</strong> Объединенная карта ДМРЛ РФ<br>
-    <strong>Источник:</strong> ЦАО / Росгидромет
+<div class="controls-panel">
+    <h3>Интерактивная карта</h3>
+    <p>Центр: Москва (55.75, 37.61)</p>
 </div>
 
 <div id="map"></div>
 
+<!-- Подключаем JS Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // 1. Инициализируем карту (Центр - Европейская часть РФ)
-    const map = L.map('map').setView([55.75, 37.61], 6);
+    // 1. Инициализируем карту (Центр - Москва, масштаб - 6)
+    const map = L.map('map', {
+        zoomControl: true,
+        attributionControl: false
+    }).setView([55.751244, 37.618423], 6);
 
-    // 2. Тёмная подложка карты (чтобы радарные данные выглядели контрастно)
+    // 2. Добавляем стильную тёмную подложку (CartoDB Dark Matter)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        maxZoom: 12
+        maxZoom: 19,
+        subdomains: 'abcd'
     }).addTo(map);
 
-    // 3. Прямой слой карты ДМРЛ из открытого геосервиса ЦАО
-    // Этот WMS/Tile сервис отдаёт сырые отражаемости осадков (dBZ)
-    const dmrlLayer = L.tileLayer('https://radar.rmc.ru/tiles/dmrl/{z}/{x}/{y}.png', {
-        opacity: 0.75,
-        maxZoom: 10,
-        tileSize: 256
-    }).addTo(map);
+    // 3. Добавляем копирайт в правый нижний угол
+    L.control.attribution({ position: 'bottomright' })
+        .addAttribution('&copy; <a href="https://openstreetmap.org" style="color:#aaa;">OpenStreetMap</a> &copy; <a href="https://carto.com/" style="color:#aaa;">CARTO</a>')
+        .addTo(map);
 </script>
 
 </body>
