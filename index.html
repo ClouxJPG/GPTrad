@@ -64,8 +64,10 @@
 <script>
 const MAP_BOUNDS = [[41.0, 19.0], [82.0, 190.0]];
 const GIF_URL = "https://meteoinfo.ru/hmc-output/rmap/phenomena.gif";
-const PROXY = "https://api.allorigins.win/raw?url=";
-
+const PROXIES = [
+  "https://api.allorigins.win/raw?url=",
+  "https://api.codetabs.com/v1/proxy?quest="
+];
 const RAIN_COLORS = [
   [100, 149, 237],
   [50, 205, 50],
