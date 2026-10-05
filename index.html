@@ -63,8 +63,9 @@
 <script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
 <script>
 const MAP_BOUNDS = [[41.0, 19.0], [82.0, 190.0]];
+const GIF_URL = "https://meteoinfo.ru/hmc-output/rmap/phenomena.gif";
+const PROXY = "https://corsproxy.io/?url=";
 
-// Цвета осадков РГМЦ (подбери под реальную гифку)
 const RAIN_COLORS = [
   [100, 149, 237],
   [50, 205, 50],
@@ -90,8 +91,6 @@ function initMap() {
   map.on("mouseout", () => { document.getElementById("coords").textContent = "—"; });
 }
 
-// --- Утилиты для работы с пикселями ---
-
 function colorDistance(a, b) {
   return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]);
 }
@@ -110,7 +109,6 @@ function fillHoles(data, mask, w, h, radius = 9) {
       const i = (y * w + x) * 4;
       if (mask[y * w + x]) continue;
 
-      // Собираем цвета соседей-осадков
       const counts = new Map();
       for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
@@ -138,52 +136,36 @@ function cleanFrame(imageData) {
   const { data, width, height } = imageData;
   const mask = new Uint8Array(width * height);
 
-  // 1. Определяем маску осадков
   for (let i = 0; i < width * height; i++) {
     const p = i * 4;
-    if (isRainColor(data[p], data[p+1], data[p+2])) {
-      mask[i] = 1;
-    }
+    if (isRainColor(data[p], data[p+1], data[p+2])) mask[i] = 1;
   }
 
-  // 2. Заливаем дыры (города, границы)
   const filled = fillHoles(data, mask, width, height, 9);
 
-  // 3. Делаем всё, кроме осадков, прозрачным
   for (let i = 0; i < width * height; i++) {
     const p = i * 4;
-    if (!mask[i]) {
-      filled[p+3] = 0;
-    } else {
-      filled[p+3] = 255;
-    }
+    filled[p+3] = mask[i] ? 255 : 0;
   }
 
   return new ImageData(filled, width, height);
 }
-
-// --- Основная загрузка ---
 
 async function loadRadar() {
   const statusEl = document.getElementById("status");
   statusEl.textContent = "загрузка...";
 
   try {
-    // 1. Получаем гифку через прокси
-    const resp = await fetch("/api/proxy");
+    const resp = await fetch(PROXY + encodeURIComponent(GIF_URL));
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const buffer = await resp.arrayBuffer();
 
-    // 2. Разбираем гифку на кадры
     const gif = window.gifuct.parseGIF(buffer);
     const frames = window.gifuct.decompressFrames(gif, true);
+    if (!frames.length) throw new Error("Нет кадров");
 
-    if (!frames.length) throw new Error("Нет кадров в гифке");
-
-    // 3. Берём последний кадр (самый свежий)
     const frame = frames[frames.length - 1];
 
-    // 4. Рисуем кадр на canvas
     const canvas = document.createElement("canvas");
     canvas.width = frame.dims.width;
     canvas.height = frame.dims.height;
@@ -193,12 +175,10 @@ async function loadRadar() {
     imageData.data.set(frame.patch);
     ctx.putImageData(imageData, 0, 0);
 
-    // 5. Чистим (пикселизация 1×1, заливка дыр, прозрачный фон)
     const raw = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const cleaned = cleanFrame(raw);
     ctx.putImageData(cleaned, 0, 0);
 
-    // 6. Конвертируем в PNG и накладываем на карту
     const pngUrl = canvas.toDataURL("image/png");
     radarLayer.clearLayers();
     L.imageOverlay(pngUrl, MAP_BOUNDS, { opacity: 0.85, interactive: false }).addTo(radarLayer);
