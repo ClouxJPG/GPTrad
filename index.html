@@ -2,61 +2,51 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Карта осадков</title>
-    <!-- Подключаем стили Leaflet -->
+    <title>Карта ДМРЛ Росгидромета</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-        .controls {
+        body, html { margin: 0; padding: 0; height: 100%; }
+        #map { height: 100vh; width: 100%; background: #242424; }
+        .info-panel {
             position: absolute;
-            top: 20px;
-            left: 50px;
+            top: 15px; right: 15px;
             z-index: 1000;
-            background: white;
-            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px;
             border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            font-family: sans-serif;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
 
-<div class="controls">
-    <button onclick="toggleRadar()">Вкл/Выкл радар</button>
+<div class="info-panel">
+    <strong>Слой:</strong> Объединенная карта ДМРЛ РФ<br>
+    <strong>Источник:</strong> ЦАО / Росгидромет
 </div>
 
 <div id="map"></div>
 
-<!-- Подключаем скрипт Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // 1. Инициализация карты (центрируем на Россию/Москву)
-    const map = L.map('map').setView([55.751244, 37.618423], 6);
+    // 1. Инициализируем карту (Центр - Европейская часть РФ)
+    const map = L.map('map').setView([55.75, 37.61], 6);
 
-    // 2. Базовый слой подложки (OpenStreetMap)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // 3. Слой погодного радара с вашего бэкенд-сервера
-    const radarLayer = L.tileLayer('http://localhost:8000/api/tile/{z}/{x}/{y}.png?time=1789999600000', {
-        opacity: 0.6, // Прозрачность слоя осадков
+    // 2. Тёмная подложка карты (чтобы радарные данные выглядели контрастно)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 12
     }).addTo(map);
 
-    // Функция переключения видимости радара
-    let isVisible = true;
-    function toggleRadar() {
-        if (isVisible) {
-            map.removeLayer(radarLayer);
-        } else {
-            map.addLayer(radarLayer);
-        }
-        isVisible = !isVisible;
-    }
+    // 3. Прямой слой карты ДМРЛ из открытого геосервиса ЦАО
+    // Этот WMS/Tile сервис отдаёт сырые отражаемости осадков (dBZ)
+    const dmrlLayer = L.tileLayer('https://radar.rmc.ru/tiles/dmrl/{z}/{x}/{y}.png', {
+        opacity: 0.75,
+        maxZoom: 10,
+        tileSize: 256
+    }).addTo(map);
 </script>
 
 </body>
