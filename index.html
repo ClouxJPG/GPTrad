@@ -3,367 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ROCKET Radar — Россия</title>
+<title>ROCKET Radar</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-  :root {
-    --bg-deep:    #06070b;
-    --bg-panel:   rgba(14, 16, 24, 0.78);
-    --bg-hover:   rgba(255, 255, 255, 0.06);
-    --border:     rgba(255, 255, 255, 0.07);
-    --border-hi:  rgba(120, 180, 255, 0.35);
-    --text:       #e6ecf5;
-    --text-dim:   #7a8496;
-    --text-mute:  #4a5264;
-    --accent:     #4a9eff;
-    --accent-glow: rgba(74, 158, 255, 0.5);
-    --rain-1: #6495ed;
-    --rain-2: #32cd32;
-    --rain-3: #ffd700;
-    --rain-4: #ff4500;
-    --rain-5: #8b0000;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
     height: 100%;
-    background: var(--bg-deep);
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #e8e8e8;
     overflow: hidden;
-    font-feature-settings: "tnum" 1, "cv11" 1;
   }
 
-  /* ---------- КАРТА ---------- */
+  /* ===== КАРТА — ОБЫЧНАЯ, СВЕТЛАЯ ===== */
   #map {
     position: absolute;
     inset: 0;
-    background: var(--bg-deep);
     z-index: 1;
   }
 
-  /* Тёмный фильтр для OSM-тайлов (без CartoDB) */
-  .leaflet-tile {
-    filter: invert(1) hue-rotate(180deg) brightness(0.35) contrast(1.25) saturate(0.6);
-  }
-
-  .leaflet-control-attribution {
-    background: rgba(6, 7, 11, 0.6) !important;
-    color: var(--text-mute) !important;
-    font-size: 9px !important;
-    padding: 2px 6px !important;
-    border-radius: 4px 0 0 0;
-  }
-  .leaflet-control-attribution a { color: var(--text-dim) !important; }
-
-  /* ---------- ВЕРХНИЙ ХЕДЕР ---------- */
-  #header {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    pointer-events: none;
-    background: linear-gradient(to bottom, rgba(6,7,11,0.85) 0%, transparent 100%);
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    pointer-events: auto;
-  }
-
-  .brand-logo {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    background: linear-gradient(135deg, #4a9eff 0%, #2c5faa 100%);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 4px 12px var(--accent-glow);
-    position: relative;
-  }
-  .brand-logo::after {
-    content: "";
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 8px #fff;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.5; transform: scale(0.85); }
-  }
-
-  .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
-  .brand-title {
-    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .brand-sub {
-    font-size: 9px; color: var(--text-dim); letter-spacing: 0.15em;
-    text-transform: uppercase; margin-top: 1px;
-  }
-
-  .header-right {
-    display: flex; align-items: center; gap: 10px;
-    pointer-events: auto;
-  }
-
-  .status-pill {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 10px;
-    background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 0.05em;
-  }
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #2ecc71;
-    box-shadow: 0 0 6px #2ecc71;
-  }
-  .status-dot.offline { background: #e74c3c; box-shadow: 0 0 6px #e74c3c; }
-
-  /* ---------- ЛЕГЕНДА ---------- */
+  /* ===== ЛЕГЕНДА РГМЦ ===== */
   #legend {
     position: absolute;
-    top: 72px; left: 18px;
+    top: 12px;
+    left: 12px;
     z-index: 1000;
-    background: var(--bg-panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 14px;
-    min-width: 148px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    min-width: 140px;
   }
 
-  .legend-title {
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-mute);
-    margin-bottom: 9px;
+  #legend .title {
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 6px;
+    color: #222;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
   }
 
-  .legend-row {
-    display: flex; align-items: center; gap: 8px;
-    margin: 5px 0;
-    cursor: default;
+  #legend .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 3px 0;
+    line-height: 1.2;
   }
-  .legend-swatch {
-    width: 12px; height: 12px;
-    border-radius: 3px;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
+
+  #legend .sw {
+    width: 16px;
+    height: 12px;
+    border: 1px solid #888;
     flex-shrink: 0;
   }
-  .legend-label {
-    font-size: 11px;
-    color: var(--text);
-    letter-spacing: 0.02em;
-  }
-  .legend-value {
-    margin-left: auto;
-    font-size: 9px;
-    color: var(--text-mute);
-    font-variant-numeric: tabular-nums;
+
+  #legend .txt {
+    color: #222;
+    font-size: 10px;
   }
 
-  /* ---------- ТАЙМЛАЙН ---------- */
-  #timeline-wrap {
+  /* ===== ТАЙМЛАЙН ===== */
+  #timeline {
     position: absolute;
-    bottom: 18px;
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-    width: min(560px, calc(100% - 24px));
-  }
-
-  #timeline {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: var(--bg-panel);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 10px 14px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    width: min(520px, calc(100% - 24px));
   }
 
-  .ctrl-btn {
-    width: 34px; height: 34px;
-    border: none;
-    border-radius: 10px;
-    background: var(--bg-hover);
-    color: var(--text);
+  #timeline button {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background: #f5f5f5;
+    color: #333;
     cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s, transform 0.1s;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
   }
-  .ctrl-btn:hover { background: rgba(255,255,255,0.12); }
-  .ctrl-btn:active { transform: scale(0.94); }
-  .ctrl-btn.primary {
-    background: linear-gradient(135deg, #4a9eff, #2c5faa);
-    box-shadow: 0 4px 14px var(--accent-glow);
-  }
-  .ctrl-btn.primary:hover { background: linear-gradient(135deg, #5aabff, #3a6fba); }
 
-  .ctrl-btn svg {
-    width: 14px; height: 14px;
-    fill: currentColor;
-  }
+  #timeline button:hover { background: #e0e0e0; }
+  #timeline button:active { background: #ccc; }
 
-  .slider-wrap {
+  #slider {
     flex: 1;
-    display: flex; flex-direction: column;
-    gap: 4px;
+    accent-color: #2980b9;
+    cursor: pointer;
     min-width: 0;
   }
 
-  input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px; height: 14px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(0,0,0,0.5);
-    cursor: grab;
-    transition: transform 0.1s;
-  }
-  input[type="range"]::-webkit-slider-thumb:active {
-    cursor: grabbing;
-    transform: scale(1.15);
-  }
-  input[type="range"]::-moz-range-thumb {
-    width: 14px; height: 14px;
-    background: #fff;
-    border: none;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px var(--accent);
-    cursor: grab;
-  }
-
-  .time-labels {
-    display: flex; justify-content: space-between;
-    font-size: 9px;
-    color: var(--text-mute);
-    letter-spacing: 0.05em;
-    font-variant-numeric: tabular-nums;
-    padding: 0 2px;
-  }
-
-  .time-current {
-    color: var(--accent);
-    font-weight: 600;
-  }
-
-  /* ---------- ПРАВАЯ ПАНЕЛЬ (координаты) ---------- */
-  #coord-panel {
-    position: absolute;
-    bottom: 18px;
-    right: 18px;
-    z-index: 1000;
-    background: var(--bg-panel);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 8px 12px;
+  #ts-label {
     font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 0.06em;
+    color: #555;
+    min-width: 40px;
+    text-align: center;
     font-variant-numeric: tabular-nums;
-    line-height: 1.5;
-    min-width: 130px;
   }
-  #coord-panel .coord-line { display: flex; justify-content: space-between; gap: 10px; }
-  #coord-panel .coord-label { color: var(--text-mute); }
-  #coord-panel .coord-value { color: var(--text); }
 
-  /* ---------- ЗУМ ---------- */
-  .leaflet-control-zoom {
-    border: none !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
-    border-radius: 12px !important;
-    overflow: hidden;
-    margin-top: 72px !important;
-    margin-left: 18px !important;
+  /* ===== СТАТУС ===== */
+  #status {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 10px;
+    color: #555;
+    font-family: monospace;
   }
-  .leaflet-control-zoom a {
-    background: var(--bg-panel) !important;
-    backdrop-filter: blur(12px);
-    color: var(--text) !important;
-    border: none !important;
-    border-bottom: 1px solid var(--border) !important;
-    width: 34px !important;
-    height: 34px !important;
-    line-height: 34px !important;
-    font-size: 16px !important;
-    font-weight: 300 !important;
+
+  /* ===== КООРДИНАТЫ ===== */
+  #coords {
+    position: absolute;
+    bottom: 16px;
+    right: 12px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 10px;
+    color: #555;
+    font-family: monospace;
+    line-height: 1.4;
   }
-  .leaflet-control-zoom a:last-child { border-bottom: none !important; }
-  .leaflet-control-zoom a:hover { background: rgba(255,255,255,0.08) !important; }
 
-  /* ---------- АДАПТИВ ---------- */
-  @media (max-width: 640px) {
-    #header { padding: 10px 12px; }
-    .brand-sub { display: none; }
-
+  /* ===== АДАПТИВ ===== */
+  @media (max-width: 500px) {
     #legend {
-      top: 60px; left: 12px;
-      padding: 10px 11px;
-      min-width: 130px;
+      padding: 6px 8px;
+      min-width: 120px;
+      font-size: 10px;
     }
-    .legend-label { font-size: 10px; }
+    #legend .sw { width: 14px; height: 10px; }
+    #legend .txt { font-size: 9px; }
 
-    #timeline-wrap {
-      bottom: 12px;
-      width: calc(100% - 20px);
+    #timeline {
+      padding: 6px 8px;
+      gap: 5px;
+      bottom: 10px;
     }
-    #timeline { padding: 8px 10px; gap: 8px; border-radius: 16px; }
-    .ctrl-btn { width: 32px; height: 32px; }
+    #timeline button { width: 28px; height: 28px; font-size: 11px; }
+    #slider { min-width: 60px; }
 
-    #coord-panel {
-      bottom: 76px;
-      right: 12px;
-      padding: 6px 10px;
-      font-size: 9px;
-      min-width: 110px;
-    }
-
-    .leaflet-control-zoom {
-      margin-top: 60px !important;
-      margin-left: 12px !important;
-    }
-  }
-
-  /* Плавное появление */
-  .fade-in { animation: fadeIn 0.5s ease both; }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    #coords { display: none; }
   }
 </style>
 </head>
@@ -371,147 +175,95 @@
 
 <div id="map"></div>
 
-<!-- HEADER -->
-<div id="header">
-  <div class="brand fade-in">
-    <div class="brand-logo"></div>
-    <div class="brand-text">
-      <span class="brand-title">ROCKET Radar</span>
-      <span class="brand-sub">Россия · сейчас</span>
-    </div>
+<!-- ЛЕГЕНДА РГМЦ (градации из документации ГИМЕТ-2010) -->
+<div id="legend">
+  <div class="title">Интенсивность осадков (мм/ч)</div>
+  <div class="row">
+    <span class="sw" style="background:#ADD8E6"></span>
+    <span class="txt">слабые (0.03–0.2)</span>
   </div>
-
-  <div class="header-right fade-in">
-    <div class="status-pill">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">подключение...</span>
-    </div>
+  <div class="row">
+    <span class="sw" style="background:#90EE90"></span>
+    <span class="txt">умеренные (0.2–0.5)</span>
   </div>
-</div>
-
-<!-- LEGEND -->
-<div id="legend" class="fade-in">
-  <div class="legend-title">Интенсивность</div>
-  <div class="legend-row">
-    <span class="legend-swatch" style="background: var(--rain-1)"></span>
-    <span class="legend-label">Слабые</span>
-    <span class="legend-value">0.1–1</span>
+  <div class="row">
+    <span class="sw" style="background:#FFD700"></span>
+    <span class="txt">сильные (&gt;0.5)</span>
   </div>
-  <div class="legend-row">
-    <span class="legend-swatch" style="background: var(--rain-2)"></span>
-    <span class="legend-label">Умеренные</span>
-    <span class="legend-value">1–5</span>
+  <div class="row">
+    <span class="sw" style="background:#FF8C00"></span>
+    <span class="txt">ливень слабый (1–3.6)</span>
   </div>
-  <div class="legend-row">
-    <span class="legend-swatch" style="background: var(--rain-3)"></span>
-    <span class="legend-label">Сильные</span>
-    <span class="legend-value">5–15</span>
+  <div class="row">
+    <span class="sw" style="background:#FF4500"></span>
+    <span class="txt">ливень умеренный (3.6–10)</span>
   </div>
-  <div class="legend-row">
-    <span class="legend-swatch" style="background: var(--rain-4)"></span>
-    <span class="legend-label">Ливни</span>
-    <span class="legend-value">15–30</span>
+  <div class="row">
+    <span class="sw" style="background:#DC143C"></span>
+    <span class="txt">ливень сильный (&gt;10)</span>
   </div>
-  <div class="legend-row">
-    <span class="legend-swatch" style="background: var(--rain-5)"></span>
-    <span class="legend-label">Экстрим</span>
-    <span class="legend-value">30+</span>
+  <div class="row">
+    <span class="sw" style="background:#8B0000"></span>
+    <span class="txt">гроза / град</span>
   </div>
 </div>
 
-<!-- TIMELINE -->
-<div id="timeline-wrap" class="fade-in">
-  <div id="timeline">
-    <button class="ctrl-btn primary" id="playBtn" title="Воспроизведение">
-      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-    <button class="ctrl-btn" id="prevBtn" title="Предыдущий кадр">
-      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-    </button>
+<div id="status">загрузка...</div>
+<div id="coords">—</div>
 
-    <div class="slider-wrap">
-      <input type="range" id="slider" min="0" max="0" value="0">
-      <div class="time-labels">
-        <span id="tsStart">--:--</span>
-        <span class="time-current" id="tsCurrent">--:--</span>
-        <span id="tsEnd">--:--</span>
-      </div>
-    </div>
-
-    <button class="ctrl-btn" id="nextBtn" title="Следующий кадр">
-      <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
-    </button>
-  </div>
-</div>
-
-<!-- COORDS -->
-<div id="coord-panel" class="fade-in">
-  <div class="coord-line">
-    <span class="coord-label">Ш</span>
-    <span class="coord-value" id="coordLat">—</span>
-  </div>
-  <div class="coord-line">
-    <span class="coord-label">Д</span>
-    <span class="coord-value" id="coordLon">—</span>
-  </div>
+<div id="timeline">
+  <button id="playBtn" title="Воспроизведение">▶</button>
+  <button id="prevBtn" title="Назад">◀</button>
+  <input type="range" id="slider" min="0" max="0" value="0">
+  <button id="nextBtn" title="Вперёд">▶</button>
+  <span id="ts-label">--:--</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-/* ---------- КОНФИГ ---------- */
+// ===== НАСТРОЙКИ =====
 const API_BASE = "";
-const REFRESH_MS = 600_000;      // 10 минут
-const PLAY_INTERVAL_MS = 450;    // скорость анимации
-const MAP_BOUNDS = [[41.0, 19.0], [82.0, 190.0]];  // границы радарного слоя
-const MAP_CENTER = [58, 50];
-const MAP_ZOOM = 5;
+const REFRESH_MS = 600000;       // 10 минут
+const PLAY_MS = 500;             // скорость анимации
+const MAP_BOUNDS = [[41.0, 19.0], [82.0, 190.0]];  // границы радарного слоя (подстрой при необходимости)
 
-/* ---------- СОСТОЯНИЕ ---------- */
+// ===== СОСТОЯНИЕ =====
 let map, radarLayer;
 let frames = [];
 let idx = 0;
 let playing = false;
 let playTimer = null;
 
-/* ---------- КАРТА ---------- */
+// ===== КАРТА =====
 function initMap() {
+  // Обычная Leaflet-карта, светлые OSM-тайлы
   map = L.map("map", {
-    zoomControl: false,
+    zoomControl: true,
     attributionControl: true,
-    minZoom: 3,
-    maxZoom: 10,
-    worldCopyJump: false,
-    zoomSnap: 0.25,
-    wheelPxPerZoomLevel: 90,
-  }).setView(MAP_CENTER, MAP_ZOOM);
+  }).setView([58, 50], 5);
 
-  // OSM-тайлы с тёмным CSS-фильтром (без CartoDB)
+  // Стандартные OSM-тайлы (без CartoDB)
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 10,
-    attribution: "&copy; OpenStreetMap",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
-
-  L.control.zoom({ position: "topleft" }).addTo(map);
 
   radarLayer = L.layerGroup().addTo(map);
 
   // Координаты под курсором
   map.on("mousemove", (e) => {
-    document.getElementById("coordLat").textContent = e.latlng.lat.toFixed(3) + "°";
-    document.getElementById("coordLon").textContent = e.latlng.lng.toFixed(3) + "°";
+    document.getElementById("coords").textContent =
+      `${e.latlng.lat.toFixed(2)}°N  ${e.latlng.lng.toFixed(2)}°E`;
   });
 
   map.on("mouseout", () => {
-    document.getElementById("coordLat").textContent = "—";
-    document.getElementById("coordLon").textContent = "—";
+    document.getElementById("coords").textContent = "—";
   });
 }
 
-/* ---------- ДАННЫЕ ---------- */
+// ===== ЗАГРУЗКА КАДРОВ =====
 async function loadFrames() {
-  const dot = document.getElementById("statusDot");
-  const txt = document.getElementById("statusText");
-
+  const statusEl = document.getElementById("status");
   try {
     const r = await fetch(`${API_BASE}/api/frames`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -519,105 +271,71 @@ async function loadFrames() {
 
     frames = data.frames || [];
     if (!frames.length) {
-      dot.classList.add("offline");
-      txt.textContent = "нет кадров";
+      statusEl.textContent = "нет кадров";
       return;
     }
 
-    dot.classList.remove("offline");
-    txt.textContent = `${frames.length} кадр${plural(frames.length)}`;
+    statusEl.textContent = `${frames.length} кадров`;
 
     const slider = document.getElementById("slider");
     slider.max = frames.length - 1;
-
-    // Остаёмся на последнем кадре при обновлении
     idx = frames.length - 1;
     slider.value = idx;
 
     render();
-    updateTimeLabels();
+    updateLabel();
   } catch (e) {
-    dot.classList.add("offline");
-    txt.textContent = "ошибка";
+    statusEl.textContent = "ошибка";
     console.error(e);
   }
 }
 
-function plural(n) {
-  const m = n % 10, h = n % 100;
-  if (h >= 11 && h <= 14) return "ов";
-  if (m === 1) return "";
-  if (m >= 2 && m <= 4) return "а";
-  return "ов";
-}
-
-/* ---------- РЕНДЕР ---------- */
+// ===== ОТРИСОВКА КАДРА =====
 function render() {
   if (!frames.length) return;
   radarLayer.clearLayers();
-  const f = frames[idx];
 
+  const f = frames[idx];
   L.imageOverlay(f.url, MAP_BOUNDS, {
-    opacity: 0.92,
+    opacity: 0.85,
     interactive: false,
-    className: "radar-frame",
   }).addTo(radarLayer);
 }
 
-/* ---------- ТАЙМЛАЙН ---------- */
-function parseTs(name) {
-  // имя файла: "<ts>_<i>.png"
-  const ts = parseInt(name.split("_")[0]);
-  return isNaN(ts) ? null : new Date(ts * 1000);
-}
-
-function fmtTime(d) {
-  if (!d) return "--:--";
-  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-}
-
-function updateTimeLabels() {
+// ===== МЕТКА ВРЕМЕНИ =====
+function updateLabel() {
   if (!frames.length) return;
+  const name = frames[idx].name;
+  const ts = parseInt(name.split("_")[0]);
+  if (isNaN(ts)) return;
 
-  const current = parseTs(frames[idx].name);
-  document.getElementById("tsCurrent").textContent = fmtTime(current);
-
-  // Время начала и конца архива — по самому раннему/позднему ts
-  const allTs = frames.map(f => parseInt(f.name.split("_")[0])).filter(n => !isNaN(n));
-  if (allTs.length) {
-    document.getElementById("tsStart").textContent =
-      fmtTime(new Date(Math.min(...allTs) * 1000));
-    document.getElementById("tsEnd").textContent =
-      fmtTime(new Date(Math.max(...allTs) * 1000));
-  }
+  const d = new Date(ts * 1000);
+  document.getElementById("ts-label").textContent =
+    `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
+// ===== ПЕРЕКЛЮЧЕНИЕ =====
 function goTo(i) {
   if (!frames.length) return;
   idx = Math.max(0, Math.min(frames.length - 1, i));
   document.getElementById("slider").value = idx;
   render();
-  updateTimeLabels();
+  updateLabel();
 }
 
-/* ---------- УПРАВЛЕНИЕ ---------- */
 function togglePlay() {
   playing = !playing;
-  const icon = document.getElementById("playIcon");
-  icon.innerHTML = playing
-    ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>'
-    : '<path d="M8 5v14l11-7z"/>';
-
+  document.getElementById("playBtn").textContent = playing ? "❚❚" : "▶";
   if (playing) {
     playTimer = setInterval(() => {
       goTo(idx + 1 >= frames.length ? 0 : idx + 1);
-    }, PLAY_INTERVAL_MS);
+    }, PLAY_MS);
   } else {
     clearInterval(playTimer);
   }
 }
 
-/* ---------- ИНИЦИАЛИЗАЦИЯ ---------- */
+// ===== СОБЫТИЯ =====
 document.getElementById("playBtn").onclick = togglePlay;
 document.getElementById("prevBtn").onclick = () => goTo(idx - 1);
 document.getElementById("nextBtn").onclick = () => goTo(idx + 1);
@@ -630,6 +348,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === " ") { e.preventDefault(); togglePlay(); }
 });
 
+// ===== СТАРТ =====
 initMap();
 loadFrames();
 setInterval(loadFrames, REFRESH_MS);
