@@ -1,31 +1,37 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071827"><title>COOLrad — российский радар</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-<style>
-:root{--panel:rgba(7,22,37,.94);--line:#31526a;--text:#eaf7ff;--muted:#9db8ca;--accent:#59d5ff}*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;overflow:hidden}body{background:#071827;color:var(--text);font:14px Arial,sans-serif}#map{position:absolute;inset:0;background:#102131}.leaflet-control-zoom a{background:#09243a!important;color:white!important;border-color:var(--line)!important}.leaflet-control-attribution{background:#071827dd!important;color:#b8cfdb!important}.leaflet-control-attribution a{color:var(--accent)!important}.glass{background:var(--panel);border:1px solid var(--line);box-shadow:0 14px 35px #02081799;backdrop-filter:blur(12px)}#top{position:absolute;z-index:1000;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}.brand,.tools{pointer-events:auto}.brand{padding:11px 15px;border-radius:13px;font-weight:900;letter-spacing:.12em}.brand b{color:var(--accent)}.brand small{display:block;color:var(--muted);font-size:9px;margin-top:4px}.tools{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);border-radius:9px;background:#0d2a40;color:var(--text);padding:9px 11px;cursor:pointer;font-weight:700}.btn:hover{border-color:var(--accent)}.btn:disabled{opacity:.5;cursor:wait}#panel{position:absolute;z-index:1001;right:14px;top:70px;width:min(360px,calc(100% - 28px));padding:15px;border-radius:14px;transform:translateX(120%);transition:.2s}.open{transform:translateX(0)!important}.row{margin:13px 0}.row label{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:6px}select,input{width:100%}select{padding:8px;background:#0b293e;color:var(--text);border:1px solid var(--line);border-radius:8px}input[type=range]{accent-color:var(--accent)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}#status{position:absolute;z-index:1000;left:14px;bottom:92px;padding:9px 11px;border-radius:9px;color:var(--muted);font-size:12px;max-width:calc(100% - 28px)}#status.ok{color:#b7f5cd}#status.err{color:#ffc5c5}#timeline{position:absolute;z-index:1000;left:14px;right:14px;bottom:14px;padding:9px 13px;border-radius:13px;text-align:center;font-size:11px}#slider{width:100%;accent-color:var(--accent)}.legend{color:var(--muted);font-size:11px;line-height:1.5}@media(max-width:600px){#top{top:9px;left:9px;right:9px}.brand{padding:9px;font-size:12px}.tools{gap:5px}.btn{padding:8px;font-size:11px}#panel{right:9px;top:67px}#status{left:9px;bottom:84px}#timeline{left:9px;right:9px;bottom:9px}}
-</style></head>
-<body>
-<div id="map"></div>
-<header id="top"><div class="brand glass"><b>●</b> COOLrad<small>REAL RADAR • РОССИЯ</small></div><div class="tools"><button class="btn glass" id="refresh">↻ Обновить</button><button class="btn glass" id="locate">⌖ Россия</button><button class="btn glass" id="settings">⚙ Панель</button></div></header>
-<aside id="panel" class="glass"><b style="font-size:17px">Управление</b><button class="btn" id="close" style="float:right">×</button><div class="row"><label>Город</label><select id="city"><option value="100,61,3">Вся Россия</option><option value="37.62,55.75,7">Москва</option><option value="30.31,59.94,7">Санкт-Петербург</option><option value="56.84,60.61,7">Екатеринбург</option><option value="82.92,55.03,6">Новосибирск</option><option value="49.11,55.79,7">Казань</option><option value="39.70,47.24,7">Ростов-на-Дону</option></select></div><div class="row"><label>Прозрачность <span id="opacityText">78%</span></label><input id="opacity" type="range" min="0" max="100" value="78"></div><div class="row"><label>Подложка</label><div class="grid"><button class="btn" id="light">Светлая</button><button class="btn" id="dark">Тёмная</button></div></div><div class="row grid"><button class="btn" id="fullscreen">⛶ Экран</button><button class="btn" id="source">↗ Источник</button></div><div class="legend">Карта и радар загружаются независимо. Если источник радара временно недоступен, базовая карта остаётся рабочей.</div></aside>
-<div id="status" class="glass">Инициализация карты…</div><div id="timeline" class="glass"><div>RADAR • <span id="time">—</span></div><input id="slider" type="range" min="0" max="0" value="0" disabled></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script>if(!window.L){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';document.head.appendChild(s)}</script>
-<script>
-(function(){
-function boot(){if(!window.L){setTimeout(boot,50);return}
-const status=document.getElementById('status'),opacity=document.getElementById('opacity');let radar=null,radarUrl=null;
-const map=L.map('map',{zoomControl:true,preferCanvas:false}).setView([61,100],3);
-const light=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
-const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'});
-light.addTo(map);light.on('tileerror',()=>setStatus('Подложка карты недоступна — проверьте соединение','err'));
-function setStatus(t,c){status.textContent=t;status.className='glass'+(c?' '+c:'')}
-function center(v){const [lon,lat,z]=v.split(',').map(Number);map.setView([lat,lon],z)}
-function removeRadar(){if(radar){map.removeLayer(radar);radar=null}if(radarUrl){URL.revokeObjectURL(radarUrl);radarUrl=null}}
-async function loadRadar(){const b=document.getElementById('refresh');b.disabled=true;setStatus('Загрузка радарного композита…');try{const r=await fetch('/api/meteoinfo?_='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const blob=await r.blob();if(!blob.type.startsWith('image/'))throw Error('сервер вернул не изображение');const u=URL.createObjectURL(blob);const bounds=[[35,20],[82,180]];const next=L.imageOverlay(u,bounds,{opacity:Number(opacity.value)/100,interactive:false});removeRadar();radar=next;radarUrl=u;radar.addTo(map);document.getElementById('time').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});setStatus('Радар загружен','ok')}catch(e){console.error(e);setStatus('Радар недоступен: '+e.message,'err')}finally{b.disabled=false}}
-document.getElementById('refresh').onclick=loadRadar;document.getElementById('locate').onclick=()=>center('100,61,3');document.getElementById('city').onchange=e=>center(e.target.value);document.getElementById('settings').onclick=()=>document.getElementById('panel').classList.toggle('open');document.getElementById('close').onclick=()=>document.getElementById('panel').classList.remove('open');opacity.oninput=e=>{document.getElementById('opacityText').textContent=e.target.value+'%';if(radar)radar.setOpacity(e.target.value/100)};document.getElementById('light').onclick=()=>{map.removeLayer(dark);light.addTo(map)};document.getElementById('dark').onclick=()=>{map.removeLayer(light);dark.addTo(map)};document.getElementById('fullscreen').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();document.getElementById('source').onclick=()=>window.open('https://meteoinfo.ru/radanim','_blank','noopener');map.invalidateSize();setStatus('Карта готова. Загружаю радар…');loadRadar()}
-boot();
-})();
-</script></body></html>
+import httpx
+from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# Разрешаем запрос с вашего фронтенда (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Заголовки, имитирующие реальный браузер
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://meteorad.ru/",
+}
+
+@app.get("/api/tile/{z}/{x}/{y}.png")
+async def get_radar_tile(z: int, x: int, y: int, time: str = "1789999600000"):
+    # Шаблон URL тайла (замените на прямой URL тайлового сервера, найденный в Network)
+    tile_url = f"https://meteorad.ru/tiles/{time}/{z}/{x}/{y}.png"
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(tile_url, headers=HEADERS, timeout=10.0)
+            if response.status_code == 200:
+                return Response(content=response.content, media_type="image/png")
+            return Response(status_code=response.status_code)
+        except Exception:
+            return Response(status_code=500)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
