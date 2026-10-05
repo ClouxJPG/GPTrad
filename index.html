@@ -1,37 +1,63 @@
-import httpx
-from fastapi import FastAPI, Response
-from fastapi.middleware.cors import CORSMiddleware
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карта осадков</title>
+    <!-- Подключаем стили Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 50px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
 
-app = FastAPI()
+<div class="controls">
+    <button onclick="toggleRadar()">Вкл/Выкл радар</button>
+</div>
 
-# Разрешаем запрос с вашего фронтенда (CORS)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+<div id="map"></div>
 
-# Заголовки, имитирующие реальный браузер
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://meteorad.ru/",
-}
+<!-- Подключаем скрипт Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Инициализация карты (центрируем на Россию/Москву)
+    const map = L.map('map').setView([55.751244, 37.618423], 6);
 
-@app.get("/api/tile/{z}/{x}/{y}.png")
-async def get_radar_tile(z: int, x: int, y: int, time: str = "1789999600000"):
-    # Шаблон URL тайла (замените на прямой URL тайлового сервера, найденный в Network)
-    tile_url = f"https://meteorad.ru/tiles/{time}/{z}/{x}/{y}.png"
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(tile_url, headers=HEADERS, timeout=10.0)
-            if response.status_code == 200:
-                return Response(content=response.content, media_type="image/png")
-            return Response(status_code=response.status_code)
-        except Exception:
-            return Response(status_code=500)
+    // 2. Базовый слой подложки (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    // 3. Слой погодного радара с вашего бэкенд-сервера
+    const radarLayer = L.tileLayer('http://localhost:8000/api/tile/{z}/{x}/{y}.png?time=1789999600000', {
+        opacity: 0.6, // Прозрачность слоя осадков
+        maxZoom: 12
+    }).addTo(map);
+
+    // Функция переключения видимости радара
+    let isVisible = true;
+    function toggleRadar() {
+        if (isVisible) {
+            map.removeLayer(radarLayer);
+        } else {
+            map.addLayer(radarLayer);
+        }
+        isVisible = !isVisible;
+    }
+</script>
+
+</body>
+</html>
