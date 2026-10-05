@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  radar:
+    build: .
+    container_name: rocket-radar
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
