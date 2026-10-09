@@ -1,43 +1,97 @@
-Вот простой пример на JavaScript, который берёт данные погоды из открытого API (например, OpenWeatherMap) и выводит их на страницу.
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Метеорологический виджет</title>
-  <style>
-    body {font-family: Arial, sans-serif; padding: 20px;}
-    #weather {border: 1px solid #ccc; padding: 10px; max-width: 300px;}
-  </style>
+<meta charset="UTF-8">
+<title>Radar‑интерфейс</title>
+<style>
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#111;color:#eee;}
+  .radar{position:relative;width:400px;height:400px;margin:50px auto;}
+  .radar canvas{border-radius:50%;background:#222;}
+  .targets{position:absolute;top:0;left:0;width:100%;height:100%;}
+  .target{
+    position:absolute;
+    width:8px;height:8px;
+    background:#0f0;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    animation:pulse 1.5s infinite;
+  }
+  @keyframes pulse{
+    0%{transform:translate(-50%,-50%) scale(0.8);opacity:0.8;}
+    100%{transform:translate(-50%,-50%) scale(1.5);opacity:0;}
+  }
+</style>
 </head>
 <body>
-  <h1>Погода сейчас</h1>
-  <div id="weather">Загрузка…</div>
+<div class="radar">
+  <canvas id="radarCanvas" width="400" height="400"></canvas>
+  <div class="targets" id="targets"></div>
+</div>
 
-  <script>
-    const apiKey = 'YOUR_API_KEY';          // замените на свой ключ
-    const city = 'Moscow';                  // город, который хотите показать
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=ru&appid=${apiKey}`;
+<script>
+const canvas = document.getElementById('radarCanvas');
+const ctx = canvas.getContext('2d');
+const centerX = canvas.width/2, centerY = canvas.height/2;
+const radius = 180;
 
-    fetch(url)
-      .then(resp => resp.json())
-      .then(data => {
-        const temp = data.main.temp;
-        const desc = data.weather[0].description;
-        const icon = data.weather[0].icon;
-        document.getElementById('weather').innerHTML = `
-          <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}">
-          <p><strong>${city}</strong></p>
-          <p>${temp}°C, ${desc}</p>
-        `;
-      })
-      .catch(err => {
-        document.getElementById('weather').textContent = 'Ошибка загрузки погоды';
-        console.error(err);
-      });
-  </script>
+// Функция рисования круга‑радар
+function drawRadar() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.strokeStyle = '#0f0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0,0,radius,0,Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Пример данных мишеней (x,y в координатах от 0 до 1)
+const targets = [
+  {x:0.3, y:0.4, color:'#ff0'},
+  {x:0.7, y:0.2, color:'#f0f'},
+  {x:0.5, y:0.8, color:'#0ff'}
+];
+
+// Отрисовка мишеней в DOM
+function renderTargets() {
+  const container = document.getElementById('targets');
+  container.innerHTML = '';
+  targets.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'target';
+    el.style.left = `${t.x*100}%`;
+    el.style.top  = `${t.y*100}%`;
+    el.style.background = t.color;
+    container.appendChild(el);
+  });
+}
+
+// Пульсирующий эффект «пульса» радар‑пульса
+let angle = 0;
+function pulse() {
+  angle += 0.01;
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.strokeStyle = `rgba(0,255,0,${Math.sin(angle)+1}/2)`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0,0,radius,0,Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Основной цикл
+function loop(){
+  drawRadar();
+  pulse();
+  requestAnimationFrame(loop);
+}
+
+renderTargets();
+loop();
+</script>
 </body>
 </html>
-Зарегистрируйтесь на OpenWeatherMap и получите бесплатный API‑ключ.
-Замените YOUR_API_KEY на свой ключ.
-При желании поменяйте city на нужный город.
-Этот код можно вставить в любой HTML‑страницу, и он будет показывать актуальную температуру и описание погоды. Если понадобится более сложный функционал (прогноз, карта, графики), дайте знать!
