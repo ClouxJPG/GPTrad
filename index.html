@@ -1,200 +1,43 @@
+Вот простой пример на JavaScript, который берёт данные погоды из открытого API (например, OpenWeatherMap) и выводит их на страницу.
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ROCKET Radar</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
-  #map { position: absolute; inset: 0; z-index: 1; }
-
-  #legend {
-    position: absolute; top: 12px; left: 12px; z-index: 1000;
-    background: rgba(255,255,255,0.95); border: 1px solid #bbb; border-radius: 4px;
-    padding: 8px 10px; font-size: 11px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    min-width: 140px;
-  }
-  #legend .title { font-weight: 700; font-size: 11px; margin-bottom: 6px; color: #222; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  #legend .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; line-height: 1.2; }
-  #legend .sw { width: 16px; height: 12px; border: 1px solid #888; flex-shrink: 0; }
-  #legend .txt { color: #222; font-size: 10px; }
-
-  #status {
-    position: absolute; top: 12px; right: 12px; z-index: 1000;
-    background: rgba(255,255,255,0.9); border: 1px solid #bbb; border-radius: 4px;
-    padding: 4px 8px; font-size: 10px; color: #555; font-family: monospace;
-  }
-
-  #coords {
-    position: absolute; bottom: 16px; right: 12px; z-index: 1000;
-    background: rgba(255,255,255,0.9); border: 1px solid #bbb; border-radius: 4px;
-    padding: 4px 8px; font-size: 10px; color: #555; font-family: monospace; line-height: 1.4;
-  }
-
-  @media (max-width: 500px) {
-    #legend { padding: 6px 8px; min-width: 120px; font-size: 10px; }
-    #legend .sw { width: 14px; height: 10px; }
-    #legend .txt { font-size: 9px; }
-    #coords { display: none; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>Метеорологический виджет</title>
+  <style>
+    body {font-family: Arial, sans-serif; padding: 20px;}
+    #weather {border: 1px solid #ccc; padding: 10px; max-width: 300px;}
+  </style>
 </head>
 <body>
+  <h1>Погода сейчас</h1>
+  <div id="weather">Загрузка…</div>
 
-<div id="map"></div>
+  <script>
+    const apiKey = 'YOUR_API_KEY';          // замените на свой ключ
+    const city = 'Moscow';                  // город, который хотите показать
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=ru&appid=${apiKey}`;
 
-<div id="legend">
-  <div class="title">Интенсивность осадков (мм/ч)</div>
-  <div class="row"><span class="sw" style="background:#ADD8E6"></span><span class="txt">слабые (0.03–0.2)</span></div>
-  <div class="row"><span class="sw" style="background:#90EE90"></span><span class="txt">умеренные (0.2–0.5)</span></div>
-  <div class="row"><span class="sw" style="background:#FFD700"></span><span class="txt">сильные (&gt;0.5)</span></div>
-  <div class="row"><span class="sw" style="background:#FF8C00"></span><span class="txt">ливень слабый (1–3.6)</span></div>
-  <div class="row"><span class="sw" style="background:#FF4500"></span><span class="txt">ливень умеренный (3.6–10)</span></div>
-  <div class="row"><span class="sw" style="background:#DC143C"></span><span class="txt">ливень сильный (&gt;10)</span></div>
-  <div class="row"><span class="sw" style="background:#8B0000"></span><span class="txt">гроза / град</span></div>
-</div>
-
-<div id="status">загрузка...</div>
-<div id="coords">—</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
-<script>
-const MAP_BOUNDS = [[41.0, 19.0], [82.0, 190.0]];
-const GIF_URL = "https://meteoinfo.ru/hmc-output/rmap/phenomena.gif";
-const PROXIES = [
-  "https://api.allorigins.win/raw?url=",
-  "https://api.codetabs.com/v1/proxy?quest="
-];
-const RAIN_COLORS = [
-  [100, 149, 237],
-  [50, 205, 50],
-  [255, 215, 0],
-  [255, 69, 0],
-  [139, 0, 0],
-];
-
-let map, radarLayer;
-
-function initMap() {
-  map = L.map("map", { zoomControl: true, attributionControl: true }).setView([58, 50], 5);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 10,
-    attribution: '&copy; OpenStreetMap',
-  }).addTo(map);
-  radarLayer = L.layerGroup().addTo(map);
-
-  map.on("mousemove", (e) => {
-    document.getElementById("coords").textContent =
-      `${e.latlng.lat.toFixed(2)}°N  ${e.latlng.lng.toFixed(2)}°E`;
-  });
-  map.on("mouseout", () => { document.getElementById("coords").textContent = "—"; });
-}
-
-function colorDistance(a, b) {
-  return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]);
-}
-
-function isRainColor(r, g, b) {
-  for (const c of RAIN_COLORS) {
-    if (colorDistance([r,g,b], c) < 120) return true;
-  }
-  return false;
-}
-
-function fillHoles(data, mask, w, h, radius = 9) {
-  const result = new Uint8ClampedArray(data);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      if (mask[y * w + x]) continue;
-
-      const counts = new Map();
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const ny = y + dy, nx = x + dx;
-          if (ny < 0 || ny >= h || nx < 0 || nx >= w) continue;
-          if (!mask[ny * w + nx]) continue;
-          const ni = (ny * w + nx) * 4;
-          const key = `${data[ni]},${data[ni+1]},${data[ni+2]}`;
-          counts.set(key, (counts.get(key) || 0) + 1);
-        }
-      }
-      if (counts.size === 0) continue;
-      let best = null, bestCount = 0;
-      for (const [k, v] of counts) {
-        if (v > bestCount) { bestCount = v; best = k; }
-      }
-      const [r, g, b] = best.split(",").map(Number);
-      result[i] = r; result[i+1] = g; result[i+2] = b; result[i+3] = 255;
-    }
-  }
-  return result;
-}
-
-function cleanFrame(imageData) {
-  const { data, width, height } = imageData;
-  const mask = new Uint8Array(width * height);
-
-  for (let i = 0; i < width * height; i++) {
-    const p = i * 4;
-    if (isRainColor(data[p], data[p+1], data[p+2])) mask[i] = 1;
-  }
-
-  const filled = fillHoles(data, mask, width, height, 9);
-
-  for (let i = 0; i < width * height; i++) {
-    const p = i * 4;
-    filled[p+3] = mask[i] ? 255 : 0;
-  }
-
-  return new ImageData(filled, width, height);
-}
-
-async function loadRadar() {
-  const statusEl = document.getElementById("status");
-  statusEl.textContent = "загрузка...";
-
-  try {
-    const resp = await fetch(PROXY + encodeURIComponent(GIF_URL));
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const buffer = await resp.arrayBuffer();
-
-    const gif = window.gifuct.parseGIF(buffer);
-    const frames = window.gifuct.decompressFrames(gif, true);
-    if (!frames.length) throw new Error("Нет кадров");
-
-    const frame = frames[frames.length - 1];
-
-    const canvas = document.createElement("canvas");
-    canvas.width = frame.dims.width;
-    canvas.height = frame.dims.height;
-    const ctx = canvas.getContext("2d");
-
-    const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
-    imageData.data.set(frame.patch);
-    ctx.putImageData(imageData, 0, 0);
-
-    const raw = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const cleaned = cleanFrame(raw);
-    ctx.putImageData(cleaned, 0, 0);
-
-    const pngUrl = canvas.toDataURL("image/png");
-    radarLayer.clearLayers();
-    L.imageOverlay(pngUrl, MAP_BOUNDS, { opacity: 0.85, interactive: false }).addTo(radarLayer);
-
-    statusEl.textContent = `обновлено ${new Date().toLocaleTimeString().slice(0,5)}`;
-  } catch (e) {
-    statusEl.textContent = `ошибка: ${e.message}`;
-    console.error(e);
-  }
-}
-
-initMap();
-loadRadar();
-setInterval(loadRadar, 300000);
-</script>
+    fetch(url)
+      .then(resp => resp.json())
+      .then(data => {
+        const temp = data.main.temp;
+        const desc = data.weather[0].description;
+        const icon = data.weather[0].icon;
+        document.getElementById('weather').innerHTML = `
+          <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}">
+          <p><strong>${city}</strong></p>
+          <p>${temp}°C, ${desc}</p>
+        `;
+      })
+      .catch(err => {
+        document.getElementById('weather').textContent = 'Ошибка загрузки погоды';
+        console.error(err);
+      });
+  </script>
 </body>
 </html>
+Зарегистрируйтесь на OpenWeatherMap и получите бесплатный API‑ключ.
+Замените YOUR_API_KEY на свой ключ.
+При желании поменяйте city на нужный город.
+Этот код можно вставить в любой HTML‑страницу, и он будет показывать актуальную температуру и описание погоды. Если понадобится более сложный функционал (прогноз, карта, графики), дайте знать!
