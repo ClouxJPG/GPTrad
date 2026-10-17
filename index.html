@@ -2,229 +2,338 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07111e">
-<title>Quantum Meteo — Storm Lab 3D</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101722">
+  <title>Quantum Storm — 3D Simulator</title>
 
-<style>
-:root{
-  color-scheme:dark;
-  --bg:#07111e;
-  --panel:#0d1a2a;
-  --line:#20354b;
-  --muted:#8ca1b8;
-  --blue:#51adff;
-  --green:#5de0b4;
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{
-  margin:0;background:var(--bg);color:#edf5ff;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  font-size:14px
-}
-button,input{font:inherit}
-button{color:inherit;cursor:pointer;touch-action:manipulation}
-button:active{transform:scale(.98)}
-#app{max-width:1300px;margin:auto;padding:0 18px 24px}
-header{
-  height:72px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--line);gap:12px
-}
-.brand{display:flex;align-items:center;gap:11px}
-.logo{
-  width:41px;height:41px;border:1px solid #438bd0;border-radius:12px;
-  display:grid;place-items:center;background:#102b44;color:#7ac4ff;
-  font-size:25px;font-weight:900
-}
-.brand strong,.brand small{display:block}
-.brand strong{font-size:13px;letter-spacing:1.5px}
-.brand small{margin-top:5px;color:var(--muted);font-size:10px;letter-spacing:1.5px}
-.live{font-size:9px;color:#b5c8da;letter-spacing:1px;white-space:nowrap}
-.live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 10px #5de0b4}
-.scene{
-  height:min(64vh,650px);min-height:350px;position:relative;overflow:hidden;
-  margin-top:16px;border:1px solid #263d53;border-radius:15px;
-  background:#091a2b;isolation:isolate
-}
-#scene{position:absolute;inset:0}
-#scene canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
-.overlay{position:absolute;z-index:2;pointer-events:none;text-shadow:0 2px 12px #0009}
-.heading{top:19px;left:20px}
-.eyebrow{font-size:9px;letter-spacing:2px;color:#75baff;font-weight:700}
-h1{font-size:clamp(20px,4vw,30px);margin:8px 0 5px;letter-spacing:1px}
-#stormDesc{font-size:12px;color:#c4d5e6;margin:0}
-.statusbar{
-  bottom:13px;left:15px;right:15px;display:flex;justify-content:space-between;
-  gap:10px;color:#c1d3e4;font-size:9px;letter-spacing:1px
-}
-.altitude{
-  top:24%;bottom:23%;right:14px;display:flex;flex-direction:column;
-  justify-content:space-between;align-items:flex-end;color:#d0deeb;font-size:9px
-}
-.altitude i{width:17px;height:1px;background:#aec3d8;opacity:.7}
-.loading{
-  position:absolute;inset:0;z-index:5;background:#091a2b;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;
-  gap:15px;color:#b7d7f5;font-size:10px;letter-spacing:1.4px
-}
-.loading.hide{display:none}
-.spinner{width:28px;height:28px;border:2px solid #28465f;border-top-color:#55b6ff;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.panel{
-  margin-top:16px;border:1px solid var(--line);border-radius:15px;
-  padding:20px;background:linear-gradient(145deg,#0e1d2e,#091523)
-}
-.panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-h2{font-size:19px;margin:7px 0 0}
-.primary,.secondary,.preset{
-  border:1px solid var(--line);border-radius:9px;background:#112238;
-  min-height:39px;padding:0 13px;font-size:11px;font-weight:650
-}
-.primary{background:#1767a9;border-color:#398bd0}
-.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
-.preset{
-  min-height:91px;padding:11px;text-align:left;display:flex;flex-direction:column;
-  justify-content:center;align-items:flex-start;gap:7px;background:#0a1726
-}
-.preset .symbol{font-size:20px;color:#76c3ff}
-.preset b{font-size:11px}
-.preset small{font-size:10px;color:var(--muted);line-height:1.4}
-.preset.active{border-color:#3995df;background:#102b44;box-shadow:inset 0 0 0 1px #3995df22}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:17px}
-.metric{padding:14px;border:1px solid var(--line);border-radius:10px;background:#081522;min-width:0}
-.metric span,.metric strong,.metric small{display:block}
-.metric span{font-size:9px;color:#9bb1c7;letter-spacing:1px}
-.metric strong{font-size:25px;margin-top:9px;font-variant-numeric:tabular-nums}
-.metric small{font-size:10px;color:var(--muted);margin-top:3px}
-.sliders{display:grid;gap:21px;margin-top:23px}
-.slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px 18px}
-.slider b,.slider small{display:block}
-.slider b{font-size:12px}
-.slider small{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
-.slider output{font-size:12px;color:#81c5ff;align-self:center;white-space:nowrap}
-.slider input{grid-column:1/-1;width:100%;margin:3px 0;accent-color:#50aaff}
-.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:23px}
-.hint{font-size:11px;color:#8199b1;line-height:1.7;margin:16px 0 0}
-footer{display:flex;justify-content:space-between;gap:12px;padding:21px 2px 0;color:#71869c;font-size:9px;letter-spacing:1px}
-.error{padding:25px;color:#ffd0d0;font-size:13px;line-height:1.6}
-@media(max-width:650px){
-  #app{padding:0 10px 18px}
-  header{height:62px}
-  .logo{width:36px;height:36px}
-  .brand strong{font-size:11px}
-  .brand small{font-size:9px}
-  .live{font-size:8px;letter-spacing:.4px}
-  .scene{height:53vh;min-height:330px;max-height:520px;margin-top:11px;border-radius:12px}
-  .heading{top:14px;left:13px}
-  .altitude{right:9px}
-  .panel{padding:13px;border-radius:12px}
-  h2{font-size:16px}
-  .panelhead{margin-bottom:15px}
-  .primary{padding:0 10px;font-size:10px}
-  .presets{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .preset{min-height:78px;padding:9px}
-  .preset:last-child{grid-column:1/-1;min-height:65px}
-  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .metric{padding:11px}
-  .metric strong{font-size:23px}
-  .actions button{flex:1 1 40%}
-  footer{font-size:8px;line-height:1.5}
-}
-@media(prefers-reduced-motion:reduce){.spinner{animation-duration:2s}}
-</style>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #101722;
+      color: #edf4ff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      outline: none;
+    }
+
+    .panel {
+      position: fixed;
+      z-index: 5;
+      left: 12px;
+      top: max(12px, env(safe-area-inset-top));
+      width: min(310px, calc(100vw - 24px));
+      max-height: calc(100dvh - 24px);
+      overflow-y: auto;
+      padding: 15px;
+      border: 1px solid #ffffff20;
+      border-radius: 16px;
+      background: #101722df;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 8px 35px #0004;
+    }
+
+    .brand {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing: 1.2px;
+    }
+
+    .subtitle {
+      margin: 5px 0 14px;
+      color: #91a4bc;
+      font-size: 12px;
+    }
+
+    .section-title {
+      margin: 14px 0 7px;
+      color: #9db2ce;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    select, button {
+      width: 100%;
+      min-height: 40px;
+      padding: 10px;
+      border: 1px solid #ffffff1c;
+      border-radius: 10px;
+      color: #eef5ff;
+      background: #202d3e;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      touch-action: manipulation;
+    }
+
+    button:active { transform: scale(.985); }
+
+    .primary {
+      margin-top: 8px;
+      background: #176de0;
+      border-color: #3989f8;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .control {
+      margin-top: 12px;
+    }
+
+    .control-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: #d9e5f5;
+      font-size: 12px;
+    }
+
+    .control-head output {
+      color: #70b5ff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #3994ff;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid #ffffff12;
+      border-radius: 10px;
+      background: #ffffff08;
+    }
+
+    .metric-label {
+      color: #91a4bc;
+      font-size: 10px;
+    }
+
+    .metric-value {
+      margin-top: 4px;
+      font-size: 17px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #status {
+      margin-top: 12px;
+      color: #a7bad1;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    #loading {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: #101722;
+    }
+
+    #loading h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+
+    #loading p {
+      max-width: 380px;
+      color: #9eb0c8;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    #loading.error {
+      background: #1a1017;
+    }
+
+    #errorDetails {
+      max-width: 500px;
+      color: #ff9eae;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 4;
+      right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      max-width: calc(100vw - 24px);
+      padding: 10px 13px;
+      border: 1px solid #ffffff18;
+      border-radius: 12px;
+      background: #101722bb;
+      color: #d5e2f4;
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 520px) {
+      .panel {
+        width: min(275px, calc(100vw - 24px));
+        padding: 12px;
+      }
+
+      .brand { font-size: 16px; }
+      .subtitle { margin-bottom: 8px; }
+      .section-title { margin-top: 10px; }
+      .control { margin-top: 8px; }
+      .metric { padding: 8px; }
+      .metric-value { font-size: 15px; }
+
+      .hint {
+        left: 12px;
+        right: 12px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: fit-content;
+      }
+    }
+  </style>
 </head>
 
 <body>
-<div id="app">
-  <header>
-    <div class="brand">
-      <div class="logo">Q</div>
-      <div>
-        <strong>QUANTUM METEO</strong>
-        <small>STORM LAB / 3D</small>
+  <canvas id="scene" aria-label="Интерактивная 3D-симуляция грозы"></canvas>
+
+  <div id="loading">
+    <h2 id="loadingTitle">QUANTUM STORM</h2>
+    <p id="loadingText">Создаём 3D-сцену, траву и грозовые облака…</p>
+    <div id="errorDetails"></div>
+  </div>
+
+  <aside class="panel">
+    <h1 class="brand">QUANTUM STORM</h1>
+    <p class="subtitle">Процедурный симулятор гроз · 3D</p>
+
+    <div class="section-title">Тип конвекции</div>
+    <select id="stormType">
+      <option value="random">Случайная гроза</option>
+      <option value="tower">Мощная башня</option>
+      <option value="supercell">Суперячейка</option>
+      <option value="multicell">Мультиячейковая гроза</option>
+      <option value="squall">Шкваловая линия</option>
+    </select>
+
+    <button id="newStorm" class="primary">Сгенерировать новую грозу</button>
+
+    <div class="button-row">
+      <button id="pause">Пауза</button>
+      <button id="lightning">Молния: вкл.</button>
+    </div>
+
+    <div class="section-title">Атмосферные параметры</div>
+
+    <div class="control">
+      <div class="control-head">
+        <label for="cape">CAPE</label>
+        <output id="capeValue">2200 Дж/кг</output>
       </div>
+      <input id="cape" type="range" min="200" max="5000" step="100" value="2200">
     </div>
-    <div class="live"><i></i>SIMULATION ACTIVE</div>
-  </header>
 
-  <section class="scene">
-    <div id="scene"></div>
-    <div class="overlay heading">
-      <div class="eyebrow">ATMOSPHERIC MODEL</div>
-      <h1 id="stormName">SUPERCELL</h1>
-      <p id="stormDesc">Развитие конвекции</p>
-    </div>
-    <div class="overlay altitude">
-      <span>12 KM</span><i></i><span>8 KM</span><i></i><span>4 KM</span><i></i><span>0 KM</span>
-    </div>
-    <div class="overlay statusbar">
-      <span id="simClock">SIM 00:00</span>
-      <span id="cloudStatus">КОНВЕКЦИЯ АКТИВНА</span>
-    </div>
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <span>ИНИЦИАЛИЗАЦИЯ 3D-АТМОСФЕРЫ...</span>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="panelhead">
-      <div>
-        <div class="eyebrow">CONTROL CENTER</div>
-        <h2>Параметры симуляции</h2>
+    <div class="control">
+      <div class="control-head">
+        <label for="shear">Вертикальный сдвиг ветра</label>
+        <output id="shearValue">20 м/с</output>
       </div>
-      <button class="primary" id="newStorm">↻ Новая гроза</button>
+      <input id="shear" type="range" min="0" max="40" step="1" value="20">
     </div>
 
-    <div class="presets">
-      <button class="preset active" data-type="random"><span class="symbol">◈</span><b>Случайная</b><small>Независимое развитие</small></button>
-      <button class="preset" data-type="supercell"><span class="symbol">◉</span><b>Суперячейка</b><small>Вращающийся апдрафт</small></button>
-      <button class="preset" data-type="multicell"><span class="symbol">▦</span><b>Мультиячейка</b><small>Несколько ячеек</small></button>
-      <button class="preset" data-type="pulse"><span class="symbol">↑</span><b>Pulse storm</b><small>Импульсная конвекция</small></button>
-      <button class="preset" data-type="squall"><span class="symbol">≋</span><b>Линия шквалов</b><small>Линейная система</small></button>
+    <div class="control">
+      <div class="control-head">
+        <label for="humidity">Влажность</label>
+        <output id="humidityValue">75%</output>
+      </div>
+      <input id="humidity" type="range" min="20" max="100" step="1" value="75">
     </div>
 
     <div class="metrics">
-      <div class="metric"><span>CAPE</span><strong id="capeValue">1850</strong><small>J/kg</small></div>
-      <div class="metric"><span>СДВИГ 0–6 KM</span><strong id="shearValue">24</strong><small>m/s</small></div>
-      <div class="metric"><span>ВЛАЖНОСТЬ</span><strong id="humidityValue">68</strong><small>%</small></div>
-      <div class="metric"><span>ВЫСОТА</span><strong id="heightValue">9.8</strong><small>km</small></div>
+      <div class="metric">
+        <div class="metric-label">Вершина облака</div>
+        <div class="metric-value" id="cloudHeight">— км</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ячеек</div>
+        <div class="metric-value" id="cellCount">—</div>
+      </div>
     </div>
 
-    <div class="sliders">
-      <label class="slider">
-        <span><b>CAPE</b><small>Конвективная доступная потенциальная энергия</small></span>
-        <output id="capeOut">1850 J/kg</output>
-        <input id="cape" type="range" min="100" max="5000" step="50" value="1850">
-      </label>
-      <label class="slider">
-        <span><b>Сдвиг ветра</b><small>Изменение скорости и направления ветра с высотой</small></span>
-        <output id="shearOut">24 m/s</output>
-        <input id="shear" type="range" min="0" max="40" step="1" value="24">
-      </label>
-      <label class="slider">
-        <span><b>Влажность</b><small>Условный показатель доступной влаги</small></span>
-        <output id="humidityOut">68%</output>
-        <input id="humidity" type="range" min="20" max="100" step="1" value="68">
-      </label>
-    </div>
+    <div id="status">Инициализация…</div>
+  </aside>
 
-    <div class="actions">
-      <button class="secondary" id="pause">Ⅱ Пауза</button>
-      <button class="secondary" id="resetCamera">⌖ Сброс камеры</button>
-      <button class="secondary" id="rotate">↻ Автовращение: выкл.</button>
-    </div>
+  <div class="hint">Поворачивай сцену пальцем · Своди два пальца, чтобы приблизить</div>
 
-    <p class="hint">Вращение — перетаскивай облака пальцем. Масштаб — жест двумя пальцами. На компьютере используй мышь и колёсико. Каждая новая генерация меняет начальную структуру грозы.</p>
-  </section>
+  <script>
+    window.showStormError = function (error) {
+      const loading = document.getElementById("loading");
+      loading.classList.add("error");
+      document.getElementById("loadingTitle").textContent = "НЕ УДАЛОСЬ ЗАПУСТИТЬ";
+      document.getElementById("loadingText").textContent =
+        "Сцена не загрузилась. Проверь интернет-соединение и открой сайт ещё раз.";
+      document.getElementById("errorDetails").textContent =
+        error && (error.stack || error.message || String(error))
+          ? String(error.stack || error.message || error)
+          : "Неизвестная ошибка";
+    };
 
-  <footer>
-    <span>QUANTUM METEO / STORM LAB</span>
-    <span>PROCEDURAL 3D MODEL</span>
-  </footer>
-</div>
+    window.hideStormLoading = function () {
+      document.getElementById("loading").style.display = "none";
+    };
 
-<script type="module" src="./sim.js"></script>
+    window.addEventListener("error", function (event) {
+      if (document.getElementById("loading").style.display !== "none") {
+        window.showStormError(event.message || "Ошибка JavaScript");
+      }
+    });
+
+    window.addEventListener("unhandledrejection", function (event) {
+      window.showStormError(event.reason || "Не удалось загрузить модуль");
+    });
+
+    import("./sim.js").catch(window.showStormError);
+  </script>
 </body>
 </html>
