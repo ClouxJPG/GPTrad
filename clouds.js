@@ -3,7 +3,7 @@ import * as THREE from 'https://esm.sh/three@0.180.0';
 export class VolumetricClouds {
   constructor(scene, model) {
     this.model=model;
-    this.texture=new THREE.Data3DTexture(model.makeTextureData(),model.nx,model.nz,model.ny);
+    this.texture=new THREE.Data3DTexture(model.makeTextureData(),model.nx,model.ny,model.nz);
     this.texture.format=THREE.RGBAFormat;
     this.texture.type=THREE.UnsignedByteType;
     this.texture.minFilter=THREE.LinearFilter;

@@ -113,7 +113,7 @@ export class AtmosphereModel {
     // Texture axes are x=domain width, y=altitude, z=domain depth.
     const out=new Uint8Array(this.n*4);
     for(let z=0;z<this.nz;z++) for(let y=0;y<this.ny;y++) for(let x=0;x<this.nx;x++){
-      const src=this.id(x,y,z), dst=((y*this.nz+z)*this.nx+x)*4;
+      const src=this.id(x,y,z), dst=((z*this.ny+y)*this.nx+x)*4;
       out[dst]=Math.round(this.clamp(this.qc[src]*300,0,1)*255);
       out[dst+1]=Math.round(this.clamp(this.qr[src]*500,0,1)*255);
       out[dst+2]=0; out[dst+3]=255;
