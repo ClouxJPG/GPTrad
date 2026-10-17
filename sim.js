@@ -1,51 +1,701 @@
 
 /* ============================================================
-   QUANTUM METEO — EVOLVING CONVECTIVE SYSTEM
+   QUANTUM METEO — NUMERICAL CONVECTION MODEL
+   Browser-based 2D Boussinesq-style moist-convection solver
 
-   Упрощённая time-dependent модель грозовой конвекции.
+   Numerical state:
+   u, w   — horizontal and vertical wind [m/s]
+   th     — potential-temperature perturbation [K]
+   qv     — water-vapor mixing ratio [kg/kg]
+   qc     — cloud-water mixing ratio [kg/kg]
+   qr     — rainwater mixing ratio [kg/kg]
+   p      — pressure correction for velocity projection
 
-   ФИЗИЧЕСКИ МОТИВИРОВАННЫЕ ПРОЦЕССЫ:
-   - последовательное зарождение конвективных ячеек;
-   - развитие и ослабление восходящих потоков;
-   - независимый жизненный цикл каждой ячейки;
-   - зависимость высоты от CAPE;
-   - влияние влажности на плотность облака;
-   - перенос верхней части облака сдвигом ветра;
-   - расширение и снос наковальни;
-   - разные режимы: башня, суперячейка,
-     мультиячейковая система, линия шквалов;
-   - динамическая реакция на настройки;
-   - облака с объёмной структурой и неровными краями.
+   Physics:
+   - semi-Lagrangian transport
+   - buoyancy and environmental stability
+   - latent heating from condensation
+   - rain fallout and evaporative cooling
+   - surface thermal forcing
+   - vertical wind shear
+   - approximate pressure projection
 
-   Ограничение:
-   Это не полноценная численная модель CM1.
-   Атмосферная динамика здесь параметризована.
-
-   index.html НЕ ИЗМЕНЯЕТСЯ.
+   This is a simplified educational model, NOT CM1.
+   index.html is not modified.
    ============================================================ */
 
-import * as THREE from
-  "https://esm.sh/three@0.180.0";
-
+import * as THREE from "https://esm.sh/three@0.180.0";
 import { OrbitControls } from
   "https://esm.sh/three@0.180.0/examples/jsm/controls/OrbitControls.js";
-
 
 // ============================================================
 // DOM
 // ============================================================
 
-const canvas = document.querySelector("#scene");
+const canvas = document.getElementById("scene");
+if (!canvas) throw new Error("Quantum Meteo: #scene not found");
 
-if (!canvas) {
-  throw new Error("Quantum Meteo: canvas #scene не найден.");
-}
+const $ = id => document.getElementById(id);
 
-const $ = (id) => document.getElementById(id);
-
+const ui = {
+  cape: $("cape"),
+  shear: $("shear"),
+  humidity: $("humidity"),
+  capeValue: $("capeValue"),
+  shearValue: $("shearValue"),
+  humidityValue: $("humidityValue"),
+  cloudHeight: $("cloudHeight"),
+  cellCount: $("cellCount"),
+  status: $("status"),
+  newStorm: $("newStorm"),
+  pause: $("pause"),
+  lightning: $("lightning"),
+  reset: $("reset"),
+  stormType: $("stormType"),
+  loading: $("loading"),
+  growthSpeed: $("growthSpeed")
+};
 
 // ============================================================
-// RENDERER
+// GRID AND CONSTANTS
+// ============================================================
+
+const NX = 72;
+const NZ = 40;
+const N = NX * NZ;
+
+const DX = 250;
+const DZ = 250;
+
+const DOMAIN_X = (NX - 1) * DX;
+const DOMAIN_Z = (NZ - 1) * DZ;
+
+const GRAVITY = 9.81;
+const CP = 1004;
+const LV = 2.5e6;
+const THETA0 = 300;
+
+const MODEL_DT = 0.30;
+const SUBSTEPS = 2;
+const DIFFUSIVITY = 8;
+const VELOCITY_DAMPING = 0.003;
+
+const idx = (i, k) => k * NX + i;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+let simTime = 0;
+let frameNumber = 0;
+let paused = false;
+let lightningEnabled = true;
+let stormSeed = 1;
+let stormAge = 0;
+let lastFrame = performance.now();
+let lastMetrics = 0;
+let lastRenderUpdate = 0;
+let activeCells = 0;
+let maxCloudHeight = 0;
+let accumulatedRain = 0;
+
+// ============================================================
+// ATMOSPHERIC STATE
+// ============================================================
+
+function makeField() {
+  return new Float32Array(N);
+}
+
+const F = {
+  u: makeField(),
+  w: makeField(),
+  th: makeField(),
+  qv: makeField(),
+  qc: makeField(),
+  qr: makeField(),
+
+  u0: makeField(),
+  w0: makeField(),
+  th0: makeField(),
+  qv0: makeField(),
+  qc0: makeField(),
+  qr0: makeField(),
+
+  buoyancy: makeField(),
+  div: makeField(),
+  pressure: makeField(),
+  pressure2: makeField()
+};
+
+let capeJkg = 1800;
+let shearMs = 15;
+let relativeHumidity = 0.78;
+
+function readSlider(element, fallback, physicalMax) {
+  if (!element) return fallback;
+
+  const min = Number(element.min || 0);
+  const max = Number(element.max || physicalMax);
+  const value = Number(element.value);
+
+  if (!Number.isFinite(value)) return fallback;
+
+  if (max <= 1) {
+    return clamp(value, 0, 1) * physicalMax;
+  }
+
+  return clamp(value, min, max);
+}
+
+function readParameters() {
+  capeJkg = readSlider(ui.cape, 1800, 5000);
+  shearMs = readSlider(ui.shear, 15, 50);
+
+  const h = readSlider(ui.humidity, 78, 100);
+  relativeHumidity = clamp(h / 100, 0.05, 1.0);
+
+  if (ui.capeValue) {
+    ui.capeValue.textContent = `${Math.round(capeJkg)} J/kg`;
+  }
+
+  if (ui.shearValue) {
+    ui.shearValue.textContent = `${shearMs.toFixed(1)} m/s`;
+  }
+
+  if (ui.humidityValue) {
+    ui.humidityValue.textContent =
+      `${Math.round(relativeHumidity * 100)}%`;
+  }
+}
+
+// ============================================================
+// ENVIRONMENT
+// ============================================================
+
+function baseWind(z) {
+  const h = clamp(z / DOMAIN_Z, 0, 1);
+  return shearMs * (h * h * 0.75 + h * 0.25);
+}
+
+function environmentalThetaGradient() {
+  // Potential-temperature gradient [K/m].
+  // A simplified stable background stratification.
+  return 0.003;
+}
+
+function ambientVapor(z) {
+  const decrease = Math.exp(-z / 6500);
+  return 0.016 * relativeHumidity * decrease;
+}
+
+function saturationMixingRatio(z, thetaPerturbation) {
+  const temperatureC =
+    26 - 0.006 * z + thetaPerturbation;
+
+  const pressureHpa = 1000 * Math.exp(-z / 8000);
+
+  const exponent =
+    17.67 * temperatureC / (temperatureC + 243.5);
+
+  const vaporPressure = 6.112 * Math.exp(
+    clamp(exponent, -10, 10)
+  );
+
+  return 0.622 * vaporPressure /
+    Math.max(pressureHpa - vaporPressure, 1);
+}
+
+// ============================================================
+// DETERMINISTIC RANDOMNESS
+// ============================================================
+
+function random01() {
+  stormSeed = (1664525 * stormSeed + 1013904223) >>> 0;
+  return stormSeed / 4294967296;
+}
+
+function gaussian(x, center, width) {
+  const d = (x - center) / Math.max(width, 1);
+  return Math.exp(-0.5 * d * d);
+}
+
+// ============================================================
+// INITIAL CONDITIONS
+// ============================================================
+
+function initializeAtmosphere(trigger = true) {
+  for (let k = 0; k < NZ; k++) {
+    const z = k * DZ;
+
+    for (let i = 0; i < NX; i++) {
+      const n = idx(i, k);
+
+      F.u[n] = baseWind(z);
+      F.w[n] = 0;
+
+      F.th[n] = 0;
+      F.qv[n] = ambientVapor(z);
+      F.qc[n] = 0;
+      F.qr[n] = 0;
+
+      F.pressure[n] = 0;
+      F.pressure2[n] = 0;
+    }
+  }
+
+  if (trigger) {
+    const center = NX * 0.32;
+    const width = NX * 0.085;
+
+    // Initial warm, moist thermal perturbation.
+    for (let k = 1; k < 15; k++) {
+      for (let i = 0; i < NX; i++) {
+        const n = idx(i, k);
+        const r2 =
+          ((i - center) / width) ** 2 +
+          ((k - 5) / 4.5) ** 2;
+
+        const bubble = Math.exp(-r2 * 1.25);
+
+        F.th[n] += 2.3 * bubble;
+        F.qv[n] += 0.0012 * bubble;
+      }
+    }
+
+    // A weak initial upward impulse near the surface.
+    for (let i = 0; i < NX; i++) {
+      const n = idx(i, 1);
+      F.w[n] += 0.7 * gaussian(i, center, width);
+    }
+  }
+
+  simTime = 0;
+  stormAge = 0;
+  accumulatedRain = 0;
+  activeCells = 0;
+  maxCloudHeight = 0;
+}
+
+// ============================================================
+// SEMI-LAGRANGIAN ADVECTION
+// ============================================================
+
+function sampleBilinear(field, x, z) {
+  const gx = clamp(x / DX, 0, NX - 1.001);
+  const gz = clamp(z / DZ, 0, NZ - 1.001);
+
+  const i0 = Math.floor(gx);
+  const k0 = Math.floor(gz);
+  const i1 = Math.min(i0 + 1, NX - 1);
+  const k1 = Math.min(k0 + 1, NZ - 1);
+
+  const fx = gx - i0;
+  const fz = gz - k0;
+
+  const a = lerp(
+    field[idx(i0, k0)],
+    field[idx(i1, k0)],
+    fx
+  );
+
+  const b = lerp(
+    field[idx(i0, k1)],
+    field[idx(i1, k1)],
+    fx
+  );
+
+  return lerp(a, b, fz);
+}
+
+function advectField(source, target, dt) {
+  for (let k = 0; k < NZ; k++) {
+    const z = k * DZ;
+
+    for (let i = 0; i < NX; i++) {
+      const n = idx(i, k);
+      const x = i * DX;
+
+      const u = F.u[n];
+      const w = F.w[n];
+
+      // Midpoint backtrace reduces first-order trajectory error.
+      const mx = x - 0.5 * dt * u;
+      const mz = z - 0.5 * dt * w;
+
+      const um = sampleBilinear(F.u, mx, mz);
+      const wm = sampleBilinear(F.w, mx, mz);
+
+      const bx = x - dt * um;
+      const bz = z - dt * wm;
+
+      target[n] = sampleBilinear(source, bx, bz);
+    }
+  }
+}
+
+// ============================================================
+// DIFFUSION
+// ============================================================
+
+function diffuseField(field, output, dt, coefficient) {
+  const alpha = coefficient * dt;
+
+  for (let k = 0; k < NZ; k++) {
+    for (let i = 0; i < NX; i++) {
+      const n = idx(i, k);
+
+      const left = field[idx(Math.max(i - 1, 0), k)];
+      const right = field[idx(Math.min(i + 1, NX - 1), k)];
+
+      const down = field[idx(i, Math.max(k - 1, 0))];
+      const up = field[idx(i, Math.min(k + 1, NZ - 1))];
+
+      const lap =
+        (left - 2 * field[n] + right) / (DX * DX) +
+        (down - 2 * field[n] + up) / (DZ * DZ);
+
+      output[n] = field[n] + alpha * lap;
+    }
+  }
+}
+
+// ============================================================
+// PRESSURE PROJECTION
+// Approximately removes divergent velocity components.
+// ============================================================
+
+function projectVelocity(dt) {
+  const p = F.pressure;
+  let next = F.pressure2;
+
+  // Compute velocity divergence.
+  for (let k = 0; k < NZ; k++) {
+    for (let i = 0; i < NX; i++) {
+      const il = Math.max(i - 1, 0);
+      const ir = Math.min(i + 1, NX - 1);
+      const kd = Math.max(k - 1, 0);
+      const ku = Math.min(k + 1, NZ - 1);
+
+      const du =
+        (F.u[idx(ir, k)] - F.u[idx(il, k)]) /
+        ((ir - il) * DX || DX);
+
+      const dw =
+        (F.w[idx(i, ku)] - F.w[idx(i, kd)]) /
+        ((ku - kd) * DZ || DZ);
+
+      F.div[idx(i, k)] = du + dw;
+    }
+  }
+
+  p.fill(0);
+
+  const ax = 1 / (DX * DX);
+  const az = 1 / (DZ * DZ);
+  const denominator = 2 * ax + 2 * az;
+
+  // Jacobi iterations for the pressure Poisson equation.
+  for (let iteration = 0; iteration < 12; iteration++) {
+    for (let k = 1; k < NZ - 1; k++) {
+      for (let i = 1; i < NX - 1; i++) {
+        const n = idx(i, k);
+
+        next[n] = (
+          (p[idx(i - 1, k)] + p[idx(i + 1, k)]) * ax +
+          (p[idx(i, k - 1)] + p[idx(i, k + 1)]) * az -
+          F.div[n] / dt
+        ) / denominator;
+      }
+    }
+
+    // Swap buffers.
+    const old = F.pressure;
+    F.pressure = F.pressure2;
+    F.pressure2 = old;
+
+    // Keep the physical boundary values fixed.
+    for (let i = 0; i < NX; i++) {
+      F.pressure[idx(i, 0)] = 0;
+      F.pressure[idx(i, NZ - 1)] = 0;
+    }
+    for (let k = 0; k < NZ; k++) {
+      F.pressure[idx(0, k)] = 0;
+      F.pressure[idx(NX - 1, k)] = 0;
+    }
+  }
+
+  // Correct velocity using the pressure gradient.
+  for (let k = 1; k < NZ - 1; k++) {
+    for (let i = 1; i < NX - 1; i++) {
+      const n = idx(i, k);
+
+      const dpdx =
+        (F.pressure[idx(i + 1, k)] -
+         F.pressure[idx(i - 1, k)]) / (2 * DX);
+
+      const dpdz =
+        (F.pressure[idx(i, k + 1)] -
+         F.pressure[idx(i, k - 1)]) / (2 * DZ);
+
+      F.u[n] -= dt * dpdx;
+      F.w[n] -= dt * dpdz;
+    }
+  }
+
+  F.w.fill(0, 0, NX);
+  F.w.fill(0, (NZ - 1) * NX, NZ * NX);
+}
+
+// ============================================================
+// THERMODYNAMICS
+// ============================================================
+
+function updateThermodynamics(dt) {
+  const latentFactor = LV / (CP * THETA0);
+  const stability = environmentalThetaGradient();
+
+  for (let k = 1; k < NZ - 1; k++) {
+    const z = k * DZ;
+
+    for (let i = 1; i < NX - 1; i++) {
+      const n = idx(i, k);
+
+      const w = F.w[n];
+
+      // Adiabatic cooling/heating relative to the environment.
+      F.th[n] -= w * stability * dt;
+
+      // Condensation when vapor exceeds saturation.
+      const qsat = saturationMixingRatio(z, F.th[n]);
+
+      if (F.qv[n] > qsat) {
+        const condensate = Math.min(
+          F.qv[n] - qsat,
+          0.003 * dt
+        );
+
+        F.qv[n] -= condensate;
+        F.qc[n] += condensate;
+
+        // Latent heat released by condensation.
+        F.th[n] += latentFactor * condensate;
+      }
+
+      // Cloud water converts gradually to precipitation.
+      if (F.qc[n] > 0.0015) {
+        const converted = Math.min(
+          F.qc[n] - 0.0015,
+          F.qc[n] * 0.035 * dt
+        );
+
+        F.qc[n] -= converted;
+        F.qr[n] += converted;
+      }
+
+      // Rain evaporates in unsaturated air, cooling the parcel.
+      if (F.qr[n] > 0) {
+        const deficit = Math.max(0, qsat - F.qv[n]);
+        const evaporation = Math.min(
+          F.qr[n],
+          deficit,
+          F.qr[n] * 0.06 * dt
+        );
+
+        F.qr[n] -= evaporation;
+        F.qv[n] += evaporation;
+        F.th[n] -= latentFactor * evaporation;
+      }
+
+      // Small background mixing prevents unlimited accumulation.
+      F.th[n] *= 1 - 0.00008 * dt;
+    }
+  }
+}
+
+// ============================================================
+// SURFACE HEATING
+// Creates new thermals instead of assigning fixed cell lifetimes.
+// ============================================================
+
+function applySurfaceForcing(dt) {
+  const capeFactor = clamp(capeJkg / 3000, 0.1, 1.5);
+  const pulsePeriod = 95;
+
+  for (let i = 1; i < NX - 1; i++) {
+    const x = i / NX;
+
+    // Several moving heating patches.
+    const p1 = 0.27 + 0.10 * Math.sin(simTime / pulsePeriod);
+    const p2 = 0.65 + 0.08 * Math.sin(simTime / 73 + 1.6);
+    const p3 = 0.48 + 0.06 * Math.sin(simTime / 121 + 2.1);
+
+    const heat =
+      0.014 * capeFactor * (
+        gaussian(x, p1, 0.055) +
+        0.8 * gaussian(x, p2, 0.045) +
+        0.55 * gaussian(x, p3, 0.035)
+      );
+
+    const n1 = idx(i, 1);
+    const n2 = idx(i, 2);
+
+    F.th[n1] += heat * dt;
+    F.th[n2] += heat * dt * 0.3;
+
+    // A weak moisture source near the surface.
+    F.qv[n1] += 0.0000007 * relativeHumidity * dt;
+  }
+}
+
+// ============================================================
+// MOMENTUM
+// ============================================================
+
+function updateMomentum(dt) {
+  // Advect velocity using the current velocity field.
+  advectField(F.u, F.u0, dt);
+  advectField(F.w, F.w0, dt);
+
+  F.u.set(F.u0);
+  F.w.set(F.w0);
+
+  diffuseField(F.u, F.u0, dt, DIFFUSIVITY);
+  diffuseField(F.w, F.w0, dt, DIFFUSIVITY);
+
+  F.u.set(F.u0);
+  F.w.set(F.w0);
+
+  for (let k = 1; k < NZ - 1; k++) {
+    const z = k * DZ;
+
+    for (let i = 1; i < NX - 1; i++) {
+      const n = idx(i, k);
+
+      const th = F.th[n];
+      const qc = F.qc[n];
+      const qr = F.qr[n];
+
+      // Thermal buoyancy, with approximate condensate loading.
+      const buoyancy =
+        GRAVITY * th / THETA0 -
+        GRAVITY * (qc + qr) * 0.8;
+
+      F.buoyancy[n] = buoyancy;
+
+      F.w[n] += buoyancy * dt;
+
+      // Relax toward the prescribed environmental shear profile.
+      const targetWind = baseWind(z);
+      F.u[n] += (targetWind - F.u[n]) *
+        clamp(0.012 * dt, 0, 0.04);
+
+      F.u[n] *= 1 - VELOCITY_DAMPING * dt;
+      F.w[n] *= 1 - VELOCITY_DAMPING * dt;
+
+      // Numerical safety limits.
+      F.u[n] = clamp(F.u[n], -35, 45);
+      F.w[n] = clamp(F.w[n], -30, 35);
+    }
+  }
+
+  // No penetration through the ground.
+  for (let i = 0; i < NX; i++) {
+    F.w[idx(i, 0)] = 0;
+  }
+}
+
+// ============================================================
+// WATER TRANSPORT AND RAIN FALLOUT
+// ============================================================
+
+function updateWater(dt) {
+  advectField(F.qv, F.qv0, dt);
+  advectField(F.qc, F.qc0, dt);
+  advectField(F.qr, F.qr0, dt);
+
+  F.qv.set(F.qv0);
+  F.qc.set(F.qc0);
+  F.qr.set(F.qr0);
+
+  diffuseField(F.qv, F.qv0, dt, 2);
+  diffuseField(F.qc, F.qc0, dt, 1.5);
+  diffuseField(F.qr, F.qr0, dt, 1);
+
+  F.qv.set(F.qv0);
+  F.qc.set(F.qc0);
+  F.qr.set(F.qr0);
+
+  for (let k = 1; k < NZ; k++) {
+    for (let i = 1; i < NX - 1; i++) {
+      const n = idx(i, k);
+
+      F.qv[n] = clamp(F.qv[n], 0, 0.04);
+      F.qc[n] = clamp(F.qc[n], 0, 0.02);
+      F.qr[n] = clamp(F.qr[n], 0, 0.025);
+
+      // Approximate gravitational settling of rainwater.
+      const fallFraction = clamp(
+        (5.0 * dt) / DZ,
+        0,
+        0.12
+      );
+
+      const fall = F.qr[n] * fallFraction;
+      F.qr[n] -= fall;
+
+      if (k > 1) {
+        F.qr[idx(i, k - 1)] += fall;
+      } else {
+        accumulatedRain += fall;
+      }
+    }
+  }
+
+  // Simple cold-pool spreading along the surface.
+  for (let i = 1; i < NX - 1; i++) {
+    const n = idx(i, 1);
+    const rain = F.qr[n];
+
+    if (rain > 0.00005) {
+      F.th[n] -= 0.0004 * rain * dt;
+      F.u[n] += Math.sign(i - NX / 2) * rain * 0.3 * dt;
+    }
+  }
+}
+
+// ============================================================
+// NUMERICAL MODEL STEP
+// ============================================================
+
+function modelStep(dt) {
+  readParameters();
+
+  // Keep thermodynamic scalars and velocities synchronized.
+  advectField(F.th, F.th0, dt);
+  F.th.set(F.th0);
+
+  applySurfaceForcing(dt);
+  updateWater(dt);
+  updateThermodynamics(dt);
+  updateMomentum(dt);
+  projectVelocity(dt);
+
+  // Remove small negative numerical artifacts.
+  for (let n = 0; n < N; n++) {
+    if (!Number.isFinite(F.u[n])) F.u[n] = 0;
+    if (!Number.isFinite(F.w[n])) F.w[n] = 0;
+    if (!Number.isFinite(F.th[n])) F.th[n] = 0;
+
+    F.qv[n] = Math.max(0, F.qv[n]);
+    F.qc[n] = Math.max(0, F.qc[n]);
+    F.qr[n] = Math.max(0, F.qr[n]);
+  }
+
+  simTime += dt;
+  stormAge += dt;
+}
+
+// ============================================================
+// THREE.JS SCENE
 // ============================================================
 
 const renderer = new THREE.WebGLRenderer({
@@ -56,1390 +706,471 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio || 1, 1.1)
+  Math.min(window.devicePixelRatio || 1, 1.35)
 );
-
-renderer.setSize(
-  canvas.clientWidth || window.innerWidth,
-  canvas.clientHeight || window.innerHeight,
-  false
-);
-
+renderer.setSize(canvas.clientWidth || window.innerWidth,
+                 canvas.clientHeight || window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
-
-
-// ============================================================
-// SCENE
-// ============================================================
+renderer.setClearColor(0x111923, 1);
 
 const scene = new THREE.Scene();
-
-scene.background = new THREE.Color(0x91b6d2);
-scene.fog = new THREE.Fog(0x91b6d2, 1100, 2900);
-
-
-// ============================================================
-// CAMERA
-// ============================================================
+scene.background = new THREE.Color(0x111923);
+scene.fog = new THREE.Fog(0x111923, 18000, 46000);
 
 const camera = new THREE.PerspectiveCamera(
-  55,
-  1,
-  0.1,
-  4500
+  43,
+  (canvas.clientWidth || window.innerWidth) /
+    (canvas.clientHeight || window.innerHeight),
+  10,
+  70000
 );
 
-camera.position.set(460, 270, 620);
+camera.position.set(12000, 9500, 14500);
 
-const controls = new OrbitControls(
-  camera,
-  renderer.domElement
-);
-
+const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.055;
-controls.minDistance = 100;
-controls.maxDistance = 1800;
-controls.maxPolarAngle = Math.PI * 0.495;
-controls.target.set(0, 100, 0);
+controls.target.set(DOMAIN_X * 0.5, DOMAIN_Z * 0.35, 0);
+controls.minDistance = 4500;
+controls.maxDistance = 32000;
+controls.maxPolarAngle = Math.PI * 0.49;
 
+// Lighting.
+scene.add(new THREE.HemisphereLight(0xc6dcff, 0x29303b, 1.6));
 
-// ============================================================
-// STATE
-// ============================================================
-
-const state = {
-  cape: 2400,
-  shear: 25,
-  humidity: 78,
-  stormType: "supercell",
-
-  paused: false,
-  lightning: true,
-
-  // Время симуляции, не реальное метеорологическое время.
-  time: 0,
-
-  lightningTimer: 3,
-  lightningFlash: 0,
-
-  seed: Math.random() * 10000,
-  stormGeneration: 0
-};
-
-
-// ============================================================
-// TERRAIN
-// ============================================================
-
-const WORLD = 1200;
-const TERRAIN_SEGMENTS = 100;
-
-function heightAt(x, z) {
-  const hills =
-    Math.sin(x * 0.0034) * 8 +
-    Math.cos(z * 0.0031) * 7 +
-    Math.sin((x + z) * 0.0024) * 5;
-
-  const hills2 =
-    Math.sin(x * 0.012) *
-    Math.cos(z * 0.011) * 2.1;
-
-  const valley =
-    Math.exp(
-      -(
-        (x + 150) ** 2 +
-        (z - 80) ** 2
-      ) / 110000
-    ) * 12;
-
-  return hills + hills2 - valley;
-}
-
-function makeTerrainTexture() {
-  const size = 512;
-  const c = document.createElement("canvas");
-
-  c.width = size;
-  c.height = size;
-
-  const ctx = c.getContext("2d");
-
-  ctx.fillStyle = "#687966";
-  ctx.fillRect(0, 0, size, size);
-
-  for (let i = 0; i < 9000; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-
-    ctx.fillStyle = Math.random() > 0.5
-      ? "rgba(165,174,128,0.12)"
-      : "rgba(30,53,39,0.11)";
-
-    const s = 1 + Math.random() * 2;
-
-    ctx.fillRect(x, y, s, s);
-  }
-
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = "#9da58c";
-  ctx.lineWidth = 1;
-
-  for (let i = 0; i < 14; i++) {
-    ctx.beginPath();
-
-    let x = Math.random() * size;
-    let y = Math.random() * size;
-
-    ctx.moveTo(x, y);
-
-    for (let j = 0; j < 12; j++) {
-      x += Math.random() * 35 - 17.5;
-      y += Math.random() * 35 - 17.5;
-      ctx.lineTo(x, y);
-    }
-
-    ctx.stroke();
-  }
-
-  ctx.globalAlpha = 1;
-
-  const texture = new THREE.CanvasTexture(c);
-
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.colorSpace = THREE.SRGBColorSpace;
-
-  texture.anisotropy = Math.min(
-    renderer.capabilities.getMaxAnisotropy(),
-    4
-  );
-
-  return texture;
-}
-
-function makeTerrain() {
-  const geometry = new THREE.PlaneGeometry(
-    WORLD,
-    WORLD,
-    TERRAIN_SEGMENTS,
-    TERRAIN_SEGMENTS
-  );
-
-  geometry.rotateX(-Math.PI / 2);
-
-  const positions = geometry.attributes.position;
-
-  for (let i = 0; i < positions.count; i++) {
-    const x = positions.getX(i);
-    const z = positions.getZ(i);
-
-    positions.setY(i, heightAt(x, z));
-  }
-
-  geometry.computeVertexNormals();
-
-  const material = new THREE.MeshStandardMaterial({
-    map: makeTerrainTexture(),
-    color: 0xc0c8b6,
-    roughness: 1,
-    metalness: 0
-  });
-
-  const terrain = new THREE.Mesh(geometry, material);
-
-  terrain.receiveShadow = false;
-  scene.add(terrain);
-}
-
-makeTerrain();
-
-
-// ============================================================
-// LIGHTING
-// ============================================================
-
-scene.add(
-  new THREE.HemisphereLight(
-    0xc7e1ff,
-    0x475044,
-    1.65
-  )
-);
-
-const sun = new THREE.DirectionalLight(
-  0xfff0d7,
-  2.5
-);
-
-sun.position.set(-400, 700, 300);
+const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+sun.position.set(-9000, 15000, 8000);
 scene.add(sun);
 
-
-// ============================================================
-// HORIZON
-// ============================================================
-
-const horizonGeometry =
-  new THREE.RingGeometry(850, 2400, 96);
-
-horizonGeometry.rotateX(-Math.PI / 2);
-
-const horizon = new THREE.Mesh(
-  horizonGeometry,
-  new THREE.MeshBasicMaterial({
-    color: 0x91b6d2,
-    side: THREE.DoubleSide,
-    fog: false
+// Ground plane.
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(DOMAIN_X + 5000, 14000),
+  new THREE.MeshStandardMaterial({
+    color: 0x202c36,
+    roughness: 1,
+    metalness: 0
   })
 );
 
-horizon.position.y = -2;
-scene.add(horizon);
+ground.rotation.x = -Math.PI / 2;
+ground.position.set(DOMAIN_X / 2, -120, 0);
+scene.add(ground);
 
+// Domain frame.
+const frameGeometry = new THREE.BufferGeometry();
+const framePoints = [
+  new THREE.Vector3(0, 0, -2500),
+  new THREE.Vector3(DOMAIN_X, 0, -2500),
+  new THREE.Vector3(DOMAIN_X, DOMAIN_Z, -2500),
+  new THREE.Vector3(0, DOMAIN_Z, -2500),
+  new THREE.Vector3(0, 0, -2500)
+];
 
-// ============================================================
-// LIGHTNING
-// ============================================================
+frameGeometry.setFromPoints(framePoints);
 
-let lightningGroup = null;
-
-function clearLightning() {
-  if (!lightningGroup) return;
-
-  scene.remove(lightningGroup);
-
-  lightningGroup.traverse((obj) => {
-    obj.geometry?.dispose();
-
-    if (Array.isArray(obj.material)) {
-      obj.material.forEach((m) => m.dispose());
-    } else {
-      obj.material?.dispose();
-    }
-  });
-
-  lightningGroup = null;
-}
-
-function createLightning() {
-  clearLightning();
-
-  const group = new THREE.Group();
-  const points = [];
-
-  // Разряд возникает над активной частью системы.
-  let x = (Math.random() - 0.5) * 150;
-  let y = 300 + Math.random() * 80;
-  let z = (Math.random() - 0.5) * 150;
-
-  points.push(new THREE.Vector3(x, y, z));
-
-  for (let i = 0; i < 19; i++) {
-    y -= 7 + Math.random() * 11;
-    x += (Math.random() - 0.5) * 20;
-    z += (Math.random() - 0.5) * 20;
-
-    points.push(new THREE.Vector3(x, y, z));
-
-    // Небольшие боковые ответвления.
-    if (i > 3 && Math.random() < 0.22) {
-      const branchPoints = [
-        new THREE.Vector3(x, y, z),
-        new THREE.Vector3(
-          x + (Math.random() - 0.5) * 38,
-          y - 8 - Math.random() * 16,
-          z + (Math.random() - 0.5) * 38
-        )
-      ];
-
-      const branchGeometry =
-        new THREE.BufferGeometry().setFromPoints(branchPoints);
-
-      group.add(
-        new THREE.Line(
-          branchGeometry,
-          new THREE.LineBasicMaterial({
-            color: 0xcce8ff,
-            transparent: true,
-            opacity: 0.8
-          })
-        )
-      );
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry()
-    .setFromPoints(points);
-
-  group.add(
-    new THREE.Line(
-      geometry,
-      new THREE.LineBasicMaterial({
-        color: 0xf0f8ff,
-        transparent: true,
-        opacity: 1
-      })
-    )
-  );
-
-  const glow = new THREE.PointLight(
-    0x9ecbff,
-    45,
-    230
-  );
-
-  glow.position.set(x, y, z);
-  group.add(glow);
-
-  scene.add(group);
-
-  lightningGroup = group;
-  state.lightningFlash = 1;
-}
-
-
-// ============================================================
-// DEPTH RENDER TARGET
-// ============================================================
-
-const renderTarget = new THREE.WebGLRenderTarget(
-  1,
-  1,
-  {
-    format: THREE.RGBAFormat,
-    type: THREE.UnsignedByteType,
-    depthBuffer: true,
-    stencilBuffer: false
-  }
+const frame = new THREE.Line(
+  frameGeometry,
+  new THREE.LineBasicMaterial({
+    color: 0x425465,
+    transparent: true,
+    opacity: 0.65
+  })
 );
-
-renderTarget.depthTexture = new THREE.DepthTexture(
-  1,
-  1,
-  THREE.UnsignedIntType
-);
-
-renderTarget.depthTexture.format = THREE.DepthFormat;
-renderTarget.texture.colorSpace = THREE.NoColorSpace;
-
+scene.add(frame);
 
 // ============================================================
-// FULLSCREEN CLOUD PASS
-// ============================================================
-
-const postScene = new THREE.Scene();
-
-const postCamera = new THREE.OrthographicCamera(
-  -1, 1, 1, -1, 0, 1
-);
-
-const quadGeometry = new THREE.PlaneGeometry(2, 2);
-
-
-// ============================================================
-// UNIFORMS
-// ============================================================
-
-const cloudUniforms = {
-  uScene: { value: renderTarget.texture },
-  uDepth: { value: renderTarget.depthTexture },
-
-  uInverseProjection: { value: new THREE.Matrix4() },
-  uInverseView: { value: new THREE.Matrix4() },
-  uCameraPosition: { value: new THREE.Vector3() },
-
-  uTime: { value: 0 },
-  uCAPE: { value: state.cape },
-  uShear: { value: state.shear },
-  uHumidity: { value: state.humidity },
-  uStormType: { value: 1 },
-  uFlash: { value: 0 },
-  uSeed: { value: state.seed }
-};
-
-
-// ============================================================
-// CLOUD SHADER — TIME-DEPENDENT CONVECTION
-// ============================================================
-
-const cloudFragmentShader = /* glsl */ `
-precision highp float;
-
-uniform sampler2D uScene;
-uniform sampler2D uDepth;
-
-uniform mat4 uInverseProjection;
-uniform mat4 uInverseView;
-
-uniform vec3 uCameraPosition;
-
-uniform float uTime;
-uniform float uCAPE;
-uniform float uShear;
-uniform float uHumidity;
-uniform float uStormType;
-uniform float uFlash;
-uniform float uSeed;
-
-varying vec2 vUv;
-
-
-// ------------------------------------------------------------
-// HASH AND VALUE NOISE
-// ------------------------------------------------------------
-
-float hash31(vec3 p) {
-    p = fract(p * 0.1031);
-    p += dot(p, p.yxz + 33.33);
-    return fract((p.x + p.y) * p.z);
-}
-
-float noise3(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-
-    f = f * f * (3.0 - 2.0 * f);
-
-    float n000 = hash31(i);
-    float n100 = hash31(i + vec3(1.0, 0.0, 0.0));
-    float n010 = hash31(i + vec3(0.0, 1.0, 0.0));
-    float n110 = hash31(i + vec3(1.0, 1.0, 0.0));
-
-    float n001 = hash31(i + vec3(0.0, 0.0, 1.0));
-    float n101 = hash31(i + vec3(1.0, 0.0, 1.0));
-    float n011 = hash31(i + vec3(0.0, 1.0, 1.0));
-    float n111 = hash31(i + vec3(1.0, 1.0, 1.0));
-
-    float x00 = mix(n000, n100, f.x);
-    float x10 = mix(n010, n110, f.x);
-    float x01 = mix(n001, n101, f.x);
-    float x11 = mix(n011, n111, f.x);
-
-    return mix(
-        mix(x00, x10, f.y),
-        mix(x01, x11, f.y),
-        f.z
-    );
-}
-
-float fbm(vec3 p) {
-    float value = 0.0;
-    float amplitude = 0.56;
-
-    value += noise3(p) * amplitude;
-    p *= 2.03;
-    amplitude *= 0.48;
-
-    value += noise3(p) * amplitude;
-
-    return value / 0.8288;
-}
-
-
-// ------------------------------------------------------------
-// BOX INTERSECTION
-// ------------------------------------------------------------
-
-vec2 intersectBox(
-    vec3 ro,
-    vec3 rd,
-    vec3 bmin,
-    vec3 bmax
-) {
-    vec3 invDir = 1.0 / rd;
-
-    vec3 t0 = (bmin - ro) * invDir;
-    vec3 t1 = (bmax - ro) * invDir;
-
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-
-    float nearT = max(
-        max(tmin.x, tmin.y),
-        tmin.z
-    );
-
-    float farT = min(
-        min(tmax.x, tmax.y),
-        tmax.z
-    );
-
-    return vec2(nearT, farT);
-}
-
-
-// ------------------------------------------------------------
-// ATMOSPHERIC PARAMETERS
-// ------------------------------------------------------------
-
-float availableCAPE() {
-    return clamp(uCAPE / 3500.0, 0.08, 1.25);
-}
-
-float moistureFactor() {
-    return clamp(uHumidity / 100.0, 0.0, 1.0);
-}
-
-float equilibriumHeight() {
-    // Условная высота вершины: не является расчётом LFC/EL.
-    return mix(
-        185.0,
-        450.0,
-        clamp(uCAPE / 4000.0, 0.0, 1.0)
-    );
-}
-
-float shearFactor() {
-    return clamp(uShear / 45.0, 0.0, 1.4);
-}
-
-
-// ------------------------------------------------------------
-// CELL LIFE CYCLE
+// CLOUD RENDERING
 //
-// Каждая ячейка имеет собственный возраст:
-// зарождение → рост → зрелость → распад.
-//
-// Периодическое обновление позволяет системе
-// формировать новые ячейки, пока старые затухают.
-// ------------------------------------------------------------
-
-float cellAge(float index) {
-    float cycle = 112.0;
-
-    float offset = index * 27.0;
-    offset += hash31(vec3(index, uSeed, 4.7)) * 13.0;
-
-    return mod(uTime * 0.72 + offset, cycle);
-}
-
-float cellLife(float age) {
-    float birth = smoothstep(2.0, 17.0, age);
-    float decay = 1.0 - smoothstep(75.0, 108.0, age);
-
-    return birth * decay;
-}
-
-float cellGrowth(float age) {
-    float growing = smoothstep(4.0, 38.0, age);
-    float mature = 1.0 - smoothstep(70.0, 103.0, age);
-
-    return max(0.12, growing) * max(0.0, mature);
-}
-
-
-// ------------------------------------------------------------
-// CELL POSITION
-//
-// Сдвиг ветра возрастает с высотой.
-// Верхняя часть переносится сильнее, чем основание.
-// ------------------------------------------------------------
-
-vec2 windDisplacement(float height) {
-    float h = clamp((height - 65.0) / 390.0, 0.0, 1.0);
-    float shear = shearFactor();
-
-    vec2 direction = normalize(vec2(1.0, 0.28));
-
-    vec2 displacement =
-        direction * h * h * shear * 210.0;
-
-    displacement.x += uTime * 0.38;
-    displacement.y += uTime * 0.10;
-
-    return displacement;
-}
-
-vec2 cellCenter(float index, float age) {
-    float mode = uStormType;
-
-    float spacing = 165.0;
-
-    if (mode > 1.5 && mode < 2.5) {
-        // Мультиячейковая система.
-        float side = mod(index, 2.0) * 2.0 - 1.0;
-
-        return vec2(
-            (index - 1.5) * spacing,
-            side * 32.0 + sin(age * 0.07 + index) * 22.0
-        );
-    }
-
-    if (mode > 2.5 && mode < 3.5) {
-        // Линия шквалов: ячейки вдоль одной оси.
-        return vec2(
-            (index - 1.5) * 125.0,
-            sin(index * 1.7) * 24.0
-        );
-    }
-
-    if (mode < 0.5) {
-        // Одиночная башня.
-        return vec2(
-            (index - 1.5) * 250.0,
-            0.0
-        );
-    }
-
-    // Суперячейковый режим: главная ячейка и
-    // менее интенсивные соседние конвективные башни.
-    return vec2(
-        (index - 1.5) * 145.0 +
-            sin(age * 0.045 + index) * 16.0,
-        sin(age * 0.06 + index * 2.0) * 26.0
-    );
-}
-
-
-// ------------------------------------------------------------
-// SINGLE CONVECTIVE CELL
-// ------------------------------------------------------------
-
-float singleCell(
-    vec3 p,
-    float index
-) {
-    float age = cellAge(index);
-    float life = cellLife(age);
-
-    if (life <= 0.001) {
-        return 0.0;
-    }
-
-    float growth = cellGrowth(age);
-    float cape = availableCAPE();
-    float humidity = moistureFactor();
-
-    float base = 66.0;
-
-    float top = equilibriumHeight();
-
-    // Рост башни зависит от стадии развития.
-    top = mix(
-        base + 35.0,
-        top,
-        growth
-    );
-
-    top *= mix(0.65, 1.0, cape);
-
-    if (p.y < base || p.y > top + 34.0) {
-        return 0.0;
-    }
-
-    float vertical = clamp(
-        (p.y - base) / max(top - base, 1.0),
-        0.0,
-        1.15
-    );
-
-    vec2 center = cellCenter(index, age);
-    vec2 wind = windDisplacement(p.y);
-
-    vec2 q = p.xz - center - wind;
-
-    // В суперячейковом режиме система вращается
-    // медленно, а не остаётся геометрически неподвижной.
-    float rotation = uTime * 0.0045 * shearFactor();
-
-    float cs = cos(rotation);
-    float sn = sin(rotation);
-
-    q = mat2(cs, -sn, sn, cs) * q;
-
-    float mode = uStormType;
-
-    float widthMultiplier = 1.0;
-
-    if (mode < 0.5) {
-        widthMultiplier = 0.72;
-    } else if (mode > 1.5 && mode < 2.5) {
-        widthMultiplier = 0.92;
-    } else if (mode > 2.5 && mode < 3.5) {
-        widthMultiplier = 0.80;
-    }
-
-    float radius = length(q);
-
-    // Конвективная башня расширяется вверх.
-    float towerWidth = mix(
-        38.0,
-        92.0,
-        smoothstep(0.0, 0.82, vertical)
-    );
-
-    towerWidth *= widthMultiplier;
-    towerWidth *= mix(0.75, 1.16, growth);
-
-    // Наковальня появляется преимущественно
-    // в верхней части зрелой ячейки.
-    float anvilLevel = smoothstep(
-        0.61,
-        0.88,
-        vertical
-    );
-
-    float anvilWidth = mix(
-        towerWidth * 1.15,
-        205.0 + shearFactor() * 105.0,
-        anvilLevel
-    );
-
-    anvilWidth *= widthMultiplier;
-
-    // Трёхмерная турбулентность краёв.
-    vec3 np = vec3(
-        q.x * 0.021,
-        p.y * 0.025,
-        q.y * 0.021
-    );
-
-    np += vec3(
-        uSeed * 0.013 + index * 4.7,
-        -uTime * 0.012,
-        uSeed * 0.007 + index * 2.3
-    );
-
-    float broad = fbm(np);
-    float detail = noise3(np * 2.7);
-
-    float turbulence =
-        (broad - 0.5) * 0.42 +
-        (detail - 0.5) * 0.16;
-
-    float towerRadius =
-        exp(
-            -(radius * radius) /
-            max(towerWidth * towerWidth * 0.72, 1.0)
-        );
-
-    float tower = smoothstep(
-        0.20,
-        0.66,
-        towerRadius + turbulence
-    );
-
-    float anvilRadius =
-        exp(
-            -(radius * radius) /
-            max(anvilWidth * anvilWidth * 0.72, 1.0)
-        );
-
-    float anvilTexture = smoothstep(
-        0.20,
-        0.61,
-        anvilRadius + (broad - 0.5) * 0.23
-    );
-
-    float anvil = anvilTexture * anvilLevel;
-
-    // Верхушка башни может немного перерастать
-    // среднюю высоту зрелого облака.
-    float overshoot =
-        tower *
-        exp(
-            -pow((vertical - 0.94) / 0.075, 2.0)
-        );
-
-    float baseShape = smoothstep(
-        0.0,
-        0.105,
-        vertical
-    );
-
-    float topNoise = (broad - 0.5) * 0.065;
-
-    float topShape = 1.0 - smoothstep(
-        0.95 + topNoise,
-        1.075 + topNoise,
-        vertical
-    );
-
-    // Небольшие вертикальные неоднородности
-    // создают вид отдельных кучевых башен.
-    float turretPattern = noise3(
-        vec3(
-            q.x * 0.038,
-            p.y * 0.018 + uTime * 0.009,
-            q.y * 0.038
-        )
-    );
-
-    float turrets = smoothstep(
-        0.32,
-        0.77,
-        turretPattern
-    );
-
-    tower *= mix(0.82, 1.12, turrets);
-
-    float density =
-        tower * 0.94 +
-        anvil * 0.40 +
-        overshoot * 0.18;
-
-    density *= baseShape * topShape;
-    density *= life;
-
-    // Сухая среда снижает оптическую плотность.
-    density *= mix(0.35, 1.0, humidity);
-
-    // CAPE влияет на интенсивность конвекции.
-    density *= mix(0.42, 1.0, cape);
-
-    // В мультиячейковом режиме соседние ячейки
-    // немного слабее, чем ведущая.
-    if (mode > 1.5 && mode < 2.5) {
-        float cellStrength =
-            index < 1.5 ? 1.0 : 0.83;
-
-        density *= cellStrength;
-    }
-
-    if (mode > 2.5 && mode < 3.5) {
-        density *= 0.90;
-    }
-
-    // Прозрачность ниже порога исключает
-    // равномерную дымку вокруг облака.
-    density = max(density - 0.095, 0.0);
-
-    return min(density, 1.0);
-}
-
-
-// ------------------------------------------------------------
-// COMPLETE STORM FIELD
-// ------------------------------------------------------------
-
-float convectiveField(vec3 p) {
-    float total = 0.0;
-
-    // Фиксированный цикл совместим с мобильными GPU.
-    for (int i = 0; i < 4; i++) {
-        total += singleCell(p, float(i));
-    }
-
-    // Ограничение плотности помогает избежать
-    // чрезмерно тёмного результата при слиянии ячеек.
-    return min(total, 1.25);
-}
-
-
-// ------------------------------------------------------------
-// CLOUD LIGHTING
-// ------------------------------------------------------------
-
-float cloudLighting(
-    vec3 p,
-    vec3 rayDirection,
-    float density
-) {
-    vec3 lightDirection =
-        normalize(vec3(-0.55, 0.78, 0.35));
-
-    float heightFactor = clamp(
-        (p.y - 60.0) / 400.0,
-        0.0,
-        1.0
-    );
-
-    float towardSun = max(
-        dot(-rayDirection, lightDirection),
-        0.0
-    );
-
-    float forwardScattering =
-        pow(towardSun, 3.0) * 0.12;
-
-    float topLight = smoothstep(
-        0.35,
-        0.95,
-        heightFactor
-    ) * 0.27;
-
-    float underside = density * 0.24;
-
-    return clamp(
-        0.38 + topLight + forwardScattering - underside,
-        0.12,
-        1.0
-    );
-}
-
-
-// ------------------------------------------------------------
-// SCENE DEPTH
-// ------------------------------------------------------------
-
-float sceneDistance(vec2 uv) {
-    float depth = texture2D(uDepth, uv).r;
-
-    if (depth >= 0.999999) {
-        return 2400.0;
-    }
-
-    vec4 clip = vec4(
-        uv * 2.0 - 1.0,
-        depth * 2.0 - 1.0,
-        1.0
-    );
-
-    vec4 viewPosition = uInverseProjection * clip;
-
-    viewPosition /= max(
-        abs(viewPosition.w),
-        0.00001
-    );
-
-    vec4 worldPosition =
-        uInverseView * vec4(viewPosition.xyz, 1.0);
-
-    return length(
-        worldPosition.xyz - uCameraPosition
-    );
-}
-
-
-// ------------------------------------------------------------
-// RAYMARCH
-// ------------------------------------------------------------
-
-void main() {
-    vec4 background = texture2D(uScene, vUv);
-
-    float maxDistance = sceneDistance(vUv);
-
-    vec4 clipPosition = vec4(
-        vUv * 2.0 - 1.0,
-        1.0,
-        1.0
-    );
-
-    vec4 viewPosition =
-        uInverseProjection * clipPosition;
-
-    viewPosition /= max(
-        abs(viewPosition.w),
-        0.00001
-    );
-
-    vec3 rayDirection = normalize(
-        (
-            uInverseView *
-            vec4(normalize(viewPosition.xyz), 0.0)
-        ).xyz
-    );
-
-    vec3 rayOrigin = uCameraPosition;
-
-    vec3 boxMin = vec3(-900.0, 25.0, -900.0);
-    vec3 boxMax = vec3(900.0, 540.0, 900.0);
-
-    vec2 hit = intersectBox(
-        rayOrigin,
-        rayDirection,
-        boxMin,
-        boxMax
-    );
-
-    float startT = max(hit.x, 0.0);
-    float endT = min(hit.y, maxDistance);
-
-    if (endT <= startT || hit.y <= 0.0) {
-        gl_FragColor = background;
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-        return;
-    }
-
-    float distanceThroughVolume = endT - startT;
-
-    // Баланс между качеством и нагрузкой.
-    const int STEPS = 36;
-
-    float stepLength =
-        distanceThroughVolume / float(STEPS);
-
-    vec3 accumulatedColor = vec3(0.0);
-    float transmittance = 1.0;
-
-    for (int i = 0; i < STEPS; i++) {
-        float t =
-            startT +
-            (float(i) + 0.5) * stepLength;
-
-        vec3 p = rayOrigin + rayDirection * t;
-
-        float density = convectiveField(p);
-
-        if (density > 0.012) {
-            float heightFactor = clamp(
-                (p.y - 60.0) / 420.0,
-                0.0,
-                1.0
-            );
-
-            float lighting = cloudLighting(
-                p,
-                rayDirection,
-                density
-            );
-
-            vec3 shadowColor =
-                vec3(0.23, 0.27, 0.34);
-
-            vec3 sunlightColor =
-                vec3(1.0, 0.975, 0.93);
-
-            vec3 cloudColor = mix(
-                shadowColor,
-                sunlightColor,
-                lighting
-            );
-
-            // Верхняя ледяная часть облака светлее.
-            float ice = smoothstep(
-                0.62,
-                0.96,
-                heightFactor
-            );
-
-            cloudColor = mix(
-                cloudColor,
-                vec3(0.84, 0.89, 0.96),
-                ice * 0.48
-            );
-
-            // Более тёмное основание.
-            float lowerShade = 1.0 - smoothstep(
-                0.0,
-                0.56,
-                heightFactor
-            );
-
-            cloudColor *= 1.0 - lowerShade * 0.19;
-
-            cloudColor +=
-                vec3(0.65, 0.76, 1.0) *
-                uFlash * 0.9;
-
-            float alpha = 1.0 - exp(
-                -density * stepLength * 0.016
-            );
-
-            alpha = clamp(alpha, 0.0, 0.64);
-
-            accumulatedColor +=
-                transmittance * alpha * cloudColor;
-
-            transmittance *= 1.0 - alpha;
-
-            if (transmittance < 0.035) {
-                break;
-            }
-        }
-    }
-
-    vec3 finalColor =
-        accumulatedColor +
-        transmittance * background.rgb;
-
-    gl_FragColor = vec4(finalColor, 1.0);
-
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-}
-`;
-
-
-// ============================================================
-// SHADER MATERIAL
+// The cloud geometry is rebuilt from the simulated qc field.
+// No cloud shape is generated by a fragment shader.
 // ============================================================
 
-const cloudMaterial = new THREE.ShaderMaterial({
-  uniforms: cloudUniforms,
+const CLOUD_DEPTH_LAYERS = 5;
+const CLOUD_DEPTH = 2600;
+const MAX_CLOUD_INSTANCES = NX * NZ * CLOUD_DEPTH_LAYERS;
 
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
+const cloudGeometry = new THREE.SphereGeometry(1, 5, 4);
 
-    void main() {
-      vUv = uv;
-      gl_Position = vec4(position.xy, 0.0, 1.0);
-    }
-  `,
-
-  fragmentShader: cloudFragmentShader,
-
-  depthTest: false,
+const cloudMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.94,
+  metalness: 0,
+  transparent: true,
+  opacity: 0.72,
   depthWrite: false,
-  transparent: false,
-  toneMapped: true
+  vertexColors: true
 });
 
-const fullscreenQuad = new THREE.Mesh(
-  quadGeometry,
-  cloudMaterial
+const clouds = new THREE.InstancedMesh(
+  cloudGeometry,
+  cloudMaterial,
+  MAX_CLOUD_INSTANCES
 );
 
-fullscreenQuad.frustumCulled = false;
-postScene.add(fullscreenQuad);
+clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+clouds.frustumCulled = false;
+clouds.count = 0;
+scene.add(clouds);
 
+const dummy = new THREE.Object3D();
+const cloudColor = new THREE.Color();
 
-// ============================================================
-// UI
-// ============================================================
+const cloudColorLow = new THREE.Color(0x8d9eae);
+const cloudColorMid = new THREE.Color(0xd7e1e9);
+const cloudColorHigh = new THREE.Color(0xffffff);
+const cloudColorDark = new THREE.Color(0x687787);
 
-const capeInput = $("cape");
-const shearInput = $("shear");
-const humidityInput = $("humidity");
-const stormTypeInput = $("stormType");
-
-function updateText(id, value) {
-  const element = $(id);
-
-  if (element) {
-    element.textContent = value;
-  }
+function cloudDensity(qc, qr) {
+  return qc + qr * 0.25;
 }
 
-function readSlider(input, fallback) {
-  if (!input) return fallback;
-
-  const value = Number(input.value);
-
-  return Number.isFinite(value) ? value : fallback;
-}
-
-function getCloudTop() {
-  const cape = Math.max(
-    0,
-    Math.min(state.cape / 4000, 1)
-  );
-
-  return Math.round(185 + 265 * cape);
-}
-
-function getActiveCellEstimate() {
-  // Это оценка по времени жизненного цикла,
-  // а не анализ реального поля восходящих потоков.
+function rebuildCloudGeometry() {
   let count = 0;
+  let top = 0;
+  let cellColumns = 0;
 
-  for (let i = 0; i < 4; i++) {
-    const cycle = 112;
-    const offset =
-      i * 27 +
-      ((Math.sin(state.seed + i * 4.7) + 1) * 0.5) * 13;
+  const threshold = 0.000055;
 
-    const age = (
-      (state.time * 0.72 + offset) % cycle + cycle
-    ) % cycle;
+  for (let i = 0; i < NX; i++) {
+    let columnActive = false;
 
-    if (age >= 3 && age <= 105) {
+    for (let k = 1; k < NZ; k++) {
+      const n = idx(i, k);
+      const qc = F.qc[n];
+      const qr = F.qr[n];
+      const density = cloudDensity(qc, qr);
+
+      if (density < threshold) continue;
+
+      columnActive = true;
+      top = Math.max(top, k * DZ);
+
+      const intensity = clamp(
+        Math.log1p(density * 12000) / 3.6,
+        0.12,
+        1
+      );
+
+      const x = i * DX;
+      const z = k * DZ;
+
+      // Each simulated grid cell is extruded through depth.
+      // This is a display extrusion, not a 3D atmospheric solve.
+      for (let layer = 0; layer < CLOUD_DEPTH_LAYERS; layer++) {
+        if (count >= MAX_CLOUD_INSTANCES) break;
+
+        const depthT =
+          layer / (CLOUD_DEPTH_LAYERS - 1) - 0.5;
+
+        const y = depthT * CLOUD_DEPTH;
+
+        // Small deterministic offset prevents a rigid slab look.
+        const offset =
+          Math.sin(i * 0.41 + k * 0.27 + layer * 1.7) * 28;
+
+        const scaleX = DX * (0.60 + 0.20 * intensity);
+        const scaleY = CLOUD_DEPTH /
+          (CLOUD_DEPTH_LAYERS + 0.5);
+        const scaleZ = DZ * (0.62 + 0.25 * intensity);
+
+        dummy.position.set(x, z, y + offset);
+        dummy.scale.set(scaleX, scaleZ, scaleY);
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+
+        clouds.setMatrixAt(count, dummy.matrix);
+
+        const shade = clamp(intensity, 0, 1);
+
+        if (qr > 0.001) {
+          cloudColor.copy(cloudColorDark);
+        } else if (k * DZ > 7500) {
+          cloudColor.copy(cloudColorHigh);
+        } else if (shade > 0.65) {
+          cloudColor.copy(cloudColorMid);
+        } else {
+          cloudColor.copy(cloudColorLow);
+        }
+
+        cloudColor.multiplyScalar(0.72 + shade * 0.45);
+        clouds.setColorAt(count, cloudColor);
+        count++;
+      }
+    }
+
+    if (columnActive) cellColumns++;
+  }
+
+  clouds.count = count;
+  clouds.instanceMatrix.needsUpdate = true;
+
+  if (clouds.instanceColor) {
+    clouds.instanceColor.needsUpdate = true;
+  }
+
+  activeCells = cellColumns;
+  maxCloudHeight = top;
+}
+
+// ============================================================
+// PRECIPITATION VISUALIZATION
+// ============================================================
+
+const MAX_RAIN_POINTS = 1400;
+
+const rainPositions = new Float32Array(MAX_RAIN_POINTS * 3);
+const rainColors = new Float32Array(MAX_RAIN_POINTS * 3);
+
+const rainGeometry = new THREE.BufferGeometry();
+
+rainGeometry.setAttribute(
+  "position",
+  new THREE.BufferAttribute(rainPositions, 3)
+);
+
+rainGeometry.setAttribute(
+  "color",
+  new THREE.BufferAttribute(rainColors, 3)
+);
+
+const rainMaterial = new THREE.PointsMaterial({
+  size: 75,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.65,
+  depthWrite: false,
+  sizeAttenuation: true
+});
+
+const rainPoints = new THREE.Points(rainGeometry, rainMaterial);
+rainPoints.frustumCulled = false;
+scene.add(rainPoints);
+
+function rebuildRain() {
+  let count = 0;
+  const stride = 3;
+
+  for (let k = 2; k < NZ - 1; k += stride) {
+    for (let i = 1; i < NX - 1; i += stride) {
+      const n = idx(i, k);
+      const rain = F.qr[n];
+
+      if (rain < 0.00025 || count >= MAX_RAIN_POINTS) continue;
+
+      const p = count * 3;
+
+      rainPositions[p] = i * DX;
+      rainPositions[p + 1] = k * DZ;
+      rainPositions[p + 2] =
+        (Math.sin(i * 2.7 + k * 1.4) * 0.5) * CLOUD_DEPTH;
+
+      const intensity = clamp(rain * 500, 0.15, 1);
+
+      rainColors[p] = 0.35 * intensity;
+      rainColors[p + 1] = 0.63 * intensity;
+      rainColors[p + 2] = 1.0 * intensity;
+
       count++;
     }
   }
 
-  if (state.stormType === "tower") {
-    return Math.min(count, 1);
-  }
-
-  return count;
+  rainGeometry.setDrawRange(0, count);
+  rainGeometry.attributes.position.needsUpdate = true;
+  rainGeometry.attributes.color.needsUpdate = true;
 }
 
-function syncControls() {
-  state.cape = readSlider(capeInput, state.cape);
-  state.shear = readSlider(shearInput, state.shear);
-  state.humidity = readSlider(humidityInput, state.humidity);
+// ============================================================
+// LIGHTNING
+// Triggered by strong simulated updrafts and condensate.
+// ============================================================
 
-  if (stormTypeInput) {
-    state.stormType = stormTypeInput.value || "supercell";
-  }
+const lightningGroup = new THREE.Group();
+scene.add(lightningGroup);
 
-  cloudUniforms.uCAPE.value = state.cape;
-  cloudUniforms.uShear.value = state.shear;
-  cloudUniforms.uHumidity.value = state.humidity;
-
-  const typeMap = {
-    tower: 0,
-    supercell: 1,
-    multicell: 2,
-    squall: 3,
-    random: 4
-  };
-
-  let mode = typeMap[state.stormType] ?? 1;
-
-  if (state.stormType === "random") {
-    mode = Math.floor(
-      Math.abs(Math.sin(state.seed * 0.017)) * 4
-    );
-
-    // random должен выбрать один из поддерживаемых
-    // режимов, не изменяя значение в интерфейсе.
-  }
-
-  cloudUniforms.uStormType.value = mode;
-
-  updateText(
-    "capeValue",
-    `${Math.round(state.cape)} J/kg`
-  );
-
-  updateText(
-    "shearValue",
-    `${Math.round(state.shear)} m/s`
-  );
-
-  updateText(
-    "humidityValue",
-    `${Math.round(state.humidity)}%`
-  );
-
-  updateText(
-    "cloudHeight",
-    `${getCloudTop()} m`
-  );
-
-  const activeCells = getActiveCellEstimate();
-
-  updateText(
-    "cellCount",
-    state.stormType === "tower"
-      ? "Одна башня"
-      : `${activeCells} ячеек`
-  );
-
-  updateText(
-    "status",
-    state.paused
-      ? "Пауза"
-      : "Конвекция развивается"
-  );
-}
-
-[
-  capeInput,
-  shearInput,
-  humidityInput,
-  stormTypeInput
-].forEach((element) => {
-  if (!element) return;
-
-  element.addEventListener("input", syncControls);
-  element.addEventListener("change", syncControls);
+const lightningMaterial = new THREE.LineBasicMaterial({
+  color: 0xe4f2ff,
+  transparent: true,
+  opacity: 0.95
 });
 
+let lightningTimer = 0;
 
-// ============================================================
-// BUTTONS
-// ============================================================
-
-const pauseButton = $("pause");
-const lightningButton = $("lightning");
-const resetButton = $("reset");
-const newStormButton = $("newStorm");
-
-if (pauseButton) {
-  pauseButton.addEventListener("click", () => {
-    state.paused = !state.paused;
-
-    pauseButton.textContent = state.paused
-      ? "Продолжить"
-      : "Пауза";
-
-    syncControls();
-  });
+function clearLightning() {
+  while (lightningGroup.children.length) {
+    const child = lightningGroup.children.pop();
+    if (child.geometry) child.geometry.dispose();
+  }
 }
 
-if (lightningButton) {
-  lightningButton.addEventListener("click", () => {
-    state.lightning = !state.lightning;
+function createLightning() {
+  if (!lightningEnabled || maxCloudHeight < 3500) return;
 
-    lightningButton.textContent = state.lightning
-      ? "Молнии: вкл."
-      : "Молнии: выкл.";
+  let best = -1;
+  let bestScore = 0;
 
-    if (!state.lightning) {
-      clearLightning();
-      state.lightningFlash = 0;
+  for (let k = 10; k < NZ - 2; k++) {
+    for (let i = 2; i < NX - 2; i++) {
+      const n = idx(i, k);
+      const score = F.w[n] * F.qc[n];
+
+      if (F.w[n] > 5 && score > bestScore) {
+        bestScore = score;
+        best = n;
+      }
     }
-  });
+  }
+
+  if (best < 0) return;
+
+  const bi = best % NX;
+  const bk = Math.floor(best / NX);
+
+  const points = [];
+  let x = bi * DX;
+  let z = bk * DZ;
+  const y = 0;
+
+  points.push(new THREE.Vector3(x, z, y));
+
+  for (let s = 0; s < 9; s++) {
+    x += (random01() - 0.5) * 380;
+    z -= 130 + random01() * 240;
+    points.push(new THREE.Vector3(x, Math.max(z, 0), y));
+  }
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(geometry, lightningMaterial);
+
+  lightningGroup.add(line);
+
+  // Brief flash, removed by the render loop.
+  line.userData.createdAt = performance.now();
+  line.userData.duration = 180 + random01() * 180;
 }
-
-if (newStormButton) {
-  newStormButton.addEventListener("click", () => {
-    state.seed = Math.random() * 10000;
-    state.stormGeneration++;
-
-    cloudUniforms.uSeed.value = state.seed;
-
-    // Новая система начинается с ранней стадии.
-    state.time = 0;
-    state.lightningTimer = 3 + Math.random() * 4;
-    state.lightningFlash = 0;
-
-    clearLightning();
-
-    // Новая гроза продолжает работу, даже если
-    // предыдущая была поставлена на паузу.
-    state.paused = false;
-
-    if (pauseButton) {
-      pauseButton.textContent = "Пауза";
-    }
-
-    syncControls();
-  });
-}
-
-if (resetButton) {
-  resetButton.addEventListener("click", () => {
-    state.time = 0;
-    state.paused = false;
-    state.lightningFlash = 0;
-    state.lightningTimer = 3;
-    state.seed = Math.random() * 10000;
-
-    cloudUniforms.uSeed.value = state.seed;
-
-    camera.position.set(460, 270, 620);
-    controls.target.set(0, 100, 0);
-    controls.update();
-
-    clearLightning();
-
-    if (pauseButton) {
-      pauseButton.textContent = "Пауза";
-    }
-
-    syncControls();
-  });
-}
-
 
 // ============================================================
-// GROWTH SPEED
+// METRICS
 // ============================================================
 
-let growthSpeed = 1;
+function updateMetrics() {
+  if (ui.cloudHeight) {
+    ui.cloudHeight.textContent =
+      `${(maxCloudHeight / 1000).toFixed(1)} km`;
+  }
 
-const growthButton = $("growthSpeed");
+  if (ui.cellCount) {
+    ui.cellCount.textContent = String(activeCells);
+  }
 
-if (growthButton) {
-  growthButton.addEventListener("click", () => {
-    growthSpeed = growthSpeed >= 3
-      ? 0.5
-      : growthSpeed + 0.5;
-
-    growthButton.textContent =
-      `Рост ×${growthSpeed.toFixed(1)}`;
-  });
+  if (ui.status) {
+    if (paused) {
+      ui.status.textContent = "Пауза";
+    } else if (maxCloudHeight > 7000) {
+      ui.status.textContent = "Глубокая конвекция";
+    } else if (maxCloudHeight > 2500) {
+      ui.status.textContent = "Развитие облаков";
+    } else {
+      ui.status.textContent = "Инициация конвекции";
+    }
+  }
 }
 
+// ============================================================
+// UI ACTIONS
+// ============================================================
+
+function resetModel() {
+  stormSeed = (stormSeed + 7919) >>> 0;
+  initializeAtmosphere(true);
+  clearLightning();
+  rebuildCloudGeometry();
+  rebuildRain();
+  updateMetrics();
+}
+
+function createNewStorm() {
+  stormSeed = (stormSeed + 104729) >>> 0;
+  initializeAtmosphere(false);
+
+  const type = ui.stormType?.value || "supercell";
+  const center = type === "squall" ? NX * 0.5 : NX * 0.36;
+  const width = type === "squall" ? NX * 0.22 : NX * 0.075;
+
+  for (let k = 1; k < 13; k++) {
+    for (let i = 0; i < NX; i++) {
+      const n = idx(i, k);
+      const thermal = gaussian(i, center, width) *
+        gaussian(k, 4.5, 3.5);
+
+      F.th[n] += 1.6 * thermal;
+      F.qv[n] += 0.001 * thermal;
+      F.w[n] += 0.4 * thermal;
+    }
+  }
+
+  if (type === "multicell" || type === "squall") {
+    const count = type === "squall" ? 5 : 3;
+
+    for (let c = 0; c < count; c++) {
+      const cx = NX * (0.15 + c * 0.16);
+
+      for (let k = 1; k < 11; k++) {
+        for (let i = 0; i < NX; i++) {
+          const n = idx(i, k);
+          const thermal = gaussian(i, cx, 3.4) *
+            gaussian(k, 4.2, 3.0);
+
+          F.th[n] += 1.0 * thermal;
+          F.qv[n] += 0.0007 * thermal;
+        }
+      }
+    }
+  }
+
+  simTime = 0;
+  stormAge = 0;
+  accumulatedRain = 0;
+  clearLightning();
+  rebuildCloudGeometry();
+  rebuildRain();
+  updateMetrics();
+}
+
+ui.newStorm?.addEventListener("click", createNewStorm);
+
+ui.pause?.addEventListener("click", () => {
+  paused = !paused;
+
+  if (ui.pause) {
+    ui.pause.textContent = paused ? "Продолжить" : "Пауза";
+  }
+
+  updateMetrics();
+});
+
+ui.lightning?.addEventListener("click", () => {
+  lightningEnabled = !lightningEnabled;
+
+  if (!lightningEnabled) clearLightning();
+
+  if (ui.lightning) {
+    ui.lightning.textContent =
+      lightningEnabled ? "Молнии: вкл." : "Молнии: выкл.";
+  }
+});
+
+ui.reset?.addEventListener("click", resetModel);
+
+for (const element of [ui.cape, ui.shear, ui.humidity]) {
+  element?.addEventListener("input", readParameters);
+}
+
+ui.stormType?.addEventListener("change", () => {
+  // Changing the selected type affects the next generated storm.
+  if (ui.status) {
+    ui.status.textContent = "Тип изменён — создай новую грозу";
+  }
+});
 
 // ============================================================
 // RESIZE
@@ -1456,149 +1187,87 @@ function resize() {
     canvas.clientHeight || window.innerHeight
   );
 
+  renderer.setSize(width, height, false);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-
-  const pixelRatio = Math.min(
-    window.devicePixelRatio || 1,
-    1.1
-  );
-
-  renderer.setPixelRatio(pixelRatio);
-  renderer.setSize(width, height, false);
-
-  const w = Math.max(
-    1,
-    Math.floor(width * pixelRatio)
-  );
-
-  const h = Math.max(
-    1,
-    Math.floor(height * pixelRatio)
-  );
-
-  renderTarget.setSize(w, h);
 }
 
 window.addEventListener("resize", resize);
-resize();
-
 
 // ============================================================
-// RENDER LOOP
+// MAIN LOOP
 // ============================================================
-
-let previousTime = performance.now();
 
 function animate(now) {
   requestAnimationFrame(animate);
 
-  const delta = Math.min(
-    (now - previousTime) / 1000,
-    0.05
-  );
+  const elapsed = clamp((now - lastFrame) / 1000, 0, 0.08);
+  lastFrame = now;
+  frameNumber++;
 
-  previousTime = now;
+  if (!paused) {
+    // Adjustable simulation speed.
+    const speed = ui.growthSpeed
+      ? clamp(Number(ui.growthSpeed.value) || 1, 0.25, 4)
+      : 1;
 
-  if (!state.paused) {
-    // Рост скорости симуляции ускоряет развитие,
-    // а не просто анимирует текстуру.
-    state.time += delta * growthSpeed;
+    // Fixed numerical steps avoid using arbitrary frame time
+    // directly in the atmospheric solver.
+    const steps = Math.max(1, Math.round(SUBSTEPS * speed));
 
-    state.lightningTimer -= delta;
-
-    const capeFactor = Math.min(
-      1,
-      Math.max(0.1, state.cape / 3000)
-    );
-
-    const humidityFactor = Math.min(
-      1,
-      Math.max(0.15, state.humidity / 100)
-    );
-
-    // При высокой CAPE и влажности разряды
-    // возникают чаще. Это визуальная эвристика.
-    const lightningChance =
-      0.028 * capeFactor * humidityFactor;
-
-    if (
-      state.lightning &&
-      state.lightningTimer <= 0 &&
-      Math.random() < lightningChance
-    ) {
-      createLightning();
-
-      state.lightningTimer =
-        1.8 + Math.random() * 6.5;
-    }
-
-    state.lightningFlash *= Math.exp(-delta * 5.5);
-
-    if (
-      lightningGroup &&
-      state.lightningFlash < 0.025
-    ) {
-      clearLightning();
+    for (let s = 0; s < steps; s++) {
+      modelStep(MODEL_DT);
     }
   }
 
+  // Geometry updates are throttled for mobile GPUs.
+  if (now - lastRenderUpdate > 140) {
+    rebuildCloudGeometry();
+    rebuildRain();
+    lastRenderUpdate = now;
+  }
+
+  if (!paused && lightningEnabled) {
+    lightningTimer += elapsed;
+
+    if (lightningTimer > 1.8 + random01() * 2.2) {
+      createLightning();
+      lightningTimer = 0;
+    }
+  }
+
+  // Remove expired lightning flashes.
+  for (let i = lightningGroup.children.length - 1; i >= 0; i--) {
+    const line = lightningGroup.children[i];
+
+    if (now - line.userData.createdAt > line.userData.duration) {
+      lightningGroup.remove(line);
+      line.geometry.dispose();
+    }
+  }
+
+  if (now - lastMetrics > 500) {
+    updateMetrics();
+    lastMetrics = now;
+  }
+
   controls.update();
-
-  cloudUniforms.uTime.value = state.time;
-  cloudUniforms.uFlash.value = state.lightningFlash;
-
-  camera.updateMatrixWorld();
-
-  cloudUniforms.uCameraPosition.value.copy(
-    camera.position
-  );
-
-  cloudUniforms.uInverseProjection.value
-    .copy(camera.projectionMatrix)
-    .invert();
-
-  cloudUniforms.uInverseView.value.copy(
-    camera.matrixWorld
-  );
-
-  // 1. Рельеф и буфер глубины.
-  renderer.setRenderTarget(renderTarget);
-  renderer.clear();
   renderer.render(scene, camera);
-
-  // 2. Объёмное поле облаков.
-  renderer.setRenderTarget(null);
-  renderer.clear();
-  renderer.render(postScene, postCamera);
-
-  updateText(
-    "cloudHeight",
-    `${getCloudTop()} m`
-  );
-
-  updateText(
-    "cellCount",
-    state.stormType === "tower"
-      ? "Одна башня"
-      : `${getActiveCellEstimate()} ячеек`
-  );
 }
 
-syncControls();
+// ============================================================
+// START
+// ============================================================
+
+readParameters();
+initializeAtmosphere(true);
+resize();
+rebuildCloudGeometry();
+rebuildRain();
+updateMetrics();
+
+if (ui.loading) {
+  ui.loading.style.display = "none";
+}
+
 requestAnimationFrame(animate);
-
-
-// ============================================================
-// READY
-// ============================================================
-
-const loading = document.querySelector("#loading");
-
-if (loading) {
-  loading.style.display = "none";
-}
-
-console.log(
-  "Quantum Meteo: evolving convective system initialized."
-);
