@@ -1,21 +1,27 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-function lumpyGeometry(seed=1,detail=3){const g=new THREE.IcosahedronGeometry(1,detail),p=g.attributes.position;for(let i=0;i<p.count;i++){let x=p.getX(i),y=p.getY(i),z=p.getZ(i);const n=1+.095*Math.sin(x*8+seed)*Math.cos(y*7-seed*.8)+.065*Math.sin(z*13+seed*2)*Math.cos(x*9+y*3);p.setXYZ(i,x*n,y*n,z*n)}g.computeVertexNormals();return g}
-function blob(mat,pos,scale,seed,detail=3){const m=new THREE.Mesh(lumpyGeometry(seed,detail),mat);m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;return m}
-export function createCloudSystem(scenario='supercell',density=0.9){const root=new THREE.Group();root.name='Dense volumetric storm geometry';const white=new THREE.MeshStandardMaterial({color:'#f0f1ee',roughness:1,metalness:0}),sunlit=new THREE.MeshStandardMaterial({color:'#f8f7f1',roughness:1}),shade=new THREE.MeshStandardMaterial({color:'#aab4bf',roughness:1}),baseMat=new THREE.MeshStandardMaterial({color:'#56616e',roughness:1});let seed=2;
- // Broad, connected anvil: a thick flattened cloud mass plus irregular lobes, not a shader plane.
- root.add(blob(shade,[0,174,-390],[105,20,63],seed++,4));root.add(blob(white,[-52,181,-405],[78,14,50],seed++,4));root.add(blob(sunlit,[42,183,-420],[88,13,53],seed++,4));root.add(blob(shade,[4,169,-348],[74,18,43],seed++,4));
- // The anvil edge is thick and scalloped, avoiding tall holes / thin disconnected rings.
- for(let i=0;i<27;i++){const a=i/27*Math.PI*2,rad=58+Math.sin(i*2.3)*10;root.add(blob(i%4===0?shade:white,[Math.cos(a)*rad,171+Math.sin(i*1.7)*5,-390+Math.sin(a)*rad*.58],[18+Math.sin(i)*4,8+Math.random()*5,15],seed++,3))}
- // Main cumulonimbus towers are stacked irregular lobed meshes; a dark continuous base visually anchors the storm.
- root.add(blob(baseMat,[0,92,-365],[72,17,44],seed++,4));
- for(let t=0;t<4;t++){const tx=[-35,-7,24,45][t],tz=-365+(t%2)*-15;for(let j=0;j<6;j++){const y=105+j*12;const s=(j<2?26:32)*(1-j*.045);root.add(blob(j>3?sunlit:(j%2?white:shade),[tx+Math.sin(j*1.4+t)*7,y,tz+Math.cos(j+t)*5],[s,s*(.78+j*.035),s*.78],seed++,3))}}
- // Massive cauliflower towers under the anvil, with dense interlocking shoulders.
- for(let i=0;i<34;i++){const x=(Math.random()-.5)*105,z=-370+(Math.random()-.5)*52,y=113+Math.random()*47,s=(14+Math.random()*16)*(.8+density*.2);root.add(blob(Math.random()>.35?white:shade,[x,y,z],[s,s*(.85+Math.random()*.4),s*.82],seed++,3))}
- // Nearby cumulus/feeder cells establish distance and environment around the principal storm.
- const cellCount=scenario==='squall'?8:scenario==='cumulus'?10:6;for(let c=0;c<cellCount;c++){const x=(c-(cellCount-1)/2)*(scenario==='squall'?95:155)+(Math.random()-.5)*25,z=-570-Math.random()*350,y=70+Math.random()*25,sz=23+Math.random()*22;for(let j=0;j<7;j++){const yy=y+j*6;const s=sz*(1-j*.07);root.add(blob(j%3===0?shade:white,[x+(Math.random()-.5)*sz,yy,z+(Math.random()-.5)*sz],[s,s*.75,s*.72],seed++,2))}}
- // FFD/RFD rain curtains: transparent, vertically streaked geometry beneath elevated cloud base.
- const rainMat=new THREE.MeshBasicMaterial({color:'#536d83',transparent:true,opacity:.24,depthWrite:false,side:THREE.DoubleSide});for(let i=0;i<7;i++){const x=-48+i*15,z=-367-(i%3)*10;const geo=new THREE.BufferGeometry();const v=[x,89,z,x+9,89,z-5,x+6,7,z-4,x-4,7,z+3];geo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();root.add(new THREE.Mesh(geo,rainMat))}
- // Scenario-specific visual adjustment.
- if(scenario==='cumulus'){root.scale.set(.8,.7,.8);root.position.z=25}if(scenario==='squall'){root.scale.x=1.65;root.position.x=-15}if(scenario==='multicell'){root.scale.set(1.1,.94,1.05)}
- return root;
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
+const clamp=THREE.MathUtils.clamp;
+function makeCloudMat(color,opacity=0.95){return new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,transparent:opacity<1,opacity,depthWrite:false,side:THREE.DoubleSide});}
+function ellipsoid(group,pos,scale,mat){const g=new THREE.SphereGeometry(1,24,16);const m=new THREE.Mesh(g,mat);m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;group.add(m);return m}
+export function createCloudSystem(scene,params){
+ const root=new THREE.Group();root.position.set(-8,0,-32);scene.add(root);const cells=[];const main=new THREE.Group();root.add(main);const white=makeCloudMat('#e8edf0',.93),sunlit=makeCloudMat('#f6f5ed',.95),shadow=makeCloudMat('#9daeb9',.94),deep=makeCloudMat('#657783',.92),mist=makeCloudMat('#d6e0e4',.48);
+ const lcl=params.lcl/250, cape=params.cape, moisture=params.moisture/100;const instability=clamp(cape/3200,0,1);const baseY=clamp(lcl,2,10);const maxHeight=5+instability*42;const mature=clamp((cape/4500)*.55+moisture*.5,0,1);const count=1+Math.round(mature*2);
+ for(let ci=0;ci<count;ci++){
+  const cell=new THREE.Group();cell.position.set((ci-(count-1)/2)*14,0,ci===0?0:-12-ci*5);root.add(cell);const parts=[];
+  const add=(p,s,m)=>parts.push({mesh:ellipsoid(cell,p,s,m),target:s.slice(),targetPos:p.slice()});
+  const base=baseY+(ci%2)*.3;
+  // Broad, irregular cloud base and stacked cauliflower towers. Shapes stay connected as they grow.
+  for(let i=0;i<15;i++){const a=i*2.399;const r=Math.sqrt((i+.5)/15)*5.5;const x=Math.cos(a)*r,z=Math.sin(a)*r*.72;add([x,base,z],[1.5+Math.random()*1.5,.65+Math.random()*.65,1.3+Math.random()*1.2],i%4===0?shadow:white)}
+  const towerCount=3+Math.round(instability*5);
+  for(let t=0;t<towerCount;t++){const a=t*2.4+ci*.8,r=t===0?0:1.5+Math.random()*3.4;const x=Math.cos(a)*r,z=Math.sin(a)*r*.7;const levels=3+Math.round(instability*5);for(let j=0;j<levels;j++){const y=base+.9+j*(maxHeight/levels);const spread=(1-j/levels)*1.4+.45;const wobble=Math.sin(j*1.7+t)*.45;add([x+wobble,y,z],[spread*(.95+Math.random()*.4),1.0+Math.random()*.35,spread*(.9+Math.random()*.45)],j>levels*.65?(j%3===0?sunlit:white):(j%4===0?shadow:white))}}
+  // Flat, broad, dense anvil is made of many overlapping lobes; its axis follows the shear vector.
+  const anvil=new THREE.Group();cell.add(anvil);const anvParts=[];const span=22+params.shear*1.4+instability*20;const driftAngle=Math.atan2(params.shear*.85+params.wind*.25,Math.max(2,params.wind+4));anvil.rotation.y=driftAngle;
+  const anvAdd=(p,s,m)=>anvParts.push({mesh:ellipsoid(anvil,p,s,m),target:s.slice(),targetPos:p.slice()});
+  for(let i=0;i<35;i++){const u=(i/34-.5)*2;const z=(Math.random()-.5)*5.2;const x=u*span;const edge=Math.pow(Math.abs(u),1.7);const y=base+maxHeight*(.83-edge*.18)+Math.sin(u*3)*.25;const sx=1.6+Math.random()*2.1;const sz=1.3+Math.random()*2.3;anvAdd([x,y,z],[sx,.55+Math.random()*.32,sz],i%6===0?mist:(i%4===0?shadow:white))}
+  // Thick central connection prevents anvil holes and makes a continuous leading shelf.
+  for(let i=0;i<12;i++){const x=(i/11-.5)*span*.8;anvAdd([x,base+maxHeight*.82+(Math.random()-.5)*.25,(Math.random()-.5)*1.8],[2.6,.85,2.8],i%4===0?shadow:white)}
+  cells.push({group:cell,parts,anvil,anvParts,base,maxHeight,phase:ci*.12});
+ }
+ // Peripheral cumulus towers surrounding the main storm for spatial context.
+ const ambient=[];for(let k=0;k<8;k++){const g=new THREE.Group();root.add(g);const angle=k/8*Math.PI*2;g.position.set(Math.cos(angle)*(28+(k%3)*8),0,Math.sin(angle)*(22+(k%4)*7)-12);const parts=[];const h=2.5+Math.random()*3.2;for(let j=0;j<5;j++){const x=(Math.random()-.5)*3,z=(Math.random()-.5)*3;const s=[1.7+Math.random()*1.5,.8+Math.random()*1.3,1.5+Math.random()*1.5];parts.push({mesh:ellipsoid(g,[x,baseY+j*.55,z],s,j%3===0?shadow:white),target:s,targetPos:[x,baseY+j*.55,z]})}ambient.push({g,parts,h,phase:k*.19})}
+ return {root,cells,ambient,baseY,maxHeight,update(t,dt,live){const cap=clamp(live.cape/4500,0,1),moist=live.moisture/100;const thermal=clamp((live.thermal??8)/16,0,1);const growthRate=clamp(.28+cap*.65+moist*.28+thermal*.12,.25,1.35);const growth=clamp(t*growthRate/95,0,1);for(const c of cells){const g=clamp((growth-c.phase*.18)*1.1,0,1);for(const p of c.parts){p.mesh.scale.set(p.target[0]*g,p.target[1]*g,p.target[2]*g);p.mesh.position.set(p.targetPos[0]*g,c.base+(p.targetPos[1]-c.base)*g,p.targetPos[2]*g);p.mesh.visible=g>.015}const stormPotential=clamp((live.cape-500)/2300,0,1)*clamp((live.moisture-30)/50,0,1);const matureG=clamp((growth-.42-c.phase*.1)*1.7,0,1)*stormPotential;c.anvil.visible=matureG>.015;for(const p of c.anvParts){p.mesh.scale.set(p.target[0]*matureG,p.target[1]*matureG,p.target[2]*matureG);p.mesh.position.set(p.targetPos[0]*matureG,c.base+(p.targetPos[1]-c.base)*matureG,p.targetPos[2]*matureG);p.mesh.visible=matureG>.015}c.group.position.y=0;c.group.rotation.y=Math.sin(t*.06+c.phase)*.018*live.shear;c.anvil.rotation.y=Math.atan2(live.shear*.85+live.wind*.25,Math.max(2,live.wind+4));c.group.scale.setScalar(.82+g*.18)}for(const a of ambient){const g=clamp((growth-a.phase*.3)*1.25,0,1);for(const p of a.parts){p.mesh.scale.set(p.target[0]*g,p.target[1]*g,p.target[2]*g);p.mesh.position.set(p.targetPos[0]*g,baseY+(p.targetPos[1]-baseY)*g,p.targetPos[2]*g);p.mesh.visible=g>.01}a.g.position.x+=Math.sin(t*.02+a.phase)*dt*.035*live.wind;a.g.rotation.y=Math.sin(t*.04+a.phase)*.05}root.rotation.y+=dt*.0008*live.wind;}};
 }

@@ -1,7 +1,8 @@
-import L from 'https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js';
-const map=L.map('map',{zoomControl:true,worldCopyJump:true}).setView([55.75,37.62],4);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(map);
-let point=[55.75,37.62], marker=L.marker(point,{draggable:true}).addTo(map);
-function update(p){point=p;document.querySelector('#latVal').textContent=p[0].toFixed(2)+'°';document.querySelector('#lonVal').textContent=p[1].toFixed(2)+'°';marker.setLatLng(p)}
-map.on('click',e=>update([e.latlng.lat,e.latlng.lng]));marker.on('dragend',e=>update([e.target.getLatLng().lat,e.target.getLatLng().lng]));
-document.querySelector('#enterGround').addEventListener('click',()=>{const scenario=document.querySelector('#scenario').value;location.href=`./ground.html?lat=${point[0].toFixed(4)}&lon=${point[1].toFixed(4)}&scenario=${encodeURIComponent(scenario)}`});
+const defaults={lat:55.75,lon:37.62,cape:1800,moisture:75,shear:20,lcl:1200,thermal:8,wind:12};
+const $=id=>document.getElementById(id);let point={lat:defaults.lat,lon:defaults.lon};
+const bindings=[['cape','capeValue',v=>`${v}`],['moisture','moistureValue',v=>`${v}%`],['shear','shearValue',v=>`${v} m/s`],['lcl','lclValue',v=>`${(v/1000).toFixed(1)} km`],['thermal','thermalValue',v=>`+${v}°C`],['wind','windValue',v=>`${v} m/s`]];
+for(const [input,out,fmt] of bindings){const el=$(input);const update=()=>$(out).textContent=fmt(el.value);el.addEventListener('input',update);update()}
+let map,marker;
+function showPoint(lat,lon){point={lat,lon};$('coords').textContent=`${lat.toFixed(2)}° N · ${lon.toFixed(2)}° E`;if(marker)marker.setLatLng([lat,lon])}
+try{if(window.L){map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([point.lat,point.lon],5);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'© OpenStreetMap'}).addTo(map);marker=L.marker([point.lat,point.lon],{draggable:true}).addTo(map);marker.on('dragend',e=>{const p=e.target.getLatLng();showPoint(p.lat,p.lng)});map.on('click',e=>showPoint(e.latlng.lat,e.latlng.lng));setTimeout(()=>map.invalidateSize(),250)}else throw Error('Библиотека карты не загрузилась. Проверь интернет и перезагрузи страницу.')}catch(e){$('map').innerHTML=`<div style="padding:20px;color:#eaf2fa;font-size:12px;line-height:1.6">Карта недоступна. Координаты можно изменить после запуска в панели наблюдения. Причина: ${e.message}</div>`}
+$('startBtn').addEventListener('click',()=>{const params={lat:point.lat,lon:point.lon,cape:+$('cape').value,moisture:+$('moisture').value,shear:+$('shear').value,lcl:+$('lcl').value,thermal:+$('thermal').value,wind:+$('wind').value};sessionStorage.setItem('qm-atmosphere',JSON.stringify(params));location.href='./ground.html'});

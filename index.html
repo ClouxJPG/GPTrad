@@ -1,15 +1,16 @@
 <!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101b2b"><title>Quantum Meteo — Earth & Storm</title>
-<link rel="stylesheet" href="app.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-</head>
-<body>
-<div id="mapView" class="view map-view">
-  <header class="topbar"><div class="brand"><span class="brand-mark">QM</span><div><strong>QUANTUM METEO</strong><small>EARTH / STORM OBSERVER</small></div></div><span class="status">ПРОТОТИП · 3D</span></header>
-  <main class="map-layout"><section class="map-copy"><p class="eyebrow">РЕЖИМ 01 / ПЛАНЕТА</p><h1>Выбери точку<br>наблюдения</h1><p>Нажми на карту, чтобы задать положение наблюдателя. Затем перейди в отдельную сцену с поверхности Земли.</p><div class="coords"><span>ШИРОТА</span><b id="latVal">55.75°</b><span>ДОЛГОТА</span><b id="lonVal">37.62°</b></div><label class="field-label" for="scenario">СЦЕНАРИЙ</label><select id="scenario"><option value="supercell">Суперячейка</option><option value="multicell">Многоклеточная гроза</option><option value="squall">Шквальная линия</option><option value="cumulus">Кучевые облака</option></select><button id="enterGround" class="primary">Открыть вид с Земли <span>↗</span></button><p class="small-note">Карта использует тайлы OpenStreetMap. Симуляция погоды локальная и не является прогнозом.</p></section><div id="map" aria-label="Карта выбора места"></div></main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#091421"><title>Quantum Meteo — Атмосферная лаборатория</title><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""></head>
+<body class="setup-body"><header class="topbar"><a class="brand" href="./index.html"><span class="brand-mark">QM</span><span><b>QUANTUM METEO</b><small>ATMOSPHERIC LABORATORY</small></span></a><span class="status-pill"><i></i> НАСТРОЙКА МОДЕЛИ</span></header>
+<main class="setup-layout"><section class="setup-intro"><div class="eyebrow">01 / INITIAL CONDITIONS</div><h1>Создай атмосферу.<br><em>Наблюдай развитие.</em></h1><p class="intro-text">Гроза не выбирается из готового сценария. Её развитие начинается с нуля и зависит от заданной термодинамики, влажности и вертикального сдвига ветра.</p><div class="model-note"><span class="note-icon">◎</span><div><b>Параметры до запуска</b><p>После нажатия «Начать симуляцию» конфигурация фиксируется для начального состояния. В процессе её можно менять.</p></div></div></section>
+<section class="setup-card"><div class="card-heading"><div><div class="eyebrow">02 / ATMOSPHERIC PROFILE</div><h2>Начальные условия</h2></div><span class="unit-tag">LOCAL MODEL</span></div>
+<div class="parameter-grid">
+<label class="param"><span>Доступная энергия конвекции <b id="capeValue">1800</b></span><input id="cape" type="range" min="0" max="4500" step="100" value="1800"><small><span>0 J/kg</span><span>4500 J/kg</span></small></label>
+<label class="param"><span>Относительная влажность <b id="moistureValue">75%</b></span><input id="moisture" type="range" min="20" max="100" step="1" value="75"><small><span>Сухо</span><span>Насыщенно</span></small></label>
+<label class="param"><span>Вертикальный сдвиг ветра <b id="shearValue">20 m/s</b></span><input id="shear" type="range" min="0" max="40" step="1" value="20"><small><span>0 m/s</span><span>40 m/s</span></small></label>
+<label class="param"><span>Высота LCL / базы облаков <b id="lclValue">1.2 km</b></span><input id="lcl" type="range" min="500" max="2500" step="100" value="1200"><small><span>0.5 km</span><span>2.5 km</span></small></label>
+<label class="param"><span>Температурный контраст у поверхности <b id="thermalValue">+8°C</b></span><input id="thermal" type="range" min="0" max="16" step="1" value="8"><small><span>0°C</span><span>+16°C</span></small></label>
+<label class="param"><span>Общий ветер <b id="windValue">12 m/s</b></span><input id="wind" type="range" min="0" max="30" step="1" value="12"><small><span>Штиль</span><span>30 m/s</span></small></label>
 </div>
-<script type="module" src="earth.js"></script>
-</body></html>
+<div class="section-divider"></div><div class="card-heading location-heading"><div><div class="eyebrow">03 / OBSERVATION LOCATION</div><h2>Точка наблюдения</h2></div><span class="coord-chip" id="coords">55.75° N · 37.62° E</span></div><p class="map-hint">Выбери точку на карте или оставь координаты по умолчанию. Это положение камеры и условного участка поверхности, не реальный прогноз погоды.</p><div id="map" aria-label="Карта выбора точки наблюдения"></div>
+<div class="start-row"><div class="start-info"><b>Развитие с нуля</b><span>Облака будут формироваться по мере эволюции модели.</span></div><button id="startBtn" class="primary-button">НАЧАТЬ СИМУЛЯЦИЮ <span>↗</span></button></div><p class="disclaimer">Модель учебно-визуальная: параметры управляют упрощённой физикой конвекции, а не численным прогнозом погоды.</p></section></main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script><script type="module" src="earth.js"></script></body></html>
