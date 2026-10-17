@@ -1,20 +1,16 @@
-// ============================================================
-// QUANTUM METEO — CONVECTIVE ATMOSPHERE
-//
-// Объёмные Cb-облака:
-// • объёмный raymarching в экранном пространстве
-// • учёт глубины рельефа
-// • непрерывная турбулентность Perlin-подобного типа
-// • восходящие потоки и развитие конвекции
-// • сдвиг ветра с высотой
-// • ледяная наковальня
-// • overshooting top
-// • mammatus
-// • волокнистые края облаков
-// • молнии
-//
-// index.html НЕ ИЗМЕНЯЕТСЯ.
-// ============================================================
+
+/* ============================================================
+   QUANTUM METEO — CONVECTIVE ATMOSPHERE
+
+   Исправления:
+   - уменьшена нагрузка на мобильный GPU;
+   - облако больше не заполняет весь объём равномерной дымкой;
+   - плотное конвективное ядро и выраженные кучевые края;
+   - расширение наковальни у верхней части облака;
+   - сохранены рельеф, камера, интерфейс, молнии и управление.
+
+   index.html НЕ ИЗМЕНЯЕТСЯ.
+   ============================================================ */
 
 import * as THREE from
   "https://esm.sh/three@0.180.0";
@@ -30,9 +26,7 @@ import { OrbitControls } from
 const canvas = document.querySelector("#scene");
 
 if (!canvas) {
-  throw new Error(
-    "Quantum Meteo: canvas #scene не найден."
-  );
+  throw new Error("Quantum Meteo: canvas #scene не найден.");
 }
 
 const $ = (id) => document.getElementById(id);
@@ -44,13 +38,13 @@ const $ = (id) => document.getElementById(id);
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
-  antialias: true,
+  antialias: false,
   alpha: false,
   powerPreference: "high-performance"
 });
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio || 1, 1.5)
+  Math.min(window.devicePixelRatio || 1, 1.15)
 );
 
 renderer.setSize(
@@ -71,11 +65,7 @@ renderer.toneMappingExposure = 1.08;
 const scene = new THREE.Scene();
 
 scene.background = new THREE.Color(0x91b6d2);
-scene.fog = new THREE.Fog(
-  0x91b6d2,
-  900,
-  2600
-);
+scene.fog = new THREE.Fog(0x91b6d2, 1100, 2900);
 
 
 // ============================================================
@@ -105,14 +95,13 @@ controls.target.set(0, 100, 0);
 
 
 // ============================================================
-// ATMOSPHERE STATE
+// STATE
 // ============================================================
 
 const state = {
   cape: 2400,
   shear: 25,
   humidity: 78,
-
   stormType: "supercell",
 
   paused: false,
@@ -121,7 +110,7 @@ const state = {
   time: 0,
   growth: 1,
 
-  lightningTimer: 0,
+  lightningTimer: 2,
   lightningFlash: 0,
 
   seed: Math.random() * 1000
@@ -129,11 +118,11 @@ const state = {
 
 
 // ============================================================
-// WORLD
+// TERRAIN
 // ============================================================
 
 const WORLD = 1200;
-const TERRAIN_SEGMENTS = 180;
+const TERRAIN_SEGMENTS = 140;
 
 function heightAt(x, z) {
   const hills =
@@ -156,15 +145,10 @@ function heightAt(x, z) {
   return hills + hills2 - valley;
 }
 
-
-// ============================================================
-// TERRAIN TEXTURE
-// ============================================================
-
 function makeTerrainTexture() {
   const size = 512;
-
   const c = document.createElement("canvas");
+
   c.width = size;
   c.height = size;
 
@@ -173,30 +157,24 @@ function makeTerrainTexture() {
   ctx.fillStyle = "#687966";
   ctx.fillRect(0, 0, size, size);
 
-  for (let i = 0; i < 18000; i++) {
+  for (let i = 0; i < 12000; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
 
-    const n = Math.random();
-
-    ctx.fillStyle = n > 0.5
+    ctx.fillStyle = Math.random() > 0.5
       ? "rgba(165,174,128,0.12)"
       : "rgba(30,53,39,0.11)";
 
-    ctx.fillRect(
-      x,
-      y,
-      1 + Math.random() * 3,
-      1 + Math.random() * 3
-    );
+    const s = 1 + Math.random() * 2;
+
+    ctx.fillRect(x, y, s, s);
   }
 
-  // Rivers and terrain markings.
-  ctx.globalAlpha = 0.28;
+  ctx.globalAlpha = 0.25;
   ctx.strokeStyle = "#9da58c";
   ctx.lineWidth = 1;
 
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 14; i++) {
     ctx.beginPath();
 
     let x = Math.random() * size;
@@ -204,10 +182,9 @@ function makeTerrainTexture() {
 
     ctx.moveTo(x, y);
 
-    for (let j = 0; j < 14; j++) {
+    for (let j = 0; j < 12; j++) {
       x += Math.random() * 35 - 17.5;
       y += Math.random() * 35 - 17.5;
-
       ctx.lineTo(x, y);
     }
 
@@ -220,8 +197,8 @@ function makeTerrainTexture() {
 
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-
   texture.colorSpace = THREE.SRGBColorSpace;
+
   texture.anisotropy = Math.min(
     renderer.capabilities.getMaxAnisotropy(),
     4
@@ -229,11 +206,6 @@ function makeTerrainTexture() {
 
   return texture;
 }
-
-
-// ============================================================
-// TERRAIN GEOMETRY
-// ============================================================
 
 function makeTerrain() {
   const geometry = new THREE.PlaneGeometry(
@@ -245,17 +217,13 @@ function makeTerrain() {
 
   geometry.rotateX(-Math.PI / 2);
 
-  const positions =
-    geometry.attributes.position;
+  const positions = geometry.attributes.position;
 
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i);
     const z = positions.getZ(i);
 
-    positions.setY(
-      i,
-      heightAt(x, z)
-    );
+    positions.setY(i, heightAt(x, z));
   }
 
   geometry.computeVertexNormals();
@@ -267,14 +235,9 @@ function makeTerrain() {
     metalness: 0
   });
 
-  const terrain = new THREE.Mesh(
-    geometry,
-    material
-  );
+  const terrain = new THREE.Mesh(geometry, material);
 
-  terrain.receiveShadow = true;
-  terrain.position.y = 0;
-
+  terrain.receiveShadow = false;
   scene.add(terrain);
 }
 
@@ -285,13 +248,13 @@ makeTerrain();
 // LIGHTING
 // ============================================================
 
-const hemisphere = new THREE.HemisphereLight(
-  0xc7e1ff,
-  0x475044,
-  1.65
+scene.add(
+  new THREE.HemisphereLight(
+    0xc7e1ff,
+    0x475044,
+    1.65
+  )
 );
-
-scene.add(hemisphere);
 
 const sun = new THREE.DirectionalLight(
   0xfff0d7,
@@ -303,24 +266,21 @@ scene.add(sun);
 
 
 // ============================================================
-// DISTANT HORIZON
+// HORIZON
 // ============================================================
 
 const horizonGeometry =
-  new THREE.RingGeometry(850, 2400, 128);
+  new THREE.RingGeometry(850, 2400, 96);
 
 horizonGeometry.rotateX(-Math.PI / 2);
 
-const horizonMaterial =
-  new THREE.MeshBasicMaterial({
-    color: 0x93b6ce,
-    side: THREE.DoubleSide,
-    fog: false
-  });
-
 const horizon = new THREE.Mesh(
   horizonGeometry,
-  horizonMaterial
+  new THREE.MeshBasicMaterial({
+    color: 0x91b6d2,
+    side: THREE.DoubleSide,
+    fog: false
+  })
 );
 
 horizon.position.y = -2;
@@ -328,7 +288,7 @@ scene.add(horizon);
 
 
 // ============================================================
-// LIGHTNING BOLT
+// LIGHTNING
 // ============================================================
 
 let lightningGroup = null;
@@ -339,8 +299,13 @@ function clearLightning() {
   scene.remove(lightningGroup);
 
   lightningGroup.traverse((obj) => {
-    if (obj.geometry) obj.geometry.dispose();
-    if (obj.material) obj.material.dispose();
+    obj.geometry?.dispose();
+
+    if (Array.isArray(obj.material)) {
+      obj.material.forEach((m) => m.dispose());
+    } else {
+      obj.material?.dispose();
+    }
   });
 
   lightningGroup = null;
@@ -350,30 +315,24 @@ function createLightning() {
   clearLightning();
 
   const group = new THREE.Group();
-
   const points = [];
 
   let x = 0;
-  let y = 280;
+  let y = 285;
   let z = 0;
 
-  points.push(
-    new THREE.Vector3(x, y, z)
-  );
+  points.push(new THREE.Vector3(x, y, z));
 
   for (let i = 0; i < 16; i++) {
     y -= 10 + Math.random() * 9;
-
     x += (Math.random() - 0.5) * 18;
     z += (Math.random() - 0.5) * 18;
 
-    points.push(
-      new THREE.Vector3(x, y, z)
-    );
+    points.push(new THREE.Vector3(x, y, z));
   }
 
-  const geometry =
-    new THREE.BufferGeometry().setFromPoints(points);
+  const geometry = new THREE.BufferGeometry()
+    .setFromPoints(points);
 
   const material = new THREE.LineBasicMaterial({
     color: 0xe9f5ff,
@@ -381,48 +340,27 @@ function createLightning() {
     opacity: 1
   });
 
-  group.add(
-    new THREE.Line(geometry, material)
-  );
+  group.add(new THREE.Line(geometry, material));
 
   const glow = new THREE.PointLight(
     0x9ecbff,
-    65,
-    260
+    45,
+    230
   );
 
   glow.position.set(x, y, z);
-
   group.add(glow);
 
   scene.add(group);
 
   lightningGroup = group;
-
   state.lightningFlash = 1;
 }
 
 
 // ============================================================
-// CLOUD VOLUME — SCREEN SPACE
-//
-// Облако не рендерится как обычный куб.
-//
-// Сначала рендерим землю в RenderTarget вместе
-// с текстурой глубины, затем интегрируем облако
-// отдельным полноэкранным проходом.
-//
-// Так глубина облака сравнивается с глубиной земли,
-// а не с поверхностью ограничивающего куба.
+// DEPTH RENDER TARGET
 // ============================================================
-
-const depthTexture = new THREE.DepthTexture(
-  1,
-  1,
-  THREE.UnsignedIntType
-);
-
-depthTexture.format = THREE.DepthFormat;
 
 const renderTarget = new THREE.WebGLRenderTarget(
   1,
@@ -435,12 +373,18 @@ const renderTarget = new THREE.WebGLRenderTarget(
   }
 );
 
-renderTarget.depthTexture = depthTexture;
+renderTarget.depthTexture = new THREE.DepthTexture(
+  1,
+  1,
+  THREE.UnsignedIntType
+);
+
+renderTarget.depthTexture.format = THREE.DepthFormat;
 renderTarget.texture.colorSpace = THREE.NoColorSpace;
 
 
 // ============================================================
-// FULLSCREEN PASS
+// FULLSCREEN CLOUD PASS
 // ============================================================
 
 const postScene = new THREE.Scene();
@@ -453,70 +397,30 @@ const quadGeometry = new THREE.PlaneGeometry(2, 2);
 
 
 // ============================================================
-// VOLUME SHADER
+// UNIFORMS
 // ============================================================
 
 const cloudUniforms = {
-  uScene: {
-    value: renderTarget.texture
-  },
+  uScene: { value: renderTarget.texture },
+  uDepth: { value: renderTarget.depthTexture },
 
-  uDepth: {
-    value: renderTarget.depthTexture
-  },
+  uInverseProjection: { value: new THREE.Matrix4() },
+  uInverseView: { value: new THREE.Matrix4() },
+  uCameraPosition: { value: new THREE.Vector3() },
 
-  uInverseProjection: {
-    value: new THREE.Matrix4()
-  },
-
-  uInverseView: {
-    value: new THREE.Matrix4()
-  },
-
-  uCameraPosition: {
-    value: new THREE.Vector3()
-  },
-
-  uTime: {
-    value: 0
-  },
-
-  uCAPE: {
-    value: state.cape
-  },
-
-  uShear: {
-    value: state.shear
-  },
-
-  uHumidity: {
-    value: state.humidity
-  },
-
-  uStormType: {
-    value: 1
-  },
-
-  uGrowth: {
-    value: 1
-  },
-
-  uFlash: {
-    value: 0
-  },
-
-  uResolution: {
-    value: new THREE.Vector2(1, 1)
-  },
-
-  uSeed: {
-    value: state.seed
-  }
+  uTime: { value: 0 },
+  uCAPE: { value: state.cape },
+  uShear: { value: state.shear },
+  uHumidity: { value: state.humidity },
+  uStormType: { value: 1 },
+  uGrowth: { value: 1 },
+  uFlash: { value: 0 },
+  uSeed: { value: state.seed }
 };
 
 
 // ============================================================
-// CLOUD FRAGMENT SHADER
+// CLOUD SHADER
 // ============================================================
 
 const cloudFragmentShader = /* glsl */ `
@@ -539,13 +443,11 @@ uniform float uGrowth;
 uniform float uFlash;
 uniform float uSeed;
 
-uniform vec2 uResolution;
-
 varying vec2 vUv;
 
 
 // ------------------------------------------------------------
-// HASH / CONTINUOUS NOISE
+// NOISE
 // ------------------------------------------------------------
 
 float hash31(vec3 p) {
@@ -560,7 +462,7 @@ float noise3(vec3 p) {
 
     f = f * f * (3.0 - 2.0 * f);
 
-    float n000 = hash31(i + vec3(0.0, 0.0, 0.0));
+    float n000 = hash31(i);
     float n100 = hash31(i + vec3(1.0, 0.0, 0.0));
     float n010 = hash31(i + vec3(0.0, 1.0, 0.0));
     float n110 = hash31(i + vec3(1.0, 1.0, 0.0));
@@ -575,28 +477,30 @@ float noise3(vec3 p) {
     float x01 = mix(n001, n101, f.x);
     float x11 = mix(n011, n111, f.x);
 
-    float y0 = mix(x00, x10, f.y);
-    float y1 = mix(x01, x11, f.y);
-
-    return mix(y0, y1, f.z);
+    return mix(
+        mix(x00, x10, f.y),
+        mix(x01, x11, f.y),
+        f.z
+    );
 }
 
+// Три октавы вместо пяти: дешевле для мобильного GPU.
 float fbm(vec3 p) {
     float value = 0.0;
     float amplitude = 0.5;
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         value += noise3(p) * amplitude;
-        p *= 2.03;
+        p *= 2.02;
         amplitude *= 0.5;
     }
 
-    return value;
+    return value / 0.875;
 }
 
 
 // ------------------------------------------------------------
-// VOLUME INTERSECTION
+// BOX INTERSECTION
 // ------------------------------------------------------------
 
 vec2 intersectBox(
@@ -628,62 +532,26 @@ vec2 intersectBox(
 
 
 // ------------------------------------------------------------
-// STORM CONFIGURATION
+// CLOUD HEIGHT AND INTENSITY
 // ------------------------------------------------------------
 
-float stormIntensity() {
-    float capeFactor = clamp(
-        uCAPE / 3500.0,
-        0.15,
-        1.35
-    );
+float cloudTop() {
+    float cape = clamp(uCAPE / 4000.0, 0.1, 1.0);
+    return mix(220.0, 440.0, cape) * uGrowth;
+}
 
-    float moisture = clamp(
-        uHumidity / 100.0,
-        0.1,
-        1.0
-    );
+float stormIntensity() {
+    float capeFactor = clamp(uCAPE / 3500.0, 0.15, 1.2);
+    float moisture = clamp(uHumidity / 100.0, 0.1, 1.0);
 
     return capeFactor * moisture;
 }
 
-float cloudTop() {
-    float cape = clamp(
-        uCAPE / 4000.0,
-        0.1,
-        1.0
-    );
-
-    return mix(
-        220.0,
-        440.0,
-        cape
-    ) * uGrowth;
-}
-
-
-// ------------------------------------------------------------
-// WIND FIELD
-//
-// Сдвиг облака с высотой:
-// нижний уровень медленнее,
-// верхний уровень переносится быстрее.
-// ------------------------------------------------------------
-
 vec2 windOffset(float height) {
-    float h = clamp(
-        (height - 70.0) / 380.0,
-        0.0,
-        1.0
-    );
-
+    float h = clamp((height - 70.0) / 380.0, 0.0, 1.0);
     float shear = uShear / 45.0;
 
-    vec2 wind = vec2(
-        1.0,
-        0.24
-    );
-
+    vec2 wind = vec2(1.0, 0.24);
     wind *= h * h * shear * 150.0;
 
     wind.x += uTime * 2.4;
@@ -694,21 +562,21 @@ vec2 windOffset(float height) {
 
 
 // ------------------------------------------------------------
-// CONTINUOUS CONVECTIVE FIELD
+// CONVECTIVE CLOUD FIELD
 //
-// Это непрерывное поле плотности, а не набор готовых
-// геометрических башен. Положение ячеек не привязано
-// к отдельным заранее нарисованным мешам.
+// Важное отличие:
+// - оболочка больше не заполняет весь объём;
+// - края формируются порогом плотности;
+// - башня отделена от верхней наковальни;
+// - шум влияет на форму, а не создаёт туман повсюду.
 // ------------------------------------------------------------
 
 float convectiveField(vec3 p) {
     float height = p.y;
-
     float top = cloudTop();
-
     float base = 68.0;
 
-    if (height < base || height > top + 35.0) {
+    if (height < base || height > top + 25.0) {
         return 0.0;
     }
 
@@ -718,227 +586,151 @@ float convectiveField(vec3 p) {
         1.0
     );
 
-    // The anvil expands horizontally near the tropopause.
-    float towerWidth = mix(
-        125.0,
-        180.0,
-        vertical
-    );
+    vec2 q = p.xz - windOffset(height);
 
-    float anvilWidth = mix(
-        1.0,
-        2.15,
-        smoothstep(0.48, 0.92, vertical)
-    );
-
-    vec2 wind = windOffset(height);
-
-    vec2 q = p.xz - wind;
-
-    float stormMode = uStormType;
-
-    // Broad storm envelope.
-    float r = length(q);
-
-    float envelopeWidth =
-        towerWidth * anvilWidth;
-
-    float envelope = exp(
-        -(r * r) /
-        (envelopeWidth * envelopeWidth * 1.55)
-    );
-
-    // Vertical convective core.
-    float coreWidth = mix(
-        82.0,
-        112.0,
-        vertical
-    );
-
-    float core = exp(
-        -(r * r) /
-        (coreWidth * coreWidth)
-    );
-
-    // A storm's rising motion varies with height.
-    float updraftProfile =
-        smoothstep(0.0, 0.12, vertical) *
-        (1.0 - smoothstep(0.89, 1.0, vertical));
-
-    // Supercells are more horizontally sheared.
-    float supercellFactor = mix(
-        0.7,
-        1.3,
-        step(0.5, stormMode)
-    );
-
-    float rotation = uTime * 0.012;
+    float rotation = uTime * 0.008;
 
     mat2 rot = mat2(
         cos(rotation), -sin(rotation),
-        sin(rotation), cos(rotation)
+        sin(rotation),  cos(rotation)
     );
 
     q = rot * q;
 
-    vec3 noisePosition = vec3(
-        q.x * 0.021,
-        height * 0.018,
-        q.y * 0.021
+    // Верхняя часть расширяется, но не превращает
+    // весь объём в однородный слой.
+    float towerWidth = mix(92.0, 120.0, vertical);
+    float anvilLevel = smoothstep(0.64, 0.91, vertical);
+
+    float stormMode = uStormType;
+
+    // Режимы различаются шириной и структурой поля.
+    float modeWidth = 1.0;
+
+    if (stormMode > 1.5 && stormMode < 2.5) {
+        modeWidth = 1.18;
+    } else if (stormMode > 2.5 && stormMode < 3.5) {
+        modeWidth = 1.35;
+    } else if (stormMode < 0.5) {
+        modeWidth = 0.78;
+    }
+
+    towerWidth *= modeWidth;
+
+    float anvilWidth = mix(
+        towerWidth,
+        260.0 * modeWidth,
+        anvilLevel
     );
 
-    noisePosition += vec3(
-        uTime * 0.018,
-        -uTime * 0.007,
-        uTime * 0.011
+    float radius = length(q);
+
+    float core = exp(
+        -(radius * radius) /
+        (towerWidth * towerWidth * 0.58)
     );
 
-    float broadNoise = fbm(
-        noisePosition * 0.62
+    float envelope = exp(
+        -(radius * radius) /
+        (anvilWidth * anvilWidth * 0.72)
     );
 
-    float detailNoise = fbm(
-        noisePosition * 2.3
+    vec3 np = vec3(
+        q.x * 0.025,
+        height * 0.021,
+        q.y * 0.025
     );
 
-    float fineNoise = noise3(
-        noisePosition * 6.2
+    np += vec3(
+        uTime * 0.012,
+        -uTime * 0.006,
+        uTime * 0.008
     );
 
-    // Break up the edge into rounded cauliflower lobes.
-    float erosion =
-        broadNoise * 0.48 +
-        detailNoise * 0.33 +
-        fineNoise * 0.19;
+    // Сдвигаем шум для разных генераций шторма.
+    np += vec3(uSeed * 0.013, uSeed * 0.007, uSeed * 0.011);
 
-    float edge =
-        envelope * 0.78 +
-        core * 0.36;
+    float broad = fbm(np);
+    float detail = noise3(np * 3.1);
+    float fine = noise3(np * 5.4);
 
-    edge +=
-        (erosion - 0.48) *
-        (0.8 + vertical * 0.55);
+    float turbulence =
+        (broad - 0.5) * 0.48 +
+        (detail - 0.5) * 0.24 +
+        (fine - 0.5) * 0.12;
 
-    edge *= supercellFactor;
+    // Жёстче порог — меньше полупрозрачной дымки.
+    float towerShape = smoothstep(
+        0.22,
+        0.64,
+        core + turbulence
+    );
 
-    // Flatten and spread the upper anvil.
-    float anvilLevel = smoothstep(
-        0.55,
-        0.78,
+    // Наковальня имеет собственную структуру
+    // и выражена только на верхних уровнях.
+    float anvilShape = smoothstep(
+        0.24,
+        0.62,
+        envelope + (broad - 0.5) * 0.24
+    );
+
+    float anvil = anvilShape *
+        anvilLevel *
+        smoothstep(0.38, 0.72, broad);
+
+    // Узкий выступ над вершиной башни.
+    float overshoot = core *
+        exp(-pow((vertical - 0.955) / 0.045, 2.0));
+
+    // Рельефное основание и резкое завершение сверху.
+    float baseShape = smoothstep(0.015, 0.15, vertical);
+
+    float topNoise = (broad - 0.5) * 0.10;
+
+    float topShape = 1.0 - smoothstep(
+        0.94 + topNoise,
+        1.035 + topNoise,
         vertical
     );
 
-    float anvil = envelope *
-        anvilLevel *
-        (0.35 + broadNoise * 0.65);
+    float density =
+        towerShape * 0.92 +
+        anvil * 0.34 +
+        overshoot * 0.16;
 
-    // Slightly overshooting top above the anvil.
-    float overshoot = core *
-        exp(
-            -pow(
-                (vertical - 0.96) / 0.045,
-                2.0
-            )
-        );
+    density *= baseShape * topShape;
 
-    // Lower cloud-base fragments.
-    float lowerFragments = core *
-        smoothstep(
-            0.08,
-            0.0,
-            abs(vertical - 0.12)
-        ) *
-        (0.3 + detailNoise);
-
-    // Mammatus-like pockets underneath the anvil.
-    float mammatusBand = exp(
-        -pow(
-            (vertical - 0.62) / 0.075,
-            2.0
-        )
-    );
-
-    float mammatusNoise = noise3(
-        vec3(
-            q.x * 0.065,
-            height * 0.045,
-            q.y * 0.065
-        )
-    );
-
-    float mammatus = mammatusBand *
-        envelope *
-        smoothstep(
-            0.48,
-            0.72,
-            mammatusNoise
-        );
-
-    float density = edge;
-
-    density += anvil * 0.3;
-    density += overshoot * 0.55;
-    density += lowerFragments * 0.12;
-    density += mammatus * 0.28;
-
-    // Cloud tops become ragged, not perfectly flat.
-    float topTurbulence = fbm(
-        vec3(
-            p.x * 0.035,
-            p.y * 0.06,
-            p.z * 0.035
-        )
-    );
-
-    float topCut = top +
-        (topTurbulence - 0.5) * 32.0;
-
-    density *= 1.0 - smoothstep(
-        topCut - 12.0,
-        topCut + 30.0,
-        height
-    );
-
-    density *= smoothstep(
-        base - 12.0,
-        base + 14.0,
-        height
+    // Влажность влияет на насыщенность облака.
+    density *= mix(
+        0.66,
+        1.0,
+        clamp(uHumidity / 100.0, 0.0, 1.0)
     );
 
     density *= stormIntensity();
 
-    return clamp(density, 0.0, 1.6);
+    // Ниже порога облако полностью прозрачно.
+    density = max(density - 0.12, 0.0);
+
+    return min(density, 1.15);
 }
 
 
 // ------------------------------------------------------------
-// LIGHTING APPROXIMATION
+// LIGHTING
 // ------------------------------------------------------------
 
-float cloudLighting(
-    vec3 p,
-    vec3 rayDirection,
-    float density
-) {
-    vec3 lightDirection = normalize(
-        vec3(-0.55, 0.78, 0.35)
-    );
+float cloudLighting(vec3 p, vec3 rayDirection, float density) {
+    vec3 lightDirection = normalize(vec3(-0.55, 0.78, 0.35));
 
-    float heightFactor = clamp(
-        (p.y - 60.0) / 380.0,
-        0.0,
-        1.0
-    );
+    float heightFactor = clamp((p.y - 60.0) / 380.0, 0.0, 1.0);
 
     float towardSun = max(
         dot(-rayDirection, lightDirection),
         0.0
     );
 
-    float forwardScattering = pow(
-        towardSun,
-        3.0
-    ) * 0.16;
+    float forwardScattering = pow(towardSun, 3.0) * 0.12;
 
     float topLight = smoothstep(
         0.35,
@@ -946,13 +738,10 @@ float cloudLighting(
         heightFactor
     ) * 0.28;
 
-    float underside = density * 0.2;
+    float underside = density * 0.22;
 
     return clamp(
-        0.35 +
-        topLight +
-        forwardScattering -
-        underside,
+        0.36 + topLight + forwardScattering - underside,
         0.12,
         1.0
     );
@@ -960,16 +749,12 @@ float cloudLighting(
 
 
 // ------------------------------------------------------------
-// DEPTH RECONSTRUCTION
+// SCENE DEPTH
 // ------------------------------------------------------------
 
 float sceneDistance(vec2 uv) {
-    float depth = texture2D(
-        uDepth,
-        uv
-    ).r;
+    float depth = texture2D(uDepth, uv).r;
 
-    // Cleared depth: no opaque object at this pixel.
     if (depth >= 0.999999) {
         return 2400.0;
     }
@@ -980,35 +765,23 @@ float sceneDistance(vec2 uv) {
         1.0
     );
 
-    vec4 viewPosition =
-        uInverseProjection * clip;
+    vec4 viewPosition = uInverseProjection * clip;
 
-    viewPosition /= max(
-        abs(viewPosition.w),
-        0.00001
-    );
+    viewPosition /= max(abs(viewPosition.w), 0.00001);
 
     vec4 worldPosition =
-        uInverseView *
-        vec4(viewPosition.xyz, 1.0);
+        uInverseView * vec4(viewPosition.xyz, 1.0);
 
-    return length(
-        worldPosition.xyz -
-        uCameraPosition
-    );
+    return length(worldPosition.xyz - uCameraPosition);
 }
 
 
 // ------------------------------------------------------------
-// MAIN
+// MAIN RAYMARCH
 // ------------------------------------------------------------
 
 void main() {
-    vec4 background = texture2D(
-        uScene,
-        vUv
-    );
-
+    vec4 background = texture2D(uScene, vUv);
     float maxDistance = sceneDistance(vUv);
 
     vec4 clipPosition = vec4(
@@ -1017,38 +790,18 @@ void main() {
         1.0
     );
 
-    vec4 viewPosition =
-        uInverseProjection * clipPosition;
+    vec4 viewPosition = uInverseProjection * clipPosition;
 
-    viewPosition /= max(
-        abs(viewPosition.w),
-        0.00001
-    );
+    viewPosition /= max(abs(viewPosition.w), 0.00001);
 
     vec3 rayDirection = normalize(
-        (
-            uInverseView *
-            vec4(
-                normalize(viewPosition.xyz),
-                0.0
-            )
-        ).xyz
+        (uInverseView * vec4(normalize(viewPosition.xyz), 0.0)).xyz
     );
 
     vec3 rayOrigin = uCameraPosition;
 
-    // Entire atmospheric volume.
-    vec3 boxMin = vec3(
-        -900.0,
-        25.0,
-        -900.0
-    );
-
-    vec3 boxMax = vec3(
-        900.0,
-        530.0,
-        900.0
-    );
+    vec3 boxMin = vec3(-900.0, 25.0, -900.0);
+    vec3 boxMax = vec3(900.0, 530.0, 900.0);
 
     vec2 hit = intersectBox(
         rayOrigin,
@@ -1058,47 +811,32 @@ void main() {
     );
 
     float startT = max(hit.x, 0.0);
-    float endT = min(
-        hit.y,
-        maxDistance
-    );
+    float endT = min(hit.y, maxDistance);
 
-    // The ray misses the volume or the ground is in front.
-    if (
-        endT <= startT ||
-        hit.y <= 0.0
-    ) {
+    if (endT <= startT || hit.y <= 0.0) {
         gl_FragColor = background;
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
         return;
     }
 
-    float distanceThroughVolume =
-        endT - startT;
+    float distanceThroughVolume = endT - startT;
 
-    // Fewer samples on mobile, more on large screens.
-    const int STEPS = 72;
+    // 40 шагов вместо 72 — меньше работы на каждый пиксель.
+    const int STEPS = 40;
 
-    float stepLength =
-        distanceThroughVolume /
-        float(STEPS);
+    float stepLength = distanceThroughVolume / float(STEPS);
 
     vec3 accumulatedColor = vec3(0.0);
     float transmittance = 1.0;
 
     for (int i = 0; i < STEPS; i++) {
-        float t =
-            startT +
-            (float(i) + 0.5) * stepLength;
-
-        vec3 p =
-            rayOrigin +
-            rayDirection * t;
+        float t = startT + (float(i) + 0.5) * stepLength;
+        vec3 p = rayOrigin + rayDirection * t;
 
         float density = convectiveField(p);
 
-        if (density > 0.008) {
+        if (density > 0.015) {
             float heightFactor = clamp(
                 (p.y - 60.0) / 400.0,
                 0.0,
@@ -1111,17 +849,8 @@ void main() {
                 density
             );
 
-            vec3 shadowColor = vec3(
-                0.31,
-                0.36,
-                0.43
-            );
-
-            vec3 sunlightColor = vec3(
-                1.0,
-                0.96,
-                0.89
-            );
+            vec3 shadowColor = vec3(0.24, 0.29, 0.36);
+            vec3 sunlightColor = vec3(1.0, 0.97, 0.91);
 
             vec3 cloudColor = mix(
                 shadowColor,
@@ -1129,73 +858,47 @@ void main() {
                 lighting
             );
 
-            // Ice near the top of the cloud.
-            float ice = smoothstep(
-                0.62,
-                0.96,
-                heightFactor
-            );
+            float ice = smoothstep(0.65, 0.96, heightFactor);
 
             cloudColor = mix(
                 cloudColor,
-                vec3(0.83, 0.88, 0.94),
-                ice * 0.55
+                vec3(0.84, 0.89, 0.96),
+                ice * 0.50
             );
 
-            // Denser lower cloud becomes darker.
-            float lowerShade = 1.0 -
-                smoothstep(
-                    0.0,
-                    0.55,
-                    heightFactor
-                );
-
-            cloudColor *= 1.0 -
-                lowerShade * 0.16;
-
-            // Lightning illuminates the interior.
-            cloudColor +=
-                vec3(0.65, 0.76, 1.0) *
-                uFlash *
-                0.9;
-
-            float alpha =
-                1.0 -
-                exp(
-                    -density *
-                    stepLength *
-                    0.022
-                );
-
-            alpha = clamp(
-                alpha,
+            float lowerShade = 1.0 - smoothstep(
                 0.0,
-                0.72
+                0.55,
+                heightFactor
             );
+
+            cloudColor *= 1.0 - lowerShade * 0.18;
+
+            cloudColor +=
+                vec3(0.65, 0.76, 1.0) * uFlash * 0.9;
+
+            // Меньше накопления полупрозрачной дымки.
+            float alpha = 1.0 - exp(
+                -density * stepLength * 0.014
+            );
+
+            alpha = clamp(alpha, 0.0, 0.62);
 
             accumulatedColor +=
-                transmittance *
-                alpha *
-                cloudColor;
+                transmittance * alpha * cloudColor;
 
-            transmittance *=
-                1.0 - alpha;
+            transmittance *= 1.0 - alpha;
 
-            if (transmittance < 0.018) {
+            if (transmittance < 0.035) {
                 break;
             }
         }
     }
 
     vec3 finalColor =
-        accumulatedColor +
-        transmittance *
-        background.rgb;
+        accumulatedColor + transmittance * background.rgb;
 
-    gl_FragColor = vec4(
-        finalColor,
-        1.0
-    );
+    gl_FragColor = vec4(finalColor, 1.0);
 
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -1204,7 +907,7 @@ void main() {
 
 
 // ============================================================
-// CLOUD MATERIAL
+// SHADER MATERIAL
 // ============================================================
 
 const cloudMaterial = new THREE.ShaderMaterial({
@@ -1215,12 +918,7 @@ const cloudMaterial = new THREE.ShaderMaterial({
 
     void main() {
       vUv = uv;
-
-      gl_Position = vec4(
-        position.xy,
-        0.0,
-        1.0
-      );
+      gl_Position = vec4(position.xy, 0.0, 1.0);
     }
   `,
 
@@ -1238,7 +936,6 @@ const fullscreenQuad = new THREE.Mesh(
 );
 
 fullscreenQuad.frustumCulled = false;
-
 postScene.add(fullscreenQuad);
 
 
@@ -1264,9 +961,7 @@ function readSlider(input, fallback) {
 
   const value = Number(input.value);
 
-  return Number.isFinite(value)
-    ? value
-    : fallback;
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function cloudTop() {
@@ -1275,27 +970,16 @@ function cloudTop() {
     Math.min(state.cape / 4000, 1)
   );
 
-  return (220 + (440 - 220) * cape) * state.growth;
+  return (220 + 220 * cape) * state.growth;
 }
+
 function syncControls() {
-  state.cape = readSlider(
-    capeInput,
-    state.cape
-  );
-
-  state.shear = readSlider(
-    shearInput,
-    state.shear
-  );
-
-  state.humidity = readSlider(
-    humidityInput,
-    state.humidity
-  );
+  state.cape = readSlider(capeInput, state.cape);
+  state.shear = readSlider(shearInput, state.shear);
+  state.humidity = readSlider(humidityInput, state.humidity);
 
   if (stormTypeInput) {
-    state.stormType =
-      stormTypeInput.value || "supercell";
+    state.stormType = stormTypeInput.value || "supercell";
   }
 
   cloudUniforms.uCAPE.value = state.cape;
@@ -1313,25 +997,10 @@ function syncControls() {
   cloudUniforms.uStormType.value =
     typeMap[state.stormType] ?? 1;
 
-  updateText(
-    "capeValue",
-    `${Math.round(state.cape)} J/kg`
-  );
-
-  updateText(
-    "shearValue",
-    `${Math.round(state.shear)} m/s`
-  );
-
-  updateText(
-    "humidityValue",
-    `${Math.round(state.humidity)}%`
-  );
-
-  updateText(
-    "cloudHeight",
-    `${Math.round(cloudTop())} m`
-  );
+  updateText("capeValue", `${Math.round(state.cape)} J/kg`);
+  updateText("shearValue", `${Math.round(state.shear)} m/s`);
+  updateText("humidityValue", `${Math.round(state.humidity)}%`);
+  updateText("cloudHeight", `${Math.round(cloudTop())} m`);
 
   updateText(
     "cellCount",
@@ -1344,9 +1013,7 @@ function syncControls() {
 
   updateText(
     "status",
-    state.paused
-      ? "Пауза"
-      : "Конвекция активна"
+    state.paused ? "Пауза" : "Конвекция активна"
   );
 }
 
@@ -1358,15 +1025,8 @@ function syncControls() {
 ].forEach((element) => {
   if (!element) return;
 
-  element.addEventListener(
-    "input",
-    syncControls
-  );
-
-  element.addEventListener(
-    "change",
-    syncControls
-  );
+  element.addEventListener("input", syncControls);
+  element.addEventListener("change", syncControls);
 });
 
 
@@ -1395,10 +1055,9 @@ if (lightningButton) {
   lightningButton.addEventListener("click", () => {
     state.lightning = !state.lightning;
 
-    lightningButton.textContent =
-      state.lightning
-        ? "Молнии: вкл."
-        : "Молнии: выкл.";
+    lightningButton.textContent = state.lightning
+      ? "Молнии: вкл."
+      : "Молнии: выкл.";
 
     if (!state.lightning) {
       clearLightning();
@@ -1410,14 +1069,13 @@ if (lightningButton) {
 if (newStormButton) {
   newStormButton.addEventListener("click", () => {
     state.seed = Math.random() * 10000;
-
     cloudUniforms.uSeed.value = state.seed;
 
     state.time = 0;
     state.growth = 0.65;
+    state.lightningTimer = 2;
 
     clearLightning();
-
     syncControls();
   });
 }
@@ -1429,7 +1087,6 @@ if (resetButton) {
     state.paused = false;
 
     camera.position.set(460, 270, 620);
-
     controls.target.set(0, 100, 0);
     controls.update();
 
@@ -1445,7 +1102,7 @@ if (resetButton) {
 
 
 // ============================================================
-// OPTIONAL GROWTH SPEED CONTROL
+// GROWTH SPEED
 // ============================================================
 
 let growthSpeed = 1;
@@ -1454,10 +1111,9 @@ const growthButton = $("growthSpeed");
 
 if (growthButton) {
   growthButton.addEventListener("click", () => {
-    growthSpeed =
-      growthSpeed >= 3
-        ? 0.5
-        : growthSpeed + 0.5;
+    growthSpeed = growthSpeed >= 3
+      ? 0.5
+      : growthSpeed + 0.5;
 
     growthButton.textContent =
       `Рост ×${growthSpeed.toFixed(1)}`;
@@ -1483,42 +1139,21 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 
-  renderer.setSize(
-    width,
-    height,
-    false
-  );
-
   const pixelRatio = Math.min(
     window.devicePixelRatio || 1,
-    1.5
+    1.15
   );
 
   renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(width, height, false);
 
-  const w = Math.max(
-    1,
-    Math.floor(width * pixelRatio)
-  );
-
-  const h = Math.max(
-    1,
-    Math.floor(height * pixelRatio)
-  );
+  const w = Math.max(1, Math.floor(width * pixelRatio));
+  const h = Math.max(1, Math.floor(height * pixelRatio));
 
   renderTarget.setSize(w, h);
-
-  cloudUniforms.uResolution.value.set(
-    w,
-    h
-  );
 }
 
-window.addEventListener(
-  "resize",
-  resize
-);
-
+window.addEventListener("resize", resize);
 resize();
 
 
@@ -1541,7 +1176,6 @@ function animate(now) {
   if (!state.paused) {
     state.time += delta;
 
-    // Smooth development after starting a new storm.
     state.growth +=
       (1.0 - state.growth) *
       Math.min(delta * 0.035, 0.01);
@@ -1559,9 +1193,7 @@ function animate(now) {
         2.0 + Math.random() * 7.0;
     }
 
-    state.lightningFlash *= Math.exp(
-      -delta * 5.5
-    );
+    state.lightningFlash *= Math.exp(-delta * 5.5);
 
     if (
       lightningGroup &&
@@ -1573,55 +1205,34 @@ function animate(now) {
 
   controls.update();
 
-  cloudUniforms.uTime.value =
-    state.time * growthSpeed;
+  cloudUniforms.uTime.value = state.time * growthSpeed;
+  cloudUniforms.uGrowth.value = state.growth;
+  cloudUniforms.uFlash.value = state.lightningFlash;
 
-  cloudUniforms.uGrowth.value =
-    state.growth;
+  camera.updateMatrixWorld();
 
-  cloudUniforms.uFlash.value =
-    state.lightningFlash;
-
-  cloudUniforms.uCameraPosition.value.copy(
-    camera.position
-  );
+  cloudUniforms.uCameraPosition.value.copy(camera.position);
 
   cloudUniforms.uInverseProjection.value
     .copy(camera.projectionMatrix)
     .invert();
 
-  camera.updateMatrixWorld();
+  cloudUniforms.uInverseView.value.copy(camera.matrixWorld);
 
-  cloudUniforms.uInverseView.value
-    .copy(camera.matrixWorld);
-
-  // 1. Render opaque world and terrain depth.
+  // 1. Рельеф и глубина сцены.
   renderer.setRenderTarget(renderTarget);
   renderer.clear();
+  renderer.render(scene, camera);
 
-  renderer.render(
-    scene,
-    camera
-  );
-
-  // 2. Render volume over the scene using depth-aware raymarching.
+  // 2. Объёмное облако с учётом глубины.
   renderer.setRenderTarget(null);
-
   renderer.clear();
+  renderer.render(postScene, postCamera);
 
-  renderer.render(
-    postScene,
-    postCamera
-  );
-
-  updateText(
-    "cloudHeight",
-    `${Math.round(cloudTop())} m`
-  );
+  updateText("cloudHeight", `${Math.round(cloudTop())} m`);
 }
 
 syncControls();
-
 requestAnimationFrame(animate);
 
 
@@ -1629,14 +1240,12 @@ requestAnimationFrame(animate);
 // READY
 // ============================================================
 
-const loading = document.querySelector(
-  "#loading"
-);
+const loading = document.querySelector("#loading");
 
 if (loading) {
   loading.style.display = "none";
 }
 
 console.log(
-  "Quantum Meteo: depth-aware convective renderer initialized."
+  "Quantum Meteo: optimized convective renderer initialized."
 );
