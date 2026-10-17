@@ -1,13 +1,25 @@
 
 /* ============================================================
-   QUANTUM METEO — CONVECTIVE ATMOSPHERE
+   QUANTUM METEO — EVOLVING CONVECTIVE SYSTEM
 
-   Исправления:
-   - уменьшена нагрузка на мобильный GPU;
-   - облако больше не заполняет весь объём равномерной дымкой;
-   - плотное конвективное ядро и выраженные кучевые края;
-   - расширение наковальни у верхней части облака;
-   - сохранены рельеф, камера, интерфейс, молнии и управление.
+   Упрощённая time-dependent модель грозовой конвекции.
+
+   ФИЗИЧЕСКИ МОТИВИРОВАННЫЕ ПРОЦЕССЫ:
+   - последовательное зарождение конвективных ячеек;
+   - развитие и ослабление восходящих потоков;
+   - независимый жизненный цикл каждой ячейки;
+   - зависимость высоты от CAPE;
+   - влияние влажности на плотность облака;
+   - перенос верхней части облака сдвигом ветра;
+   - расширение и снос наковальни;
+   - разные режимы: башня, суперячейка,
+     мультиячейковая система, линия шквалов;
+   - динамическая реакция на настройки;
+   - облака с объёмной структурой и неровными краями.
+
+   Ограничение:
+   Это не полноценная численная модель CM1.
+   Атмосферная динамика здесь параметризована.
 
    index.html НЕ ИЗМЕНЯЕТСЯ.
    ============================================================ */
@@ -44,7 +56,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio || 1, 1.15)
+  Math.min(window.devicePixelRatio || 1, 1.1)
 );
 
 renderer.setSize(
@@ -107,13 +119,14 @@ const state = {
   paused: false,
   lightning: true,
 
+  // Время симуляции, не реальное метеорологическое время.
   time: 0,
-  growth: 1,
 
-  lightningTimer: 2,
+  lightningTimer: 3,
   lightningFlash: 0,
 
-  seed: Math.random() * 1000
+  seed: Math.random() * 10000,
+  stormGeneration: 0
 };
 
 
@@ -122,7 +135,7 @@ const state = {
 // ============================================================
 
 const WORLD = 1200;
-const TERRAIN_SEGMENTS = 140;
+const TERRAIN_SEGMENTS = 100;
 
 function heightAt(x, z) {
   const hills =
@@ -157,7 +170,7 @@ function makeTerrainTexture() {
   ctx.fillStyle = "#687966";
   ctx.fillRect(0, 0, size, size);
 
-  for (let i = 0; i < 12000; i++) {
+  for (let i = 0; i < 9000; i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
 
@@ -170,7 +183,7 @@ function makeTerrainTexture() {
     ctx.fillRect(x, y, s, s);
   }
 
-  ctx.globalAlpha = 0.25;
+  ctx.globalAlpha = 0.22;
   ctx.strokeStyle = "#9da58c";
   ctx.lineWidth = 1;
 
@@ -317,30 +330,60 @@ function createLightning() {
   const group = new THREE.Group();
   const points = [];
 
-  let x = 0;
-  let y = 285;
-  let z = 0;
+  // Разряд возникает над активной частью системы.
+  let x = (Math.random() - 0.5) * 150;
+  let y = 300 + Math.random() * 80;
+  let z = (Math.random() - 0.5) * 150;
 
   points.push(new THREE.Vector3(x, y, z));
 
-  for (let i = 0; i < 16; i++) {
-    y -= 10 + Math.random() * 9;
-    x += (Math.random() - 0.5) * 18;
-    z += (Math.random() - 0.5) * 18;
+  for (let i = 0; i < 19; i++) {
+    y -= 7 + Math.random() * 11;
+    x += (Math.random() - 0.5) * 20;
+    z += (Math.random() - 0.5) * 20;
 
     points.push(new THREE.Vector3(x, y, z));
+
+    // Небольшие боковые ответвления.
+    if (i > 3 && Math.random() < 0.22) {
+      const branchPoints = [
+        new THREE.Vector3(x, y, z),
+        new THREE.Vector3(
+          x + (Math.random() - 0.5) * 38,
+          y - 8 - Math.random() * 16,
+          z + (Math.random() - 0.5) * 38
+        )
+      ];
+
+      const branchGeometry =
+        new THREE.BufferGeometry().setFromPoints(branchPoints);
+
+      group.add(
+        new THREE.Line(
+          branchGeometry,
+          new THREE.LineBasicMaterial({
+            color: 0xcce8ff,
+            transparent: true,
+            opacity: 0.8
+          })
+        )
+      );
+    }
   }
 
   const geometry = new THREE.BufferGeometry()
     .setFromPoints(points);
 
-  const material = new THREE.LineBasicMaterial({
-    color: 0xe9f5ff,
-    transparent: true,
-    opacity: 1
-  });
-
-  group.add(new THREE.Line(geometry, material));
+  group.add(
+    new THREE.Line(
+      geometry,
+      new THREE.LineBasicMaterial({
+        color: 0xf0f8ff,
+        transparent: true,
+        opacity: 1
+      })
+    )
+  );
 
   const glow = new THREE.PointLight(
     0x9ecbff,
@@ -413,14 +456,13 @@ const cloudUniforms = {
   uShear: { value: state.shear },
   uHumidity: { value: state.humidity },
   uStormType: { value: 1 },
-  uGrowth: { value: 1 },
   uFlash: { value: 0 },
   uSeed: { value: state.seed }
 };
 
 
 // ============================================================
-// CLOUD SHADER
+// CLOUD SHADER — TIME-DEPENDENT CONVECTION
 // ============================================================
 
 const cloudFragmentShader = /* glsl */ `
@@ -439,7 +481,6 @@ uniform float uCAPE;
 uniform float uShear;
 uniform float uHumidity;
 uniform float uStormType;
-uniform float uGrowth;
 uniform float uFlash;
 uniform float uSeed;
 
@@ -447,7 +488,7 @@ varying vec2 vUv;
 
 
 // ------------------------------------------------------------
-// NOISE
+// HASH AND VALUE NOISE
 // ------------------------------------------------------------
 
 float hash31(vec3 p) {
@@ -484,18 +525,17 @@ float noise3(vec3 p) {
     );
 }
 
-// Три октавы вместо пяти: дешевле для мобильного GPU.
 float fbm(vec3 p) {
     float value = 0.0;
-    float amplitude = 0.5;
+    float amplitude = 0.56;
 
-    for (int i = 0; i < 3; i++) {
-        value += noise3(p) * amplitude;
-        p *= 2.02;
-        amplitude *= 0.5;
-    }
+    value += noise3(p) * amplitude;
+    p *= 2.03;
+    amplitude *= 0.48;
 
-    return value / 0.875;
+    value += noise3(p) * amplitude;
+
+    return value / 0.8288;
 }
 
 
@@ -532,216 +572,399 @@ vec2 intersectBox(
 
 
 // ------------------------------------------------------------
-// CLOUD HEIGHT AND INTENSITY
+// ATMOSPHERIC PARAMETERS
 // ------------------------------------------------------------
 
-float cloudTop() {
-    float cape = clamp(uCAPE / 4000.0, 0.1, 1.0);
-    return mix(220.0, 440.0, cape) * uGrowth;
+float availableCAPE() {
+    return clamp(uCAPE / 3500.0, 0.08, 1.25);
 }
 
-float stormIntensity() {
-    float capeFactor = clamp(uCAPE / 3500.0, 0.15, 1.2);
-    float moisture = clamp(uHumidity / 100.0, 0.1, 1.0);
-
-    return capeFactor * moisture;
+float moistureFactor() {
+    return clamp(uHumidity / 100.0, 0.0, 1.0);
 }
 
-vec2 windOffset(float height) {
-    float h = clamp((height - 70.0) / 380.0, 0.0, 1.0);
-    float shear = uShear / 45.0;
+float equilibriumHeight() {
+    // Условная высота вершины: не является расчётом LFC/EL.
+    return mix(
+        185.0,
+        450.0,
+        clamp(uCAPE / 4000.0, 0.0, 1.0)
+    );
+}
 
-    vec2 wind = vec2(1.0, 0.24);
-    wind *= h * h * shear * 150.0;
-
-    wind.x += uTime * 2.4;
-    wind.y += uTime * 0.65;
-
-    return wind;
+float shearFactor() {
+    return clamp(uShear / 45.0, 0.0, 1.4);
 }
 
 
 // ------------------------------------------------------------
-// CONVECTIVE CLOUD FIELD
+// CELL LIFE CYCLE
 //
-// Важное отличие:
-// - оболочка больше не заполняет весь объём;
-// - края формируются порогом плотности;
-// - башня отделена от верхней наковальни;
-// - шум влияет на форму, а не создаёт туман повсюду.
+// Каждая ячейка имеет собственный возраст:
+// зарождение → рост → зрелость → распад.
+//
+// Периодическое обновление позволяет системе
+// формировать новые ячейки, пока старые затухают.
 // ------------------------------------------------------------
 
-float convectiveField(vec3 p) {
-    float height = p.y;
-    float top = cloudTop();
-    float base = 68.0;
+float cellAge(float index) {
+    float cycle = 112.0;
 
-    if (height < base || height > top + 25.0) {
+    float offset = index * 27.0;
+    offset += hash31(vec3(index, uSeed, 4.7)) * 13.0;
+
+    return mod(uTime * 0.72 + offset, cycle);
+}
+
+float cellLife(float age) {
+    float birth = smoothstep(2.0, 17.0, age);
+    float decay = 1.0 - smoothstep(75.0, 108.0, age);
+
+    return birth * decay;
+}
+
+float cellGrowth(float age) {
+    float growing = smoothstep(4.0, 38.0, age);
+    float mature = 1.0 - smoothstep(70.0, 103.0, age);
+
+    return max(0.12, growing) * max(0.0, mature);
+}
+
+
+// ------------------------------------------------------------
+// CELL POSITION
+//
+// Сдвиг ветра возрастает с высотой.
+// Верхняя часть переносится сильнее, чем основание.
+// ------------------------------------------------------------
+
+vec2 windDisplacement(float height) {
+    float h = clamp((height - 65.0) / 390.0, 0.0, 1.0);
+    float shear = shearFactor();
+
+    vec2 direction = normalize(vec2(1.0, 0.28));
+
+    vec2 displacement =
+        direction * h * h * shear * 210.0;
+
+    displacement.x += uTime * 0.38;
+    displacement.y += uTime * 0.10;
+
+    return displacement;
+}
+
+vec2 cellCenter(float index, float age) {
+    float mode = uStormType;
+
+    float spacing = 165.0;
+
+    if (mode > 1.5 && mode < 2.5) {
+        // Мультиячейковая система.
+        float side = mod(index, 2.0) * 2.0 - 1.0;
+
+        return vec2(
+            (index - 1.5) * spacing,
+            side * 32.0 + sin(age * 0.07 + index) * 22.0
+        );
+    }
+
+    if (mode > 2.5 && mode < 3.5) {
+        // Линия шквалов: ячейки вдоль одной оси.
+        return vec2(
+            (index - 1.5) * 125.0,
+            sin(index * 1.7) * 24.0
+        );
+    }
+
+    if (mode < 0.5) {
+        // Одиночная башня.
+        return vec2(
+            (index - 1.5) * 250.0,
+            0.0
+        );
+    }
+
+    // Суперячейковый режим: главная ячейка и
+    // менее интенсивные соседние конвективные башни.
+    return vec2(
+        (index - 1.5) * 145.0 +
+            sin(age * 0.045 + index) * 16.0,
+        sin(age * 0.06 + index * 2.0) * 26.0
+    );
+}
+
+
+// ------------------------------------------------------------
+// SINGLE CONVECTIVE CELL
+// ------------------------------------------------------------
+
+float singleCell(
+    vec3 p,
+    float index
+) {
+    float age = cellAge(index);
+    float life = cellLife(age);
+
+    if (life <= 0.001) {
+        return 0.0;
+    }
+
+    float growth = cellGrowth(age);
+    float cape = availableCAPE();
+    float humidity = moistureFactor();
+
+    float base = 66.0;
+
+    float top = equilibriumHeight();
+
+    // Рост башни зависит от стадии развития.
+    top = mix(
+        base + 35.0,
+        top,
+        growth
+    );
+
+    top *= mix(0.65, 1.0, cape);
+
+    if (p.y < base || p.y > top + 34.0) {
         return 0.0;
     }
 
     float vertical = clamp(
-        (height - base) / max(top - base, 1.0),
+        (p.y - base) / max(top - base, 1.0),
         0.0,
-        1.0
+        1.15
     );
 
-    vec2 q = p.xz - windOffset(height);
+    vec2 center = cellCenter(index, age);
+    vec2 wind = windDisplacement(p.y);
 
-    float rotation = uTime * 0.008;
+    vec2 q = p.xz - center - wind;
 
-    mat2 rot = mat2(
-        cos(rotation), -sin(rotation),
-        sin(rotation),  cos(rotation)
-    );
+    // В суперячейковом режиме система вращается
+    // медленно, а не остаётся геометрически неподвижной.
+    float rotation = uTime * 0.0045 * shearFactor();
 
-    q = rot * q;
+    float cs = cos(rotation);
+    float sn = sin(rotation);
 
-    // Верхняя часть расширяется, но не превращает
-    // весь объём в однородный слой.
-    float towerWidth = mix(92.0, 120.0, vertical);
-    float anvilLevel = smoothstep(0.64, 0.91, vertical);
+    q = mat2(cs, -sn, sn, cs) * q;
 
-    float stormMode = uStormType;
+    float mode = uStormType;
 
-    // Режимы различаются шириной и структурой поля.
-    float modeWidth = 1.0;
+    float widthMultiplier = 1.0;
 
-    if (stormMode > 1.5 && stormMode < 2.5) {
-        modeWidth = 1.18;
-    } else if (stormMode > 2.5 && stormMode < 3.5) {
-        modeWidth = 1.35;
-    } else if (stormMode < 0.5) {
-        modeWidth = 0.78;
+    if (mode < 0.5) {
+        widthMultiplier = 0.72;
+    } else if (mode > 1.5 && mode < 2.5) {
+        widthMultiplier = 0.92;
+    } else if (mode > 2.5 && mode < 3.5) {
+        widthMultiplier = 0.80;
     }
-
-    towerWidth *= modeWidth;
-
-    float anvilWidth = mix(
-        towerWidth,
-        260.0 * modeWidth,
-        anvilLevel
-    );
 
     float radius = length(q);
 
-    float core = exp(
-        -(radius * radius) /
-        (towerWidth * towerWidth * 0.58)
+    // Конвективная башня расширяется вверх.
+    float towerWidth = mix(
+        38.0,
+        92.0,
+        smoothstep(0.0, 0.82, vertical)
     );
 
-    float envelope = exp(
-        -(radius * radius) /
-        (anvilWidth * anvilWidth * 0.72)
-    );
+    towerWidth *= widthMultiplier;
+    towerWidth *= mix(0.75, 1.16, growth);
 
-    vec3 np = vec3(
-        q.x * 0.025,
-        height * 0.021,
-        q.y * 0.025
-    );
-
-    np += vec3(
-        uTime * 0.012,
-        -uTime * 0.006,
-        uTime * 0.008
-    );
-
-    // Сдвигаем шум для разных генераций шторма.
-    np += vec3(uSeed * 0.013, uSeed * 0.007, uSeed * 0.011);
-
-    float broad = fbm(np);
-    float detail = noise3(np * 3.1);
-    float fine = noise3(np * 5.4);
-
-    float turbulence =
-        (broad - 0.5) * 0.48 +
-        (detail - 0.5) * 0.24 +
-        (fine - 0.5) * 0.12;
-
-    // Жёстче порог — меньше полупрозрачной дымки.
-    float towerShape = smoothstep(
-        0.22,
-        0.64,
-        core + turbulence
-    );
-
-    // Наковальня имеет собственную структуру
-    // и выражена только на верхних уровнях.
-    float anvilShape = smoothstep(
-        0.24,
-        0.62,
-        envelope + (broad - 0.5) * 0.24
-    );
-
-    float anvil = anvilShape *
-        anvilLevel *
-        smoothstep(0.38, 0.72, broad);
-
-    // Узкий выступ над вершиной башни.
-    float overshoot = core *
-        exp(-pow((vertical - 0.955) / 0.045, 2.0));
-
-    // Рельефное основание и резкое завершение сверху.
-    float baseShape = smoothstep(0.015, 0.15, vertical);
-
-    float topNoise = (broad - 0.5) * 0.10;
-
-    float topShape = 1.0 - smoothstep(
-        0.94 + topNoise,
-        1.035 + topNoise,
+    // Наковальня появляется преимущественно
+    // в верхней части зрелой ячейки.
+    float anvilLevel = smoothstep(
+        0.61,
+        0.88,
         vertical
     );
 
-    float density =
-        towerShape * 0.92 +
-        anvil * 0.34 +
-        overshoot * 0.16;
-
-    density *= baseShape * topShape;
-
-    // Влажность влияет на насыщенность облака.
-    density *= mix(
-        0.66,
-        1.0,
-        clamp(uHumidity / 100.0, 0.0, 1.0)
+    float anvilWidth = mix(
+        towerWidth * 1.15,
+        205.0 + shearFactor() * 105.0,
+        anvilLevel
     );
 
-    density *= stormIntensity();
+    anvilWidth *= widthMultiplier;
 
-    // Ниже порога облако полностью прозрачно.
-    density = max(density - 0.12, 0.0);
+    // Трёхмерная турбулентность краёв.
+    vec3 np = vec3(
+        q.x * 0.021,
+        p.y * 0.025,
+        q.y * 0.021
+    );
 
-    return min(density, 1.15);
+    np += vec3(
+        uSeed * 0.013 + index * 4.7,
+        -uTime * 0.012,
+        uSeed * 0.007 + index * 2.3
+    );
+
+    float broad = fbm(np);
+    float detail = noise3(np * 2.7);
+
+    float turbulence =
+        (broad - 0.5) * 0.42 +
+        (detail - 0.5) * 0.16;
+
+    float towerRadius =
+        exp(
+            -(radius * radius) /
+            max(towerWidth * towerWidth * 0.72, 1.0)
+        );
+
+    float tower = smoothstep(
+        0.20,
+        0.66,
+        towerRadius + turbulence
+    );
+
+    float anvilRadius =
+        exp(
+            -(radius * radius) /
+            max(anvilWidth * anvilWidth * 0.72, 1.0)
+        );
+
+    float anvilTexture = smoothstep(
+        0.20,
+        0.61,
+        anvilRadius + (broad - 0.5) * 0.23
+    );
+
+    float anvil = anvilTexture * anvilLevel;
+
+    // Верхушка башни может немного перерастать
+    // среднюю высоту зрелого облака.
+    float overshoot =
+        tower *
+        exp(
+            -pow((vertical - 0.94) / 0.075, 2.0)
+        );
+
+    float baseShape = smoothstep(
+        0.0,
+        0.105,
+        vertical
+    );
+
+    float topNoise = (broad - 0.5) * 0.065;
+
+    float topShape = 1.0 - smoothstep(
+        0.95 + topNoise,
+        1.075 + topNoise,
+        vertical
+    );
+
+    // Небольшие вертикальные неоднородности
+    // создают вид отдельных кучевых башен.
+    float turretPattern = noise3(
+        vec3(
+            q.x * 0.038,
+            p.y * 0.018 + uTime * 0.009,
+            q.y * 0.038
+        )
+    );
+
+    float turrets = smoothstep(
+        0.32,
+        0.77,
+        turretPattern
+    );
+
+    tower *= mix(0.82, 1.12, turrets);
+
+    float density =
+        tower * 0.94 +
+        anvil * 0.40 +
+        overshoot * 0.18;
+
+    density *= baseShape * topShape;
+    density *= life;
+
+    // Сухая среда снижает оптическую плотность.
+    density *= mix(0.35, 1.0, humidity);
+
+    // CAPE влияет на интенсивность конвекции.
+    density *= mix(0.42, 1.0, cape);
+
+    // В мультиячейковом режиме соседние ячейки
+    // немного слабее, чем ведущая.
+    if (mode > 1.5 && mode < 2.5) {
+        float cellStrength =
+            index < 1.5 ? 1.0 : 0.83;
+
+        density *= cellStrength;
+    }
+
+    if (mode > 2.5 && mode < 3.5) {
+        density *= 0.90;
+    }
+
+    // Прозрачность ниже порога исключает
+    // равномерную дымку вокруг облака.
+    density = max(density - 0.095, 0.0);
+
+    return min(density, 1.0);
 }
 
 
 // ------------------------------------------------------------
-// LIGHTING
+// COMPLETE STORM FIELD
 // ------------------------------------------------------------
 
-float cloudLighting(vec3 p, vec3 rayDirection, float density) {
-    vec3 lightDirection = normalize(vec3(-0.55, 0.78, 0.35));
+float convectiveField(vec3 p) {
+    float total = 0.0;
 
-    float heightFactor = clamp((p.y - 60.0) / 380.0, 0.0, 1.0);
+    // Фиксированный цикл совместим с мобильными GPU.
+    for (int i = 0; i < 4; i++) {
+        total += singleCell(p, float(i));
+    }
+
+    // Ограничение плотности помогает избежать
+    // чрезмерно тёмного результата при слиянии ячеек.
+    return min(total, 1.25);
+}
+
+
+// ------------------------------------------------------------
+// CLOUD LIGHTING
+// ------------------------------------------------------------
+
+float cloudLighting(
+    vec3 p,
+    vec3 rayDirection,
+    float density
+) {
+    vec3 lightDirection =
+        normalize(vec3(-0.55, 0.78, 0.35));
+
+    float heightFactor = clamp(
+        (p.y - 60.0) / 400.0,
+        0.0,
+        1.0
+    );
 
     float towardSun = max(
         dot(-rayDirection, lightDirection),
         0.0
     );
 
-    float forwardScattering = pow(towardSun, 3.0) * 0.12;
+    float forwardScattering =
+        pow(towardSun, 3.0) * 0.12;
 
     float topLight = smoothstep(
         0.35,
         0.95,
         heightFactor
-    ) * 0.28;
+    ) * 0.27;
 
-    float underside = density * 0.22;
+    float underside = density * 0.24;
 
     return clamp(
-        0.36 + topLight + forwardScattering - underside,
+        0.38 + topLight + forwardScattering - underside,
         0.12,
         1.0
     );
@@ -767,21 +990,27 @@ float sceneDistance(vec2 uv) {
 
     vec4 viewPosition = uInverseProjection * clip;
 
-    viewPosition /= max(abs(viewPosition.w), 0.00001);
+    viewPosition /= max(
+        abs(viewPosition.w),
+        0.00001
+    );
 
     vec4 worldPosition =
         uInverseView * vec4(viewPosition.xyz, 1.0);
 
-    return length(worldPosition.xyz - uCameraPosition);
+    return length(
+        worldPosition.xyz - uCameraPosition
+    );
 }
 
 
 // ------------------------------------------------------------
-// MAIN RAYMARCH
+// RAYMARCH
 // ------------------------------------------------------------
 
 void main() {
     vec4 background = texture2D(uScene, vUv);
+
     float maxDistance = sceneDistance(vUv);
 
     vec4 clipPosition = vec4(
@@ -790,18 +1019,25 @@ void main() {
         1.0
     );
 
-    vec4 viewPosition = uInverseProjection * clipPosition;
+    vec4 viewPosition =
+        uInverseProjection * clipPosition;
 
-    viewPosition /= max(abs(viewPosition.w), 0.00001);
+    viewPosition /= max(
+        abs(viewPosition.w),
+        0.00001
+    );
 
     vec3 rayDirection = normalize(
-        (uInverseView * vec4(normalize(viewPosition.xyz), 0.0)).xyz
+        (
+            uInverseView *
+            vec4(normalize(viewPosition.xyz), 0.0)
+        ).xyz
     );
 
     vec3 rayOrigin = uCameraPosition;
 
     vec3 boxMin = vec3(-900.0, 25.0, -900.0);
-    vec3 boxMax = vec3(900.0, 530.0, 900.0);
+    vec3 boxMax = vec3(900.0, 540.0, 900.0);
 
     vec2 hit = intersectBox(
         rayOrigin,
@@ -822,23 +1058,27 @@ void main() {
 
     float distanceThroughVolume = endT - startT;
 
-    // 40 шагов вместо 72 — меньше работы на каждый пиксель.
-    const int STEPS = 40;
+    // Баланс между качеством и нагрузкой.
+    const int STEPS = 36;
 
-    float stepLength = distanceThroughVolume / float(STEPS);
+    float stepLength =
+        distanceThroughVolume / float(STEPS);
 
     vec3 accumulatedColor = vec3(0.0);
     float transmittance = 1.0;
 
     for (int i = 0; i < STEPS; i++) {
-        float t = startT + (float(i) + 0.5) * stepLength;
+        float t =
+            startT +
+            (float(i) + 0.5) * stepLength;
+
         vec3 p = rayOrigin + rayDirection * t;
 
         float density = convectiveField(p);
 
-        if (density > 0.015) {
+        if (density > 0.012) {
             float heightFactor = clamp(
-                (p.y - 60.0) / 400.0,
+                (p.y - 60.0) / 420.0,
                 0.0,
                 1.0
             );
@@ -849,8 +1089,11 @@ void main() {
                 density
             );
 
-            vec3 shadowColor = vec3(0.24, 0.29, 0.36);
-            vec3 sunlightColor = vec3(1.0, 0.97, 0.91);
+            vec3 shadowColor =
+                vec3(0.23, 0.27, 0.34);
+
+            vec3 sunlightColor =
+                vec3(1.0, 0.975, 0.93);
 
             vec3 cloudColor = mix(
                 shadowColor,
@@ -858,31 +1101,37 @@ void main() {
                 lighting
             );
 
-            float ice = smoothstep(0.65, 0.96, heightFactor);
+            // Верхняя ледяная часть облака светлее.
+            float ice = smoothstep(
+                0.62,
+                0.96,
+                heightFactor
+            );
 
             cloudColor = mix(
                 cloudColor,
                 vec3(0.84, 0.89, 0.96),
-                ice * 0.50
+                ice * 0.48
             );
 
+            // Более тёмное основание.
             float lowerShade = 1.0 - smoothstep(
                 0.0,
-                0.55,
+                0.56,
                 heightFactor
             );
 
-            cloudColor *= 1.0 - lowerShade * 0.18;
+            cloudColor *= 1.0 - lowerShade * 0.19;
 
             cloudColor +=
-                vec3(0.65, 0.76, 1.0) * uFlash * 0.9;
+                vec3(0.65, 0.76, 1.0) *
+                uFlash * 0.9;
 
-            // Меньше накопления полупрозрачной дымки.
             float alpha = 1.0 - exp(
-                -density * stepLength * 0.014
+                -density * stepLength * 0.016
             );
 
-            alpha = clamp(alpha, 0.0, 0.62);
+            alpha = clamp(alpha, 0.0, 0.64);
 
             accumulatedColor +=
                 transmittance * alpha * cloudColor;
@@ -896,7 +1145,8 @@ void main() {
     }
 
     vec3 finalColor =
-        accumulatedColor + transmittance * background.rgb;
+        accumulatedColor +
+        transmittance * background.rgb;
 
     gl_FragColor = vec4(finalColor, 1.0);
 
@@ -964,13 +1214,40 @@ function readSlider(input, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function cloudTop() {
+function getCloudTop() {
   const cape = Math.max(
-    0.1,
+    0,
     Math.min(state.cape / 4000, 1)
   );
 
-  return (220 + 220 * cape) * state.growth;
+  return Math.round(185 + 265 * cape);
+}
+
+function getActiveCellEstimate() {
+  // Это оценка по времени жизненного цикла,
+  // а не анализ реального поля восходящих потоков.
+  let count = 0;
+
+  for (let i = 0; i < 4; i++) {
+    const cycle = 112;
+    const offset =
+      i * 27 +
+      ((Math.sin(state.seed + i * 4.7) + 1) * 0.5) * 13;
+
+    const age = (
+      (state.time * 0.72 + offset) % cycle + cycle
+    ) % cycle;
+
+    if (age >= 3 && age <= 105) {
+      count++;
+    }
+  }
+
+  if (state.stormType === "tower") {
+    return Math.min(count, 1);
+  }
+
+  return count;
 }
 
 function syncControls() {
@@ -994,26 +1271,53 @@ function syncControls() {
     random: 4
   };
 
-  cloudUniforms.uStormType.value =
-    typeMap[state.stormType] ?? 1;
+  let mode = typeMap[state.stormType] ?? 1;
 
-  updateText("capeValue", `${Math.round(state.cape)} J/kg`);
-  updateText("shearValue", `${Math.round(state.shear)} m/s`);
-  updateText("humidityValue", `${Math.round(state.humidity)}%`);
-  updateText("cloudHeight", `${Math.round(cloudTop())} m`);
+  if (state.stormType === "random") {
+    mode = Math.floor(
+      Math.abs(Math.sin(state.seed * 0.017)) * 4
+    );
+
+    // random должен выбрать один из поддерживаемых
+    // режимов, не изменяя значение в интерфейсе.
+  }
+
+  cloudUniforms.uStormType.value = mode;
+
+  updateText(
+    "capeValue",
+    `${Math.round(state.cape)} J/kg`
+  );
+
+  updateText(
+    "shearValue",
+    `${Math.round(state.shear)} m/s`
+  );
+
+  updateText(
+    "humidityValue",
+    `${Math.round(state.humidity)}%`
+  );
+
+  updateText(
+    "cloudHeight",
+    `${getCloudTop()} m`
+  );
+
+  const activeCells = getActiveCellEstimate();
 
   updateText(
     "cellCount",
-    state.stormType === "multicell"
-      ? "Несколько ячеек"
-      : state.stormType === "squall"
-        ? "Линия конвекции"
-        : "Главная ячейка"
+    state.stormType === "tower"
+      ? "Одна башня"
+      : `${activeCells} ячеек`
   );
 
   updateText(
     "status",
-    state.paused ? "Пауза" : "Конвекция активна"
+    state.paused
+      ? "Пауза"
+      : "Конвекция развивается"
   );
 }
 
@@ -1069,13 +1373,25 @@ if (lightningButton) {
 if (newStormButton) {
   newStormButton.addEventListener("click", () => {
     state.seed = Math.random() * 10000;
+    state.stormGeneration++;
+
     cloudUniforms.uSeed.value = state.seed;
 
+    // Новая система начинается с ранней стадии.
     state.time = 0;
-    state.growth = 0.65;
-    state.lightningTimer = 2;
+    state.lightningTimer = 3 + Math.random() * 4;
+    state.lightningFlash = 0;
 
     clearLightning();
+
+    // Новая гроза продолжает работу, даже если
+    // предыдущая была поставлена на паузу.
+    state.paused = false;
+
+    if (pauseButton) {
+      pauseButton.textContent = "Пауза";
+    }
+
     syncControls();
   });
 }
@@ -1083,8 +1399,12 @@ if (newStormButton) {
 if (resetButton) {
   resetButton.addEventListener("click", () => {
     state.time = 0;
-    state.growth = 1;
     state.paused = false;
+    state.lightningFlash = 0;
+    state.lightningTimer = 3;
+    state.seed = Math.random() * 10000;
+
+    cloudUniforms.uSeed.value = state.seed;
 
     camera.position.set(460, 270, 620);
     controls.target.set(0, 100, 0);
@@ -1141,14 +1461,21 @@ function resize() {
 
   const pixelRatio = Math.min(
     window.devicePixelRatio || 1,
-    1.15
+    1.1
   );
 
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(width, height, false);
 
-  const w = Math.max(1, Math.floor(width * pixelRatio));
-  const h = Math.max(1, Math.floor(height * pixelRatio));
+  const w = Math.max(
+    1,
+    Math.floor(width * pixelRatio)
+  );
+
+  const h = Math.max(
+    1,
+    Math.floor(height * pixelRatio)
+  );
 
   renderTarget.setSize(w, h);
 }
@@ -1174,23 +1501,36 @@ function animate(now) {
   previousTime = now;
 
   if (!state.paused) {
-    state.time += delta;
-
-    state.growth +=
-      (1.0 - state.growth) *
-      Math.min(delta * 0.035, 0.01);
+    // Рост скорости симуляции ускоряет развитие,
+    // а не просто анимирует текстуру.
+    state.time += delta * growthSpeed;
 
     state.lightningTimer -= delta;
+
+    const capeFactor = Math.min(
+      1,
+      Math.max(0.1, state.cape / 3000)
+    );
+
+    const humidityFactor = Math.min(
+      1,
+      Math.max(0.15, state.humidity / 100)
+    );
+
+    // При высокой CAPE и влажности разряды
+    // возникают чаще. Это визуальная эвристика.
+    const lightningChance =
+      0.028 * capeFactor * humidityFactor;
 
     if (
       state.lightning &&
       state.lightningTimer <= 0 &&
-      Math.random() < 0.035
+      Math.random() < lightningChance
     ) {
       createLightning();
 
       state.lightningTimer =
-        2.0 + Math.random() * 7.0;
+        1.8 + Math.random() * 6.5;
     }
 
     state.lightningFlash *= Math.exp(-delta * 5.5);
@@ -1205,31 +1545,44 @@ function animate(now) {
 
   controls.update();
 
-  cloudUniforms.uTime.value = state.time * growthSpeed;
-  cloudUniforms.uGrowth.value = state.growth;
+  cloudUniforms.uTime.value = state.time;
   cloudUniforms.uFlash.value = state.lightningFlash;
 
   camera.updateMatrixWorld();
 
-  cloudUniforms.uCameraPosition.value.copy(camera.position);
+  cloudUniforms.uCameraPosition.value.copy(
+    camera.position
+  );
 
   cloudUniforms.uInverseProjection.value
     .copy(camera.projectionMatrix)
     .invert();
 
-  cloudUniforms.uInverseView.value.copy(camera.matrixWorld);
+  cloudUniforms.uInverseView.value.copy(
+    camera.matrixWorld
+  );
 
-  // 1. Рельеф и глубина сцены.
+  // 1. Рельеф и буфер глубины.
   renderer.setRenderTarget(renderTarget);
   renderer.clear();
   renderer.render(scene, camera);
 
-  // 2. Объёмное облако с учётом глубины.
+  // 2. Объёмное поле облаков.
   renderer.setRenderTarget(null);
   renderer.clear();
   renderer.render(postScene, postCamera);
 
-  updateText("cloudHeight", `${Math.round(cloudTop())} m`);
+  updateText(
+    "cloudHeight",
+    `${getCloudTop()} m`
+  );
+
+  updateText(
+    "cellCount",
+    state.stormType === "tower"
+      ? "Одна башня"
+      : `${getActiveCellEstimate()} ячеек`
+  );
 }
 
 syncControls();
@@ -1247,5 +1600,5 @@ if (loading) {
 }
 
 console.log(
-  "Quantum Meteo: optimized convective renderer initialized."
+  "Quantum Meteo: evolving convective system initialized."
 );
