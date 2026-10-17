@@ -1,107 +1,21 @@
-import * as THREE from 'https://esm.sh/three@0.180.0';
-
-export class VolumetricClouds {
-  constructor(scene, model) {
-    this.model=model;
-    this.texture=new THREE.Data3DTexture(model.makeTextureData(),model.nx,model.ny,model.nz);
-    this.texture.format=THREE.RGBAFormat;
-    this.texture.type=THREE.UnsignedByteType;
-    this.texture.minFilter=THREE.LinearFilter;
-    this.texture.magFilter=THREE.LinearFilter;
-    this.texture.unpackAlignment=1;
-    this.texture.needsUpdate=true;
-    this.material=new THREE.ShaderMaterial({
-      glslVersion:THREE.GLSL3, transparent:true, depthWrite:false, side:THREE.FrontSide,
-      uniforms:{uField:{value:this.texture},uTime:{value:0},uSun:{value:new THREE.Vector3(-.55,.68,.42).normalize()},uStorm:{value:1.0},uCloudScale:{value:1.0}},
-      vertexShader:`
-        out vec3 vLocal;
-        void main(){ vLocal=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }
-      `,
-      fragmentShader:`
-        precision highp float;
-        precision highp sampler3D;
-        uniform sampler3D uField;
-        uniform float uTime;
-        uniform vec3 uSun;
-        uniform float uStorm;
-        uniform float uCloudScale;
-        in vec3 vLocal;
-        out vec4 outColor;
-
-        float hash3(vec3 p){ p=fract(p*.1031); p+=dot(p,p.yxz+33.33); return fract((p.x+p.y)*p.z); }
-        float noise3(vec3 p){
-          vec3 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
-          float a=hash3(i), b=hash3(i+vec3(1,0,0)), c=hash3(i+vec3(0,1,0)), d=hash3(i+vec3(1,1,0));
-          float e=hash3(i+vec3(0,0,1)), f1=hash3(i+vec3(1,0,1)), g=hash3(i+vec3(0,1,1)), h=hash3(i+vec3(1,1,1));
-          return mix(mix(mix(a,b,f.x),mix(c,d,f.x),f.y),mix(mix(e,f1,f.x),mix(g,h,f.x),f.y),f.z);
-        }
-        float fbm(vec3 p){ float v=0.0,a=.5; for(int i=0;i<4;i++){v+=a*noise3(p);p=p*2.03+vec3(7.1,3.7,5.9);a*=.5;}return v; }
-        vec2 hitBox(vec3 ro,vec3 rd){
-          vec3 inv=1.0/rd; vec3 t0=(-.5-ro)*inv; vec3 t1=(.5-ro)*inv;
-          vec3 lo=min(t0,t1),hi=max(t0,t1);
-          return vec2(max(max(lo.x,lo.y),lo.z),min(min(hi.x,hi.y),hi.z));
-        }
-        void main(){
-          vec3 ro=(inverse(modelMatrix)*vec4(cameraPosition,1.0)).xyz;
-          vec3 rd=normalize(vLocal-ro);
-          vec2 hit=hitBox(ro,rd); float start=max(hit.x,0.0), finish=hit.y;
-          if(finish<=start) discard;
-          float span=finish-start; float stepLen=span/68.0;
-          vec3 p=ro+rd*start; float trans=1.0; vec3 sum=vec3(0.0); float alpha=0.0;
-          vec3 sunDir=normalize(uSun);
-          for(int i=0;i<68;i++){
-            if(float(i)*stepLen>span || trans<.025) break;
-            vec3 uv=p+vec3(.5);
-            vec4 field=texture(uField,clamp(uv,vec3(.002),vec3(.998)));
-            float base=field.r;
-            float height=uv.z;
-            // Eroded cloud edges and cauliflower detail are applied to solved condensate,
-            // not used to invent a fixed storm silhouette.
-            float n=fbm(uv*vec3(25.0,20.0,24.0)+vec3(uTime*.012,uTime*.004,-uTime*.006));
-            float detail=fbm(uv*vec3(61.0,52.0,57.0)+vec3(2.4,-uTime*.018,3.1));
-            float edge=base-(.18+(1.0-n)*.19);
-            float d=smoothstep(.08,.42,edge+detail*.09);
-            d*=smoothstep(.025,.18,base);
-            // Flatter, spreading upper cloud shield; less erosion in the anvil.
-            float anvil=smoothstep(.54,.79,height);
-            d=mix(d,d*.86,anvil);
-            if(d>.012){
-              float shadow=0.0;
-              for(int j=1;j<=4;j++){
-                vec3 sp=uv+sunDir*float(j)*.018;
-                shadow+=texture(uField,clamp(sp,vec3(.002),vec3(.998))).r;
-              }
-              float light=exp(-shadow*1.45);
-              float powder=clamp((height-.62)*1.4,0.0,1.0);
-              vec3 dark=vec3(.22,.28,.36), mid=vec3(.56,.64,.72), bright=vec3(.94,.96,1.0);
-              vec3 col=mix(dark,mid,clamp(light*.92,0.0,1.0));
-              col=mix(col,bright,pow(light,2.4)*(.25+.62*pow(powder,.65)));
-              float rain=field.g;
-              col=mix(col,vec3(.22,.28,.34),clamp(rain*1.2,0.0,.72));
-              float a=d*.105;
-              sum+=trans*col*a;
-              trans*=1.0-a;
-              alpha+=a*trans;
-            }
-            p+=rd*stepLen;
-          }
-          float a=1.0-trans;
-          if(a<.015) discard;
-          outColor=vec4(sum/max(a,.001),clamp(a*.95,0.0,.94));
-        }
-      `
-    });
-    this.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),this.material);
-    this.mesh.scale.set(model.width,model.height,model.depth);
-    this.mesh.position.set(model.width*.5,model.height*.5,0);
-    this.mesh.frustumCulled=false;
-    scene.add(this.mesh);
-  }
-  update(time){
-    this.material.uniforms.uTime.value=time;
-    const raw=this.model.makeTextureData();
-    this.texture.image.data.set(raw);
-    this.texture.needsUpdate=true;
-  }
-  dispose(){this.mesh.parent?.remove(this.mesh);this.mesh.geometry.dispose();this.material.dispose();this.texture.dispose();}
+import * as THREE from 'three';
+const vertex=`varying vec3 vPos; varying vec3 vNormal; void main(){vPos=position;vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+const fragment=`uniform float uTime; uniform float uDensity; uniform float uLight; uniform vec3 uTint; uniform float uSeed; varying vec3 vPos; varying vec3 vNormal;
+float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+void main(){vec3 p=vPos;float n=noise(p*2.4+vec3(uTime*.018,uTime*.009,uSeed));n+=.5*noise(p*5.2-vec3(uTime*.027,0.,uTime*.018));n/=1.5;float edge=1.-smoothstep(.48,1.0,length(p));float density=smoothstep(.17,.69,n*.72+edge*.48)*uDensity;float top=clamp(vNormal.y*.5+.5,0.,1.);vec3 lightDir=normalize(vec3(-.45,.78,.35));float diffuse=max(dot(normalize(vNormal),lightDir),0.);float silver=pow(max(dot(reflect(-lightDir,normalize(vNormal)),vec3(0.,0.,1.)),0.),3.);float shade=.42+diffuse*.62+silver*.22;vec3 color=mix(uTint,vec3(0.79,.84,.88),clamp(top*.6+diffuse*.25,0.,.9));color*=shade;float alpha=density*.72; if(alpha<.035)discard;gl_FragColor=vec4(color,alpha);}`;
+function cloudMaterial(seed,tint='#aebdca',density=1){return new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,transparent:true,depthWrite:false,side:THREE.DoubleSide,uniforms:{uTime:{value:0},uDensity:{value:density},uLight:{value:1},uTint:{value:new THREE.Color(tint)},uSeed:{value:seed}},blending:THREE.NormalBlending});}
+export class CloudSystem{
+ constructor(scene,model){this.scene=scene;this.model=model;this.groups=[];this.clock=0;this.build();}
+ build(){const count=3;for(let c=0;c<count;c++){const group=new THREE.Group();const meshes=[];const seed=c*31+7;const tint=c===1?'#9eacbc':'#b8c6d2';
+ // broad low cloud base and many overlapping lobes produce a connected cloud volume
+ const add=(x,y,z,sx,sy,sz,d=1)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,18),cloudMaterial(seed+x*3+y,tint,d));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);meshes.push(m);};
+ add(0,0,0,12,2.6,8,.8);for(let i=0;i<9;i++){const a=i/9*Math.PI*2;add(Math.cos(a)*6,1+Math.sin(i*2)*.45,Math.sin(a)*4.5,4.5+Math.random()*2,3.1+Math.random()*1.7,4.2+Math.random()*1.8,.95);}
+ // towering cumulonimbus turrets, plus anvil cap
+ for(let t=0;t<3;t++){const x=(t-1)*3.1;for(let k=0;k<4;k++){add(x+(Math.random()-.5)*1.3,3.8+k*3.0,(Math.random()-.5)*1.5,3.5-k*.3,3.3,3.4-k*.25,1.04);} }
+ add(0,14.8,-.5,9.8,1.5,5.5,.82);add(-3,15.1,-1,7,1.0,5.1,.7);add(5,14.5,-.4,7.4,1.1,4.6,.76);
+ group.position.set((c-1)*24,8+(c===1?1:0),-12-c*13);group.rotation.y=c*.7;this.scene.add(group);this.groups.push({group,meshes,seed,baseX:group.position.x,baseZ:group.position.z,phase:c*2.4});}
+ }
+ update(dt,time){this.clock=time;this.groups.forEach((g,idx)=>{const cell=this.model.cells[idx];if(cell){g.group.position.x=THREE.MathUtils.lerp(g.group.position.x,g.baseX+cell.x*.28,Math.min(1,dt*.15));g.group.position.z=THREE.MathUtils.lerp(g.group.position.z,g.baseZ+cell.z*.18,Math.min(1,dt*.15));}g.group.position.y=8+Math.sin(time*.18+g.phase)*.22;g.group.rotation.y=Math.sin(time*.06+g.phase)*.04;g.meshes.forEach((m,i)=>{m.material.uniforms.uTime.value=time+i*.17; m.scale.x*=1;});});}
+ setDensity(v){this.groups.forEach(g=>g.meshes.forEach(m=>m.material.uniforms.uDensity.value=v));}
 }

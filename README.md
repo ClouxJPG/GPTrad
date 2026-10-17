@@ -1,18 +1,27 @@
-# Quantum Meteo — immersive storm simulator prototype
+# Quantum Meteo — 3D Storm Simulator
 
-This is a multi-file browser prototype for the storm-simulator page that contains a `<canvas id="scene">` and controls such as `#cape`, `#shear`, `#humidity`, `#newStorm`, `#pause`, `#lightning`, and `#reset`.
+Standalone browser-based 3D atmosphere visualization. This is a self-contained project folder and does not modify an existing radar-map `index.html` when uploaded into a separate directory (recommended: `storm-sim/`).
 
-## Files
-- `sim.js` — scene, camera, UI and render loop
-- `atmosphere.js` — low-resolution 3D moist-convection approximation
-- `clouds.js` — volume raymarch renderer driven by the solver's condensate field
-- `terrain.js` — procedural terrain and sky
-- `weather.js` — precipitation and approximate lightning effects
+## Run locally
+Open `index.html` through a static web server. ES modules and import maps may be blocked by `file://`; GitHub Pages is suitable. Internet access is required to load Three.js from jsDelivr.
 
-## Install
-Upload all five `.js` files to the same directory as the existing storm-simulator `index.html`. Do not replace the radar-map `index.html`; this build expects the separate storm-simulator page with `#scene`.
+## Deploy from iPhone with GitHub mobile
+1. Open `https://github.com/ClouxJPG/Daradar` and enter the repository.
+2. Tap **Add file → Create new file**.
+3. In the filename field enter `storm-sim/index.html`, paste the contents of this project's `index.html`, and commit.
+4. Repeat for `storm-sim/sim.js`, `storm-sim/atmosphere.js`, `storm-sim/terrain.js`, `storm-sim/clouds.js`, and `storm-sim/weather.js` (copy each file's complete contents).
+5. Add `storm-sim/README.md` if desired.
+6. Open `https://clouxjpg.github.io/Daradar/storm-sim/` after GitHub Pages finishes deploying. If Pages is configured for a different repository or branch, use that repository's Pages URL instead.
 
-The existing page must load `sim.js` as an ES module, e.g. `<script type="module" src="./sim.js"></script>`. If it already does, leave it unchanged.
+Do not overwrite the repository's root `index.html`. The simulator runs in its own folder. All modules use relative local paths; Three.js and OrbitControls load from jsDelivr.
 
-## Limits
-This is an educational, low-resolution 3D approximation. It does not solve the full compressible Navier–Stokes equations, does not include full microphysics, and is not CM1 or a forecasting model. The cloud volume uses solver-generated condensate as its large-scale density field and procedural noise only for small-scale visual detail.
+## Controls
+Drag to orbit; pinch or scroll to zoom. Use the panel to select a scenario, adjust humidity/CAPE/shear/wind, pause, change time speed, and toggle rain, lightning, flow lines and diagnostics.
+
+## What this model is—and isn't
+The scene includes a procedural terrain, layered 3D cloud forms with animated procedural shading, moving convective cells, rain streaks, lightning flashes, and a simplified reduced-order atmospheric state. It is a visual/educational approximation. It is **not** a full CFD solver, not CM1, and not a forecasting product. CAPE, LCL and updraft diagnostics are approximate; tornado and microphysics processes are not quantitatively resolved.
+
+## Verification performed
+- JavaScript syntax checks with Node.js.
+- ZIP integrity and required-file checks.
+- Browser launch/screenshot tests should be performed on the deployment device; a static code check alone cannot guarantee WebGL rendering on every iPhone/Safari version.

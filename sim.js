@@ -1,82 +1,16 @@
-import * as THREE from 'https://esm.sh/three@0.180.0';
-import { OrbitControls } from 'https://esm.sh/three@0.180.0/examples/jsm/controls/OrbitControls.js';
-import { AtmosphereModel } from './atmosphere.js';
-import { VolumetricClouds } from './clouds.js';
-import { createTerrain, createSky } from './terrain.js';
-import { WeatherEffects } from './weather.js';
-
-// Quantum Meteo immersive storm laboratory. No changes to index.html required.
-const $=id=>document.getElementById(id);
-const canvas=$('scene');
-if(!canvas) throw new Error('Quantum Meteo simulator: #scene was not found. This sim.js needs the storm-simulator index.html, not the radar-map index.html.');
-
-const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.15));
-renderer.setSize(canvas.clientWidth||innerWidth,canvas.clientHeight||innerHeight,false);
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
-
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9aaeba);
-scene.fog=new THREE.FogExp2(0xa9bac2,.000018);
-const camera=new THREE.PerspectiveCamera(49,(canvas.clientWidth||innerWidth)/(canvas.clientHeight||innerHeight),5,100000);
-camera.position.set(15000,7300,17200);
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.target.set(9000,4200,0);controls.enableDamping=true;controls.dampingFactor=.045;controls.minDistance=1700;controls.maxDistance=42000;controls.maxPolarAngle=Math.PI*.495;
-controls.screenSpacePanning=true;
-
-scene.add(new THREE.HemisphereLight(0xcce4ff,0x38434a,1.25));
-const sunLight=new THREE.DirectionalLight(0xffe6c4,2.3);sunLight.position.set(-12000,18000,9000);scene.add(sunLight);
-const sky=createSky(scene);
-const model=new AtmosphereModel();
-const terrain=createTerrain(scene,model.width,model.depth);
-const clouds=new VolumetricClouds(scene,model);
-const weather=new WeatherEffects(scene,model);
-
-let paused=false,simSpeed=1,last=performance.now(),simClock=0,textureClock=0,metricClock=0;
-const maxSubsteps=2;
-function sliderValue(el,fallback,max){
- if(!el)return fallback;const v=Number(el.value);if(!Number.isFinite(v))return fallback;
- const mn=Number(el.min||0),mx=Number(el.max||max);
- return mx<=1?THREE.MathUtils.clamp(v,0,1)*max:THREE.MathUtils.clamp(v,mn,mx);
-}
-function readControls(){
- const cape=sliderValue($('cape'),1800,5000);
- const shear=sliderValue($('shear'),18,50);
- const hum=sliderValue($('humidity'),78,100)/100;
- model.setParameters(cape,shear,hum);
- if($('capeValue'))$('capeValue').textContent=`${Math.round(cape)} J/kg`;
- if($('shearValue'))$('shearValue').textContent=`${shear.toFixed(1)} m/s`;
- if($('humidityValue'))$('humidityValue').textContent=`${Math.round(hum*100)}%`;
-}
-function metrics(){
- const d=model.diagnostics();
- if($('cloudHeight'))$('cloudHeight').textContent=`${(d.top/1000).toFixed(1)} km`;
- if($('cellCount'))$('cellCount').textContent=String(Math.max(0,Math.round(d.updraft/18)));
- if($('status'))$('status').textContent=paused?'Пауза':d.top>7500?'Глубокая конвекция':d.top>2200?'Рост грозовых башен':'Инициация конвекции';
-}
-function updatePause(){const b=$('pause');if(b)b.textContent=paused?'Продолжить':'Пауза';}
-function newStorm(){const type=$('stormType')?.value||'supercell';model.newStorm(type);clouds.update(model.time);metrics();}
-$('newStorm')?.addEventListener('click',newStorm);
-$('reset')?.addEventListener('click',()=>{model.reset();clouds.update(model.time);metrics();});
-$('pause')?.addEventListener('click',()=>{paused=!paused;updatePause();metrics();});
-$('lightning')?.addEventListener('click',()=>{weather.setEnabled(!weather.enabled);const b=$('lightning');if(b)b.textContent=weather.enabled?'Молнии: вкл.':'Молнии: выкл.';});
-for(const id of ['cape','shear','humidity'])$(id)?.addEventListener('input',readControls);
-$('growthSpeed')?.addEventListener('input',e=>{simSpeed=THREE.MathUtils.clamp(Number(e.target.value)||1,.2,5);});
-$('loading')?.style&&( $('loading').style.display='none' );
-
-function resize(){const w=Math.max(1,canvas.clientWidth||innerWidth),h=Math.max(1,canvas.clientHeight||innerHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-window.addEventListener('resize',resize);
-
-function animate(now){requestAnimationFrame(animate);const elapsed=Math.min(.08,Math.max(0,(now-last)/1000));last=now;
- if(!paused){const count=Math.max(1,Math.min(maxSubsteps,Math.ceil(simSpeed)));for(let i=0;i<count;i++)model.step(.28*simSpeed/count);simClock+=elapsed*simSpeed;}
- textureClock+=elapsed;metricClock+=elapsed;
- if(textureClock>.22){clouds.update(model.time);weather.update(elapsed,now/1000);textureClock=0;}
- if(metricClock>.5){readControls();metrics();metricClock=0;}
- controls.update();renderer.render(scene,camera);
-}
-readControls();metrics();requestAnimationFrame(animate);
-
-// Expose a tiny console interface for testing without changing the UI.
-window.QuantumMeteoSimulation={model,renderer,scene,camera,controls,newStorm,reset:()=>model.reset(),setPaused:v=>{paused=!!v;updatePause();}};
+import * as THREE from 'three';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+import {AtmosphereModel} from './atmosphere.js';import {createTerrain} from './terrain.js';import {CloudSystem} from './clouds.js';import {WeatherEffects} from './weather.js';
+const $=id=>document.getElementById(id);let renderer,scene,camera,controls,clouds,weather,model,clock,paused=false,autoOrbit=true,simTime=0,scenario='storm';
+function fail(err){console.error(err);$('error').style.display='block';$('errorText').textContent=String(err?.message||err);$('state').textContent='ОШИБКА ЗАПУСКА';}
+try{init();animate();}catch(e){fail(e);}
+function init(){model=new AtmosphereModel();scene=new THREE.Scene();scene.background=new THREE.Color('#7f9bb1');scene.fog=new THREE.FogExp2('#9baebe',.0019);camera=new THREE.PerspectiveCamera(54,innerWidth/innerHeight,.1,500);camera.position.set(0,17,47);renderer=new THREE.WebGLRenderer({antialias:innerWidth>650,alpha:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<650?1.25:1.7));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;$('view').appendChild(renderer.domElement);renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();paused=true;$('state').textContent='WEBGL ПРИОСТАНОВЛЕН';});renderer.domElement.addEventListener('webglcontextrestored',()=>{paused=false;$('state').textContent='АТМОСФЕРА АКТИВНА';});
+ const hemi=new THREE.HemisphereLight(0xc7e3ff,0x33352e,2.1);scene.add(hemi);const sun=new THREE.DirectionalLight(0xffe6c0,3.1);sun.position.set(-45,65,25);scene.add(sun);sun.castShadow=false;
+ const skyGeo=new THREE.SphereGeometry(220,32,20);const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,vertexShader:'varying vec3 v; void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 v; void main(){float h=max(v.y,0.);vec3 a=vec3(.13,.25,.39),b=vec3(.57,.70,.79);vec3 c=mix(a,b,pow(h,.65));float horizon=1.-smoothstep(-.05,.45,v.y);c=mix(c,vec3(.72,.75,.72),horizon*.34);gl_FragColor=vec4(c,1.);}'});scene.add(new THREE.Mesh(skyGeo,skyMat));createTerrain(scene);clouds=new CloudSystem(scene,model);weather=new WeatherEffects(scene);controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.045;controls.minDistance=13;controls.maxDistance=100;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,10,-10);clock=new THREE.Clock();
+ bind();window.addEventListener('resize',resize);$('state').textContent='АТМОСФЕРА АКТИВНА';}
+function bind(){const sliders=[['humidity','humidityOut',v=>v+'%',v=>model.humidity=+v],['cape','capeOut',v=>v+' J/kg',v=>model.cape=+v],['shear','shearOut',v=>v+' m/s',v=>model.shear=+v],['wind','windOut',v=>v+' m/s',v=>model.wind=+v],['timeSpeed','timeOut',v=>['0×','0.5×','1×','2×','4×'][+v],v=>{}]];for(const [id,out,fmt,set] of sliders){const el=$(id);const update=()=>{const v=el.value;$(out).textContent=fmt(v);set(v);};el.addEventListener('input',update);update();}
+ $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'▶ Продолжить':'Ⅱ Пауза';$('state').textContent=paused?'ПАУЗА':'АТМОСФЕРА АКТИВНА';};$('reset').onclick=()=>{simTime=0;model.reset();camera.position.set(0,17,47);controls.target.set(0,10,-10);controls.update();$('state').textContent='СИМУЛЯЦИЯ СБРОШЕНА';};$('scenario').onchange=e=>setScenario(e.target.value);$('rainToggle').onchange=e=>weather.setRain(e.target.checked);$('lightningToggle').onchange=e=>weather.setLightning(e.target.checked);$('windToggle').onchange=e=>weather.setWind(e.target.checked);$('diagnosticsToggle').onchange=e=>$('metrics').style.display=e.target.checked?'grid':'none';$('autoOrbit').onclick=()=>{autoOrbit=!autoOrbit;$('autoOrbit').classList.toggle('active',autoOrbit);$('autoOrbit').textContent='Автоповорот: '+(autoOrbit?'вкл.':'выкл.');};$('viewWide').onclick=()=>{camera.position.set(0,20,57);controls.target.set(0,9,-12);};$('viewGround').onclick=()=>{camera.position.set(0,3.5,27);controls.target.set(0,12,-10);};$('viewTop').onclick=()=>{camera.position.set(0,75,-10);controls.target.set(0,0,-10);};$('togglePanel').onclick=()=>$('panel').classList.toggle('collapsed');}
+function setScenario(v){scenario=v;model.scenario=v;const cfg={storm:[78,2400,22,12],supercell:[86,3400,30,17],cumulus:[65,500,8,6],squall:[82,2100,18,20]}[v];['humidity','cape','shear','wind'].forEach((id,i)=>{$(id).value=cfg[i];$(id).dispatchEvent(new Event('input'));});clouds.groups.forEach((g,i)=>{g.group.scale.setScalar(v==='cumulus'?.72:v==='supercell'?1.13:1);});$('state').textContent=({storm:'МОЩНАЯ ГРОЗА',supercell:'СУПЕРЯЧЕЙКА',cumulus:'КУЧЕВЫЕ ОБЛАКА',squall:'ШКВАЛЬНАЯ ЛИНИЯ'})[v];}
+function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<650?1.25:1.7));renderer.setSize(innerWidth,innerHeight);}
+function animate(){requestAnimationFrame(animate);if(!renderer)return;const dt=Math.min(clock.getDelta(),.05);const speed=[0,.5,1,2,4][+$('timeSpeed').value];if(!paused&&speed>0){simTime+=dt*speed;model.step(dt*speed);clouds.update(dt*speed,simTime);weather.update(dt*speed,simTime,model,$('lightningToggle').checked);if(autoOrbit){controls.target.x=Math.sin(simTime*.018)*2;controls.update();}const dark=scenario==='storm'||scenario==='supercell'||scenario==='squall';scene.fog.color.set(dark?'#8b9eae':'#b3c8d6');scene.fog.density=dark?.0022:.00145;renderer.toneMappingExposure=1.13+weather.flash*.65;}
+ controls.update();renderer.render(scene,camera);$('clock').textContent=`${String(12+Math.floor(simTime/60)%12).padStart(2,'0')}:${String(Math.floor(simTime)%60).padStart(2,'0')} LOCAL SIM`;$('mCape').textContent=Math.round(model.cape);$('mUp').textContent=model.updraft.toFixed(1)+' m/s';$('mWater').textContent=model.water.toFixed(2)+' g/kg';$('mShear').textContent=model.shear+' m/s';}
