@@ -52,7 +52,7 @@ controls.maxPolarAngle = Math.PI * 0.495;
 const sky = new THREE.Mesh(
   new THREE.SphereGeometry(1800, 32, 20),
   new THREE.ShaderMaterial({
-    side: THREE.BackSide,
+    side: THREE.FrontSide,
     depthWrite: false,
     vertexShader: `
       varying vec3 vDirection;
