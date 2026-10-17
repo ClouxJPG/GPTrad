@@ -1,19 +1,19 @@
 
 /* ============================================================
-   QUANTUM METEO — NUMERICAL CONVECTION SIMULATOR
-   Version 1.0
+   QUANTUM METEO — CONVECTION MODEL
+   Fixed cloud rendering + simplified numerical atmosphere
 
-   - 3D grid: 32 x 32 x 32
-   - Advection of air velocity and moisture
-   - Approximate pressure projection
-   - Buoyancy and vertical thermal transport
-   - Water vapor, condensation and cloud water
-   - 3D volume rendering through a Data3DTexture
-   - No server, API, external weather data or cloud assets
+   Existing index.html is not changed.
+   Uses Three.js, OrbitControls and the existing UI IDs.
 
-   IMPORTANT:
-   This is an educational, simplified numerical model.
-   It is NOT a port of the full CM1 atmospheric model.
+   Model fields:
+   - u, v, w: air velocity
+   - theta: temperature perturbation
+   - qv: water vapor
+   - qc: cloud liquid water
+
+   The cloud is rendered from qc, not from a premade cloud mesh.
+   This is an educational model, not the full CM1 solver.
    ============================================================ */
 
 import * as THREE from
@@ -24,42 +24,43 @@ import { OrbitControls } from
 
 
 // ============================================================
-// CONFIGURATION
+// SETTINGS
 // ============================================================
 
 const NX = 32;
 const NY = 32;
 const NZ = 32;
 
-const SIZE = NX * NY * NZ;
+const N = NX * NY * NZ;
 
-const DOMAIN_X = 24;
-const DOMAIN_Y = 13;
-const DOMAIN_Z = 24;
+const DX = 24 / (NX - 1);
+const DY = 13 / (NY - 1);
+const DZ = 24 / (NZ - 1);
 
-const DT = 0.12;
-const PRESSURE_ITERATIONS = 5;
-const CLOUD_UPDATE_INTERVAL = 2;
+const WORLD_X = 24;
+const WORLD_Y = 13;
+const WORLD_Z = 24;
 
-const CELL_HEIGHT_KM = DOMAIN_Y / (NY - 1);
+const DT = 0.16;
 
-const clamp = (v, a, b) =>
-  Math.max(a, Math.min(b, v));
+const clamp = (v, lo, hi) =>
+  Math.max(lo, Math.min(hi, v));
 
 const lerp = (a, b, t) =>
   a + (b - a) * t;
 
-const index = (x, y, z) =>
+const idx = (x, y, z) =>
   x + NX * (y + NY * z);
 
+const $ = id => document.getElementById(id);
+
 
 // ============================================================
-// DOM
+// INTERFACE
 // ============================================================
-
-const $ = (id) => document.getElementById(id);
 
 const canvas = $("scene");
+
 const loading = $("loading");
 const loadingTitle = $("loadingTitle");
 const loadingText = $("loadingText");
@@ -68,12 +69,11 @@ const errorDetails = $("errorDetails");
 const capeSlider = $("cape");
 const shearSlider = $("shear");
 const humiditySlider = $("humidity");
+const stormType = $("stormType");
 
 const capeValue = $("capeValue");
 const shearValue = $("shearValue");
 const humidityValue = $("humidityValue");
-
-const stormType = $("stormType");
 
 const cloudHeightElement = $("cloudHeight");
 const cellCountElement = $("cellCount");
@@ -81,23 +81,21 @@ const statusElement = $("status");
 
 
 // ============================================================
-// ERROR HANDLING
+// ERROR REPORTING
 // ============================================================
 
-function showError(error) {
+function showStormError(error) {
   console.error("[Quantum Meteo]", error);
 
-  if (loading) {
-    loading.style.display = "flex";
-  }
+  if (loading) loading.style.display = "flex";
 
   if (loadingTitle) {
-    loadingTitle.textContent = "Ошибка симуляции";
+    loadingTitle.textContent = "Ошибка запуска";
   }
 
   if (loadingText) {
     loadingText.textContent =
-      "Не удалось запустить 3D-модель.";
+      "Не удалось инициализировать симуляцию.";
   }
 
   if (errorDetails) {
@@ -107,67 +105,56 @@ function showError(error) {
   }
 }
 
-window.showStormError = showError;
+window.showStormError = showStormError;
 
 
 // ============================================================
-// MAIN
+// START
 // ============================================================
 
 try {
-  await startSimulation();
+  await main();
 } catch (error) {
-  showError(error);
+  showStormError(error);
 }
 
 
-// ============================================================
-// SIMULATION
-// ============================================================
-
-async function startSimulation() {
+async function main() {
   if (!canvas) {
-    throw new Error(
-      "Не найден canvas #scene. Проверь index.html."
-    );
-  }
-
-  if (!window.WebGL2RenderingContext) {
-    throw new Error(
-      "Для 3D-текстур требуется поддержка WebGL 2."
-    );
+    throw new Error("В index.html отсутствует #scene.");
   }
 
   if (loadingTitle) {
-    loadingTitle.textContent =
-      "Инициализация модели атмосферы";
+    loadingTitle.textContent = "Запуск модели";
   }
 
   if (loadingText) {
     loadingText.textContent =
-      "Создание трёхмерной расчётной сетки...";
+      "Инициализация расчётной сетки атмосферы...";
   }
 
-  await new Promise(resolve =>
-    requestAnimationFrame(resolve)
-  );
+  await new Promise(resolve => requestAnimationFrame(resolve));
 
-  // ----------------------------------------------------------
-  // THREE.JS
-  // ----------------------------------------------------------
+
+  // ==========================================================
+  // THREE.JS SCENE
+  // ==========================================================
 
   const scene = new THREE.Scene();
 
-  scene.background = new THREE.Color(0x111a2a);
+  scene.background = new THREE.Color(0x172337);
+
+  scene.fog = new THREE.Fog(0x172337, 65, 145);
 
   const camera = new THREE.PerspectiveCamera(
     48,
-    canvas.clientWidth / Math.max(1, canvas.clientHeight),
+    Math.max(1, canvas.clientWidth) /
+      Math.max(1, canvas.clientHeight),
     0.1,
-    500
+    250
   );
 
-  camera.position.set(34, 23, 39);
+  camera.position.set(32, 22, 34);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -177,7 +164,7 @@ async function startSimulation() {
   });
 
   renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio || 1, 1.35)
+    Math.min(window.devicePixelRatio || 1, 1.25)
   );
 
   renderer.setSize(
@@ -189,92 +176,164 @@ async function startSimulation() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.1;
 
   const controls = new OrbitControls(camera, renderer.domElement);
 
-  controls.target.set(0, DOMAIN_Y * 0.48, 0);
+  controls.target.set(0, 5.5, 0);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.055;
+  controls.dampingFactor = 0.06;
   controls.minDistance = 12;
-  controls.maxDistance = 100;
+  controls.maxDistance = 95;
   controls.maxPolarAngle = Math.PI * 0.49;
 
   scene.add(new THREE.HemisphereLight(
-    0xbfd9ff,
-    0x252b38,
-    1.2
+    0xd5e5ff,
+    0x343b48,
+    1.6
   ));
 
-  const sunlight = new THREE.DirectionalLight(
-    0xffffff,
-    2.0
+  const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+  sun.position.set(-20, 35, 15);
+  scene.add(sun);
+
+
+  // ==========================================================
+  // DOMAIN FLOOR
+  // ==========================================================
+
+  const floorGeometry = new THREE.PlaneGeometry(
+    WORLD_X,
+    WORLD_Z,
+    24,
+    24
   );
 
-  sunlight.position.set(-20, 30, 12);
-  scene.add(sunlight);
+  const floorMaterial = new THREE.MeshBasicMaterial({
+    color: 0x28364a,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.24
+  });
 
-  // ----------------------------------------------------------
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = 0;
+  scene.add(floor);
+
+  const base = new THREE.Mesh(
+    new THREE.PlaneGeometry(WORLD_X, WORLD_Z),
+    new THREE.MeshBasicMaterial({
+      color: 0x18263a,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide
+    })
+  );
+
+  base.rotation.x = -Math.PI / 2;
+  base.position.y = -0.025;
+  scene.add(base);
+
+
+  // ==========================================================
   // MODEL ARRAYS
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  const u = new Float32Array(SIZE);
-  const v = new Float32Array(SIZE);
-  const w = new Float32Array(SIZE);
+  const u = new Float32Array(N);
+  const v = new Float32Array(N);
+  const w = new Float32Array(N);
 
-  const uNext = new Float32Array(SIZE);
-  const vNext = new Float32Array(SIZE);
-  const wNext = new Float32Array(SIZE);
+  const un = new Float32Array(N);
+  const vn = new Float32Array(N);
+  const wn = new Float32Array(N);
 
-  // Temperature perturbation relative to environment.
-  const theta = new Float32Array(SIZE);
-  const thetaNext = new Float32Array(SIZE);
+  const theta = new Float32Array(N);
+  const thetan = new Float32Array(N);
 
-  // Water vapor mixing ratio, kg/kg.
-  const qv = new Float32Array(SIZE);
-  const qvNext = new Float32Array(SIZE);
+  const qv = new Float32Array(N);
+  const qvn = new Float32Array(N);
 
-  // Cloud liquid water mixing ratio, kg/kg.
-  const qc = new Float32Array(SIZE);
-  const qcNext = new Float32Array(SIZE);
+  const qc = new Float32Array(N);
+  const qcn = new Float32Array(N);
 
-  const pressure = new Float32Array(SIZE);
-  const pressureNext = new Float32Array(SIZE);
-  const divergence = new Float32Array(SIZE);
 
-  const cloudBytes = new Uint8Array(SIZE);
+  // ==========================================================
+  // MODEL PARAMETERS
+  // ==========================================================
 
-  // ----------------------------------------------------------
-  // ENVIRONMENT
-  // ----------------------------------------------------------
+  let cape = Number(capeSlider?.value ?? 1500);
+  let shear = Number(shearSlider?.value ?? 35);
+  let humidity = Number(humiditySlider?.value ?? 80);
+
+  let modelTime = 0;
+  let lastThermalTime = -100;
+  let thermalX = NX * 0.5;
+  let thermalZ = NZ * 0.5;
+
+  let paused = false;
+  let frameNumber = 0;
+  let cloudCellCount = 0;
+  let highestCloudCell = 0;
+
+
+  // ==========================================================
+  // THERMODYNAMICS
+  // ==========================================================
 
   function environmentalTemperature(y) {
-    const heightKm = y * CELL_HEIGHT_KM;
-
-    // Approximate environmental lapse rate.
-    return 302.0 - 6.5 * heightKm;
+    const heightKm = y * DY;
+    return 302 - 6.5 * heightKm;
   }
 
-  function saturationMixingRatio(tempK, pressureHpa = 950) {
+  function saturationMixingRatio(tempK) {
     const tempC = tempK - 273.15;
 
-    const exponent =
-      (17.67 * tempC) / (tempC + 243.5);
+    const exponent = clamp(
+      17.67 * tempC / (tempC + 243.5),
+      -20,
+      20
+    );
 
-    const vaporPressure =
-      6.112 * Math.exp(clamp(exponent, -20, 20));
+    const vaporPressure = 6.112 * Math.exp(exponent);
+
+    const pressureHpa = 950;
 
     return 0.622 * vaporPressure /
       Math.max(1, pressureHpa - vaporPressure);
   }
 
-  function relativeHumidityFraction() {
-    const value = Number(humiditySlider?.value ?? 80);
+  function readControls() {
+    cape = Number(capeSlider?.value ?? 1500);
+    shear = Number(shearSlider?.value ?? 35);
+    humidity = Number(humiditySlider?.value ?? 80);
 
-    return clamp(value / 100, 0.05, 1.0);
+    if (capeValue) {
+      capeValue.textContent = `${cape} J/kg`;
+    }
+
+    if (shearValue) {
+      shearValue.textContent = `${shear} m/s`;
+    }
+
+    if (humidityValue) {
+      humidityValue.textContent = `${humidity}%`;
+    }
   }
 
-  function initializeEnvironment() {
+  capeSlider?.addEventListener("input", readControls);
+  shearSlider?.addEventListener("input", readControls);
+  humiditySlider?.addEventListener("input", readControls);
+
+  readControls();
+
+
+  // ==========================================================
+  // INITIAL ATMOSPHERE
+  // ==========================================================
+
+  function initializeAtmosphere() {
     u.fill(0);
     v.fill(0);
     w.fill(0);
@@ -282,132 +341,122 @@ async function startSimulation() {
     theta.fill(0);
     qc.fill(0);
 
-    pressure.fill(0);
-    pressureNext.fill(0);
-
-    const rh = relativeHumidityFraction();
+    const rh = clamp(humidity / 100, 0.05, 1.0);
 
     for (let z = 0; z < NZ; z++) {
       for (let y = 0; y < NY; y++) {
         const temp = environmentalTemperature(y);
+        const qsat = saturationMixingRatio(temp);
 
-        const qSat = saturationMixingRatio(temp);
-
-        // Moisture decreases with altitude.
-        const moistureFactor =
-          Math.exp(-(y * CELL_HEIGHT_KM) / 2.6);
+        // Moisture decreases with height.
+        const moistureProfile =
+          Math.exp(-(y * DY) / 3.2);
 
         const vapor =
-          qSat * rh * moistureFactor;
+          qsat * rh * moistureProfile;
 
         for (let x = 0; x < NX; x++) {
-          const i = index(x, y, z);
+          const i = idx(x, y, z);
 
-          qv[i] = Math.max(0.0001, vapor);
+          qv[i] = vapor;
 
-          // Environmental background shear.
-          u[i] = 0;
+          // Environmental wind profile.
+          const heightFraction = y / (NY - 1);
+
+          u[i] =
+            (heightFraction - 0.5) *
+            (shear / 100) *
+            0.15;
         }
       }
     }
+
+    modelTime = 0;
+    lastThermalTime = -100;
   }
 
-  // ----------------------------------------------------------
+
+  // ==========================================================
   // THERMAL INITIATION
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  let thermalX = NX * 0.5;
-  let thermalZ = NZ * 0.5;
+  function selectThermalLocation() {
+    const type = stormType?.value || "random";
 
-  let simulationTime = 0;
-  let lastThermalTime = 0;
-  let frameNumber = 0;
+    if (type === "tower") {
+      thermalX = NX * 0.5;
+      thermalZ = NZ * 0.5;
+    } else if (type === "supercell") {
+      thermalX = NX * 0.36;
+      thermalZ = NZ * 0.5;
+    } else {
+      thermalX = 5 + Math.random() * (NX - 10);
+      thermalZ = 5 + Math.random() * (NZ - 10);
+    }
+  }
 
-  let paused = false;
-  let stormAge = 0;
+  function addThermal(cx, cz, strength = 1) {
+    const capeFactor = clamp(cape / 2000, 0.2, 2.5);
 
-  let currentCAPE = Number(capeSlider?.value ?? 1500);
-  let currentShear = Number(shearSlider?.value ?? 35);
-  let currentHumidity = Number(humiditySlider?.value ?? 80);
-
-  function makeThermal(xCenter, zCenter, strength = 1) {
-    const radius = 3.2;
-    const capeFactor = clamp(currentCAPE / 2000, 0.1, 2.5);
+    const radius = 3.0;
 
     for (let z = 1; z < NZ - 1; z++) {
-      for (let y = 1; y < 6; y++) {
+      for (let y = 1; y < 7; y++) {
         for (let x = 1; x < NX - 1; x++) {
-          const dx = (x - xCenter) / radius;
-          const dz = (z - zCenter) / radius;
-          const dy = (y - 2.0) / 2.5;
+          const dx = (x - cx) / radius;
+          const dz = (z - cz) / radius;
+          const dy = (y - 2.2) / 2.5;
 
           const r2 = dx * dx + dz * dz + dy * dy;
 
           if (r2 > 5.0) continue;
 
-          const bubble = Math.exp(-r2 * 1.25);
-          const i = index(x, y, z);
+          const bubble = Math.exp(-r2 * 1.15);
+          const i = idx(x, y, z);
 
-          // Warm, moist air; no cloud is created here.
           theta[i] +=
-            bubble * strength * (0.8 + capeFactor * 1.1);
+            bubble * strength * (0.9 + capeFactor * 1.2);
 
-          const temp = environmentalTemperature(y);
+          // Moist thermal.
+          const qsat = saturationMixingRatio(
+            environmentalTemperature(y)
+          );
 
           qv[i] +=
-            bubble *
-            relativeHumidityFraction() *
-            saturationMixingRatio(temp) *
-            0.045;
+            bubble * qsat *
+            clamp(humidity / 100, 0.05, 1.0) *
+            0.08;
         }
       }
     }
 
-    // A small upward impulse initiates convection.
+    // Initial updraft impulse.
     for (let z = 1; z < NZ - 1; z++) {
-      for (let y = 1; y < 5; y++) {
+      for (let y = 1; y < 6; y++) {
         for (let x = 1; x < NX - 1; x++) {
-          const dx = x - xCenter;
-          const dz = z - zCenter;
-          const radius2 = dx * dx + dz * dz;
+          const dx = x - cx;
+          const dz = z - cz;
+          const r2 = dx * dx + dz * dz;
 
-          if (radius2 > 20) continue;
+          if (r2 > 24) continue;
 
-          const i = index(x, y, z);
+          const i = idx(x, y, z);
 
           w[i] +=
-            Math.exp(-radius2 / 8) *
-            (0.04 + capeFactor * 0.035) *
+            Math.exp(-r2 / 9) *
+            (0.22 + capeFactor * 0.12) *
             strength;
         }
       }
     }
   }
 
-  function chooseThermalLocation() {
-    const mode = stormType?.value || "random";
 
-    if (mode === "tower") {
-      thermalX = NX * 0.5;
-      thermalZ = NZ * 0.5;
-      return;
-    }
-
-    if (mode === "supercell") {
-      thermalX = NX * 0.34;
-      thermalZ = NZ * 0.5;
-      return;
-    }
-
-    thermalX = 5 + Math.random() * (NX - 10);
-    thermalZ = 5 + Math.random() * (NZ - 10);
-  }
-
-  // ----------------------------------------------------------
+  // ==========================================================
   // TRILINEAR SAMPLING
-  // ----------------------------------------------------------
+  // ==========================================================
 
-  function sampleField(field, x, y, z) {
+  function sample(field, x, y, z) {
     x = clamp(x, 0, NX - 1.001);
     y = clamp(y, 0, NY - 1.001);
     z = clamp(z, 0, NZ - 1.001);
@@ -424,701 +473,493 @@ async function startSimulation() {
     const fy = y - y0;
     const fz = z - z0;
 
-    const c000 = field[index(x0, y0, z0)];
-    const c100 = field[index(x1, y0, z0)];
-    const c010 = field[index(x0, y1, z0)];
-    const c110 = field[index(x1, y1, z0)];
+    const a = lerp(
+      field[idx(x0, y0, z0)],
+      field[idx(x1, y0, z0)],
+      fx
+    );
 
-    const c001 = field[index(x0, y0, z1)];
-    const c101 = field[index(x1, y0, z1)];
-    const c011 = field[index(x0, y1, z1)];
-    const c111 = field[index(x1, y1, z1)];
+    const b = lerp(
+      field[idx(x0, y1, z0)],
+      field[idx(x1, y1, z0)],
+      fx
+    );
 
-    const c00 = lerp(c000, c100, fx);
-    const c10 = lerp(c010, c110, fx);
-    const c01 = lerp(c001, c101, fx);
-    const c11 = lerp(c011, c111, fx);
+    const c = lerp(
+      field[idx(x0, y0, z1)],
+      field[idx(x1, y0, z1)],
+      fx
+    );
 
-    const c0 = lerp(c00, c10, fy);
-    const c1 = lerp(c01, c11, fy);
+    const d = lerp(
+      field[idx(x0, y1, z1)],
+      field[idx(x1, y1, z1)],
+      fx
+    );
 
-    return lerp(c0, c1, fz);
+    return lerp(
+      lerp(a, b, fy),
+      lerp(c, d, fy),
+      fz
+    );
   }
 
-  // ----------------------------------------------------------
-  // SEMI-LAGRANGIAN ADVECTION
-  // ----------------------------------------------------------
 
-  function advectField(source, destination) {
+  // ==========================================================
+  // SEMI-LAGRANGIAN ADVECTION
+  // ==========================================================
+
+  function advect(source, destination) {
     for (let z = 1; z < NZ - 1; z++) {
       for (let y = 1; y < NY - 1; y++) {
         for (let x = 1; x < NX - 1; x++) {
-          const i = index(x, y, z);
+          const i = idx(x, y, z);
 
-          const backX = x - u[i] * DT;
-          const backY = y - v[i] * DT;
-          const backZ = z - w[i] * DT;
+          const bx = x - u[i] * DT;
+          const by = y - v[i] * DT;
+          const bz = z - w[i] * DT;
 
-          destination[i] = sampleField(
-            source,
-            backX,
-            backY,
-            backZ
-          );
+          destination[i] = sample(source, bx, by, bz);
         }
       }
     }
 
-    // Copy boundary values.
+    // Keep boundary values stable.
     for (let z = 0; z < NZ; z++) {
       for (let x = 0; x < NX; x++) {
-        destination[index(x, 0, z)] =
-          source[index(x, 0, z)];
-
-        destination[index(x, NY - 1, z)] =
-          source[index(x, NY - 1, z)];
+        destination[idx(x, 0, z)] = source[idx(x, 0, z)];
+        destination[idx(x, NY - 1, z)] =
+          source[idx(x, NY - 1, z)];
       }
     }
 
     for (let y = 0; y < NY; y++) {
-      for (let x = 0; x < NX; x++) {
-        destination[index(x, y, 0)] =
-          source[index(x, y, 0)];
-
-        destination[index(x, y, NZ - 1)] =
-          source[index(x, y, NZ - 1)];
-      }
-
       for (let z = 0; z < NZ; z++) {
-        destination[index(0, y, z)] =
-          source[index(0, y, z)];
+        destination[idx(0, y, z)] = source[idx(0, y, z)];
+        destination[idx(NX - 1, y, z)] =
+          source[idx(NX - 1, y, z)];
+      }
 
-        destination[index(NX - 1, y, z)] =
-          source[index(NX - 1, y, z)];
+      for (let x = 0; x < NX; x++) {
+        destination[idx(x, y, 0)] = source[idx(x, y, 0)];
+        destination[idx(x, y, NZ - 1)] =
+          source[idx(x, y, NZ - 1)];
       }
     }
   }
 
-  // ----------------------------------------------------------
-  // PRESSURE PROJECTION
-  // ----------------------------------------------------------
 
-  function solvePressure() {
-    divergence.fill(0);
-    pressure.fill(0);
+  // ==========================================================
+  // MODEL FORCES
+  // ==========================================================
 
-    for (let z = 1; z < NZ - 1; z++) {
-      for (let y = 1; y < NY - 1; y++) {
-        for (let x = 1; x < NX - 1; x++) {
-          const i = index(x, y, z);
-
-          const du =
-            u[index(x + 1, y, z)] -
-            u[index(x - 1, y, z)];
-
-          const dv =
-            v[index(x, y + 1, z)] -
-            v[index(x, y - 1, z)];
-
-          const dw =
-            w[index(x, y, z + 1)] -
-            w[index(x, y, z - 1)];
-
-          divergence[i] = 0.5 * (du + dv + dw);
-        }
-      }
-    }
-
-    for (let iteration = 0;
-         iteration < PRESSURE_ITERATIONS;
-         iteration++) {
-
-      for (let z = 1; z < NZ - 1; z++) {
-        for (let y = 1; y < NY - 1; y++) {
-          for (let x = 1; x < NX - 1; x++) {
-            const i = index(x, y, z);
-
-            const neighbors =
-              pressure[index(x - 1, y, z)] +
-              pressure[index(x + 1, y, z)] +
-              pressure[index(x, y - 1, z)] +
-              pressure[index(x, y + 1, z)] +
-              pressure[index(x, y, z - 1)] +
-              pressure[index(x, y, z + 1)];
-
-            pressureNext[i] =
-              (neighbors - divergence[i]) / 6;
-          }
-        }
-      }
-
-      pressure.set(pressureNext);
-    }
-
-    // Remove the pressure gradient from velocity.
-    for (let z = 1; z < NZ - 1; z++) {
-      for (let y = 1; y < NY - 1; y++) {
-        for (let x = 1; x < NX - 1; x++) {
-          const i = index(x, y, z);
-
-          u[i] -= 0.5 * (
-            pressure[index(x + 1, y, z)] -
-            pressure[index(x - 1, y, z)]
-          );
-
-          v[i] -= 0.5 * (
-            pressure[index(x, y + 1, z)] -
-            pressure[index(x, y - 1, z)]
-          );
-
-          w[i] -= 0.5 * (
-            pressure[index(x, y, z + 1)] -
-            pressure[index(x, y, z - 1)]
-          );
-        }
-      }
-    }
-  }
-
-  // ----------------------------------------------------------
-  // CLOUD MICROPHYSICS
-  // ----------------------------------------------------------
-
-  function applyMicrophysics() {
-    let cloudCells = 0;
-    let maximumCloudY = 0;
+  function applyDynamics() {
+    const capeFactor = clamp(cape / 2000, 0.2, 2.5);
+    const shearFactor = clamp(shear / 100, 0, 1.5);
 
     for (let z = 1; z < NZ - 1; z++) {
       for (let y = 1; y < NY - 1; y++) {
         for (let x = 1; x < NX - 1; x++) {
-          const i = index(x, y, z);
+          const i = idx(x, y, z);
 
-          const temp =
-            environmentalTemperature(y) + theta[i];
+          // Buoyancy from the thermal perturbation.
+          w[i] += theta[i] * 0.025 * capeFactor * DT;
 
-          const qSat = saturationMixingRatio(temp);
+          // Approximate cooling of rising parcels relative
+          // to the environmental temperature profile.
+          theta[i] -= w[i] * DT * 0.08;
 
-          if (qv[i] > qSat) {
-            const excess = qv[i] - qSat;
+          // Background vertical wind shear.
+          const targetU =
+            ((y / (NY - 1)) - 0.5) *
+            shearFactor * 0.18;
 
-            // Condensation converts vapor into cloud water.
-            const condensed = excess * 0.48;
+          u[i] += (targetU - u[i]) * 0.025;
 
-            qv[i] -= condensed;
-            qc[i] += condensed;
-
-            // Latent heat release.
-            theta[i] += condensed * 2500;
-          } else if (qc[i] > 0 && qv[i] < qSat * 0.94) {
-            // Partial evaporation in subsaturated air.
-            const evaporated = Math.min(
-              qc[i],
-              (qSat - qv[i]) * 0.035
-            );
-
-            qc[i] -= evaporated;
-            qv[i] += evaporated;
-
-            theta[i] -= evaporated * 2500;
-          }
-
-          // Simple cloud-water settling and dissipation.
-          qc[i] = Math.max(0, qc[i] - 0.0000015);
-
-          if (qc[i] > 0.000015) {
-            cloudCells++;
-            maximumCloudY = Math.max(maximumCloudY, y);
-          }
-
-          // Numerical safety.
-          theta[i] = clamp(theta[i], -18, 18);
-          qv[i] = clamp(qv[i], 0, 0.05);
-          qc[i] = clamp(qc[i], 0, 0.015);
-        }
-      }
-    }
-
-    return {
-      cloudCells,
-      maximumCloudY
-    };
-  }
-
-  // ----------------------------------------------------------
-  // DYNAMICS
-  // ----------------------------------------------------------
-
-  function applyForces() {
-    const capeFactor = clamp(currentCAPE / 2000, 0, 2.5);
-
-    const shearFraction = clamp(currentShear / 100, 0, 1);
-
-    for (let z = 1; z < NZ - 1; z++) {
-      for (let y = 1; y < NY - 1; y++) {
-        for (let x = 1; x < NX - 1; x++) {
-          const i = index(x, y, z);
-
-          // Buoyancy: positive thermal perturbations accelerate
-          // upward motion. CAPE controls the acceleration scale.
-          const buoyancy =
-            theta[i] * 0.028 * capeFactor;
-
-          w[i] += buoyancy * DT;
-
-          // A rising parcel cools relative to the environment.
-          // This approximates the difference between dry-adiabatic
-          // and environmental lapse rates.
-          theta[i] -=
-            w[i] * DT * 1.25;
-
-          // Weak relaxation toward a height-dependent background
-          // wind. This represents environmental vertical shear.
-          const heightFraction = y / (NY - 1);
-
-          const backgroundWind =
-            (heightFraction - 0.5) *
-            shearFraction *
-            0.20;
-
-          u[i] += (backgroundWind - u[i]) * 0.018;
-
-          // Small-scale numerical damping.
+          // Weak damping prevents unbounded numerical growth.
           u[i] *= 0.997;
           v[i] *= 0.997;
           w[i] *= 0.996;
 
-          // Approximate moisture effects on buoyancy.
-          w[i] += qc[i] * 0.8 * DT;
+          // Condensate contributes a small buoyancy correction.
+          w[i] += qc[i] * 0.3 * DT;
+
+          theta[i] = clamp(theta[i], -12, 12);
+          u[i] = clamp(u[i], -1.2, 1.2);
+          v[i] = clamp(v[i], -1.2, 1.2);
+          w[i] = clamp(w[i], -1.2, 1.8);
         }
       }
     }
 
-    // Impermeable vertical boundaries.
     for (let z = 0; z < NZ; z++) {
       for (let x = 0; x < NX; x++) {
-        w[index(x, 0, z)] = 0;
-        w[index(x, NY - 1, z)] = 0;
+        w[idx(x, 0, z)] = 0;
+        w[idx(x, NY - 1, z)] = 0;
       }
     }
+  }
 
-    // Damping near the domain's side boundaries.
-    for (let y = 0; y < NY; y++) {
-      for (let z = 0; z < NZ; z++) {
-        for (let x = 0; x < NX; x++) {
-          const edge = Math.min(
-            x, NX - 1 - x,
-            z, NZ - 1 - z
-          );
 
-          if (edge < 2) {
-            const damping = edge === 0 ? 0.2 : 0.65;
-            const i = index(x, y, z);
+  // ==========================================================
+  // CONDENSATION AND EVAPORATION
+  // ==========================================================
 
-            u[i] *= damping;
-            v[i] *= damping;
-            w[i] *= damping;
+  function updateMicrophysics() {
+    for (let z = 1; z < NZ - 1; z++) {
+      for (let y = 1; y < NY - 1; y++) {
+        for (let x = 1; x < NX - 1; x++) {
+          const i = idx(x, y, z);
+
+          const temperature =
+            environmentalTemperature(y) + theta[i];
+
+          const qsat = saturationMixingRatio(temperature);
+
+          if (qv[i] > qsat) {
+            // Supersaturated vapor condenses.
+            const condensed = (qv[i] - qsat) * 0.35;
+
+            qv[i] -= condensed;
+            qc[i] += condensed;
+
+            // Latent heating; deliberately scaled for stability.
+            theta[i] += condensed * 100;
+          } else if (qc[i] > 0 && qv[i] < qsat * 0.94) {
+            // Evaporation in subsaturated air.
+            const evaporation = Math.min(
+              qc[i],
+              (qsat - qv[i]) * 0.025
+            );
+
+            qc[i] -= evaporation;
+            qv[i] += evaporation;
+            theta[i] -= evaporation * 60;
           }
+
+          // Very weak dissipation of cloud water.
+          qc[i] = Math.max(0, qc[i] - 0.0000002);
+
+          qv[i] = clamp(qv[i], 0, 0.05);
+          qc[i] = clamp(qc[i], 0, 0.015);
+          theta[i] = clamp(theta[i], -12, 12);
         }
       }
     }
   }
 
-  // ----------------------------------------------------------
-  // CLOUD VOLUME TEXTURE
-  // ----------------------------------------------------------
 
-  const cloudTexture = new THREE.Data3DTexture(
-    cloudBytes,
-    NX,
-    NY,
-    NZ
+  // ==========================================================
+  // PARTICLE-BASED CLOUD RENDERING
+  //
+  // No cube surface, no raymarching through a box.
+  // Every point corresponds to a grid cell.
+  // Its density is driven by calculated cloud water qc.
+  // ==========================================================
+
+  const positions = new Float32Array(N * 3);
+  const densities = new Float32Array(N);
+
+  let p = 0;
+
+  for (let z = 0; z < NZ; z++) {
+    for (let y = 0; y < NY; y++) {
+      for (let x = 0; x < NX; x++) {
+        positions[p * 3] =
+          (x / (NX - 1) - 0.5) * WORLD_X;
+
+        positions[p * 3 + 1] =
+          (y / (NY - 1)) * WORLD_Y;
+
+        positions[p * 3 + 2] =
+          (z / (NZ - 1) - 0.5) * WORLD_Z;
+
+        p++;
+      }
+    }
+  }
+
+  const cloudGeometry = new THREE.BufferGeometry();
+
+  cloudGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positions, 3)
   );
 
-  cloudTexture.format = THREE.RedFormat;
-  cloudTexture.type = THREE.UnsignedByteType;
+  cloudGeometry.setAttribute(
+    "aDensity",
+    new THREE.BufferAttribute(densities, 1)
+  );
 
-  cloudTexture.minFilter = THREE.LinearFilter;
-  cloudTexture.magFilter = THREE.LinearFilter;
+  cloudGeometry.attributes.position.setUsage(
+    THREE.StaticDrawUsage
+  );
 
-  cloudTexture.wrapS = THREE.ClampToEdgeWrapping;
-  cloudTexture.wrapT = THREE.ClampToEdgeWrapping;
-  cloudTexture.wrapR = THREE.ClampToEdgeWrapping;
+  cloudGeometry.attributes.aDensity.setUsage(
+    THREE.DynamicDrawUsage
+  );
 
-  cloudTexture.unpackAlignment = 1;
-  cloudTexture.needsUpdate = true;
-
-  // ----------------------------------------------------------
-  // VOLUME RENDERER
-  // ----------------------------------------------------------
-
-  const volumeMaterial = new THREE.ShaderMaterial({
-    glslVersion: THREE.GLSL3,
+  const cloudMaterial = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: THREE.NormalBlending,
 
     uniforms: {
-      uCloudTex: { value: cloudTexture },
-      uCameraLocal: { value: new THREE.Vector3() },
-      uLightDirection: {
-        value: new THREE.Vector3(-0.5, 0.8, 0.4).normalize()
-      },
-      uCloudOpacity: { value: 1.0 }
+      uPointScale: { value: 1.0 }
     },
 
     vertexShader: `
-      out vec3 vPosition;
+      attribute float aDensity;
+
+      varying float vDensity;
+
+      uniform float uPointScale;
 
       void main() {
-        vPosition = position;
+        vDensity = aDensity;
 
-        gl_Position =
-          projectionMatrix *
-          modelViewMatrix *
-          vec4(position, 1.0);
+        vec4 mvPosition =
+          modelViewMatrix * vec4(position, 1.0);
+
+        gl_Position = projectionMatrix * mvPosition;
+
+        float density = clamp(aDensity, 0.0, 1.0);
+
+        // Empty grid cells produce no visible points.
+        gl_PointSize = density < 0.012
+          ? 0.0
+          : (2.0 + 7.0 * sqrt(density)) *
+            uPointScale *
+            clamp(32.0 / max(8.0, -mvPosition.z), 0.45, 2.0);
       }
     `,
 
     fragmentShader: `
-      precision highp float;
-      precision highp sampler3D;
-
-      uniform sampler3D uCloudTex;
-      uniform vec3 uCameraLocal;
-      uniform vec3 uLightDirection;
-      uniform float uCloudOpacity;
-
-      in vec3 vPosition;
-
-      out vec4 outColor;
-
-      bool insideBox(vec3 p) {
-        return all(greaterThanEqual(p, vec3(-1.0))) &&
-               all(lessThanEqual(p, vec3(1.0)));
-      }
-
-      float densityAt(vec3 uvw) {
-        return texture(uCloudTex, uvw).r;
-      }
+      varying float vDensity;
 
       void main() {
-        vec3 ray = normalize(vPosition - uCameraLocal);
-        vec3 p = vPosition;
+        vec2 centered = gl_PointCoord - vec2(0.5);
+        float r = length(centered);
 
-        vec4 accumulated = vec4(0.0);
+        // Soft edges, with a dense central core.
+        float edge = 1.0 - smoothstep(0.16, 0.50, r);
 
-        const int MAX_STEPS = 96;
-        const float STEP_SIZE = 0.035;
+        float density = clamp(vDensity, 0.0, 1.0);
 
-        for (int i = 0; i < MAX_STEPS; i++) {
-          if (!insideBox(p)) break;
+        float alpha =
+          edge * clamp(density * 1.7, 0.0, 0.82);
 
-          vec3 uvw = p * 0.5 + 0.5;
+        if (alpha < 0.012) discard;
 
-          float density = densityAt(uvw);
+        vec3 shadowColor = vec3(0.40, 0.46, 0.55);
+        vec3 brightColor = vec3(0.96, 0.98, 1.00);
 
-          if (density > 0.008) {
-            // Estimate local density gradients for shading.
-            vec3 texel = vec3(
-              1.0 / 32.0,
-              1.0 / 32.0,
-              1.0 / 32.0
-            );
-
-            float gx =
-              densityAt(clamp(uvw + vec3(texel.x, 0.0, 0.0),
-                              0.0, 1.0)) -
-              densityAt(clamp(uvw - vec3(texel.x, 0.0, 0.0),
-                              0.0, 1.0));
-
-            float gy =
-              densityAt(clamp(uvw + vec3(0.0, texel.y, 0.0),
-                              0.0, 1.0)) -
-              densityAt(clamp(uvw - vec3(0.0, texel.y, 0.0),
-                              0.0, 1.0));
-
-            float gz =
-              densityAt(clamp(uvw + vec3(0.0, 0.0, texel.z),
-                              0.0, 1.0)) -
-              densityAt(clamp(uvw - vec3(0.0, 0.0, texel.z),
-                              0.0, 1.0));
-
-            vec3 normal = normalize(
-              vec3(-gx, -gy, -gz) + vec3(0.0001)
-            );
-
-            float light = clamp(
-              0.5 + 0.5 * dot(normal, normalize(uLightDirection)),
-              0.0,
-              1.0
-            );
-
-            float shade = 0.55 + light * 0.55;
-
-            vec3 cloudColor = mix(
-              vec3(0.30, 0.36, 0.45),
-              vec3(0.96, 0.98, 1.0),
-              clamp(density * 1.8 + light * 0.25, 0.0, 1.0)
-            );
-
-            cloudColor *= shade;
-
-            float alpha =
-              1.0 - exp(-density * 10.0 * STEP_SIZE);
-
-            alpha *= uCloudOpacity;
-
-            accumulated.rgb +=
-              (1.0 - accumulated.a) * cloudColor * alpha;
-
-            accumulated.a +=
-              (1.0 - accumulated.a) * alpha;
-
-            if (accumulated.a > 0.985) break;
-          }
-
-          p += ray * STEP_SIZE;
-        }
-
-        if (accumulated.a < 0.008) discard;
-
-        outColor = vec4(
-          accumulated.rgb,
-          accumulated.a
+        vec3 color = mix(
+          shadowColor,
+          brightColor,
+          clamp(density * 1.25, 0.0, 1.0)
         );
-      }
-    `,
 
-    side: THREE.FrontSide,
-    transparent: true,
-    depthWrite: false
+        gl_FragColor = vec4(color, alpha);
+      }
+    `
   });
 
-  const volume = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    volumeMaterial
+  const cloudPoints = new THREE.Points(
+    cloudGeometry,
+    cloudMaterial
   );
 
-  volume.scale.set(
-    DOMAIN_X / 2,
-    DOMAIN_Y / 2,
-    DOMAIN_Z / 2
-  );
+  cloudPoints.frustumCulled = false;
+  scene.add(cloudPoints);
 
-  volume.position.y = DOMAIN_Y / 2;
 
-  scene.add(volume);
+  // ==========================================================
+  // UPDATE CLOUD DISPLAY FROM MODEL DATA
+  // ==========================================================
 
-  // ----------------------------------------------------------
-  // CLOUD FIELD TO GPU
-  // ----------------------------------------------------------
-
-  function updateCloudTexture() {
-    let cloudCells = 0;
-    let maxY = 0;
+  function updateCloudDisplay() {
+    cloudCellCount = 0;
+    highestCloudCell = 0;
 
     for (let z = 0; z < NZ; z++) {
       for (let y = 0; y < NY; y++) {
         for (let x = 0; x < NX; x++) {
-          const i = index(x, y, z);
+          const i = idx(x, y, z);
 
-          // Cloud water only: no artificial cloud geometry.
+          // Scale cloud water into a visible density.
           const density = clamp(
-            qc[i] * 18000,
+            (qc[i] - 0.000001) * 4200,
             0,
             1
           );
 
-          cloudBytes[i] = Math.round(density * 255);
+          densities[i] = density;
 
-          if (qc[i] > 0.000015) {
-            cloudCells++;
-            maxY = Math.max(maxY, y);
+          if (density > 0.025) {
+            cloudCellCount++;
+            highestCloudCell = Math.max(highestCloudCell, y);
           }
         }
       }
     }
 
-    cloudTexture.needsUpdate = true;
+    cloudGeometry.attributes.aDensity.needsUpdate = true;
 
     if (cellCountElement) {
       cellCountElement.textContent =
-        String(cloudCells);
+        String(cloudCellCount);
     }
 
     if (cloudHeightElement) {
-      const heightKm = maxY * CELL_HEIGHT_KM;
-
       cloudHeightElement.textContent =
-        cloudCells > 0
-          ? `${heightKm.toFixed(1)} km`
+        cloudCellCount > 0
+          ? `${(highestCloudCell * DY).toFixed(1)} km`
           : "—";
     }
 
-    return cloudCells;
+    if (statusElement && !paused) {
+      statusElement.textContent =
+        cloudCellCount > 20
+          ? "Конвекция развивается"
+          : "Формирование восходящего потока";
+    }
   }
 
-  // ----------------------------------------------------------
-  // TIME STEP
-  // ----------------------------------------------------------
 
-  function stepModel() {
-    // Advect all prognostic fields.
-    advectField(u, uNext);
-    advectField(v, vNext);
-    advectField(w, wNext);
+  // ==========================================================
+  // MODEL STEP
+  // ==========================================================
 
-    advectField(theta, thetaNext);
-    advectField(qv, qvNext);
-    advectField(qc, qcNext);
+  function modelStep() {
+    // Advect momentum and thermodynamic fields.
+    advect(u, un);
+    advect(v, vn);
+    advect(w, wn);
 
-    u.set(uNext);
-    v.set(vNext);
-    w.set(wNext);
+    advect(theta, thetan);
+    advect(qv, qvn);
+    advect(qc, qcn);
 
-    theta.set(thetaNext);
-    qv.set(qvNext);
-    qc.set(qcNext);
+    u.set(un);
+    v.set(vn);
+    w.set(wn);
 
-    applyForces();
+    theta.set(thetan);
+    qv.set(qvn);
+    qc.set(qcn);
 
-    // Generate another warm thermal after a delay. The model
-    // must still produce cloud water through condensation.
-    const mode = stormType?.value || "random";
+    applyDynamics();
+    updateMicrophysics();
 
-    const interval =
-      mode === "tower" ? 100 :
-      mode === "supercell" ? 75 :
-      mode === "multicell" ? 25 :
-      mode === "squall" ? 18 : 35;
+    modelTime += DT;
 
-    if (simulationTime - lastThermalTime > interval) {
-      if (mode !== "tower") {
-        chooseThermalLocation();
+    const type = stormType?.value || "random";
+
+    let thermalInterval = 35;
+
+    if (type === "tower") thermalInterval = 100;
+    if (type === "supercell") thermalInterval = 70;
+    if (type === "multicell") thermalInterval = 18;
+    if (type === "squall") thermalInterval = 14;
+
+    if (modelTime - lastThermalTime > thermalInterval) {
+      if (type !== "tower") {
+        selectThermalLocation();
       }
 
-      makeThermal(
+      addThermal(
         thermalX,
         thermalZ,
-        0.75 + Math.random() * 0.45
+        0.8 + Math.random() * 0.35
       );
 
-      lastThermalTime = simulationTime;
+      lastThermalTime = modelTime;
     }
-
-    solvePressure();
-
-    applyMicrophysics();
-
-    simulationTime += DT;
-    stormAge += DT;
   }
 
-  // ----------------------------------------------------------
-  // LIGHTNING VISUAL
-  // ----------------------------------------------------------
 
-  let lightningLine = null;
-  let lightningExpiry = 0;
+  // ==========================================================
+  // LIGHTNING
+  // ==========================================================
 
-  function triggerLightning() {
-    if (lightningLine) {
-      scene.remove(lightningLine);
+  let lightning = null;
+  let lightningEnd = 0;
 
-      lightningLine.geometry.dispose();
-      lightningLine.material.dispose();
-
-      lightningLine = null;
+  function makeLightning() {
+    if (lightning) {
+      scene.remove(lightning);
+      lightning.geometry.dispose();
+      lightning.material.dispose();
+      lightning = null;
     }
 
-    const x =
-      ((thermalX / (NX - 1)) - 0.5) * DOMAIN_X;
+    const cx =
+      (thermalX / (NX - 1) - 0.5) * WORLD_X;
 
-    const z =
-      ((thermalZ / (NZ - 1)) - 0.5) * DOMAIN_Z;
+    const cz =
+      (thermalZ / (NZ - 1) - 0.5) * WORLD_Z;
 
     const points = [];
+    const segments = 18;
 
-    const segments = 14;
+    let currentX = cx;
+    let currentZ = cz;
 
     for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
+      const y = WORLD_Y * (1 - i / segments);
 
-      const px = x + (Math.random() - 0.5) * 1.5;
-      const py = DOMAIN_Y * (1 - t);
-      const pz = z + (Math.random() - 0.5) * 1.5;
+      points.push(new THREE.Vector3(
+        currentX,
+        y,
+        currentZ
+      ));
 
-      points.push(new THREE.Vector3(px, py, pz));
+      currentX += (Math.random() - 0.5) * 1.0;
+      currentZ += (Math.random() - 0.5) * 1.0;
     }
 
     const geometry = new THREE.BufferGeometry()
       .setFromPoints(points);
 
     const material = new THREE.LineBasicMaterial({
-      color: 0xc9e7ff,
+      color: 0xc5e6ff,
       transparent: true,
       opacity: 1
     });
 
-    lightningLine = new THREE.Line(geometry, material);
+    lightning = new THREE.Line(geometry, material);
+    scene.add(lightning);
 
-    scene.add(lightningLine);
-
-    lightningExpiry = performance.now() + 180;
+    lightningEnd = performance.now() + 180;
   }
 
-  // ----------------------------------------------------------
-  // UI
-  // ----------------------------------------------------------
 
-  function updateParameterLabels() {
-    currentCAPE = Number(capeSlider?.value ?? 1500);
-    currentShear = Number(shearSlider?.value ?? 35);
-    currentHumidity = Number(humiditySlider?.value ?? 80);
+  // ==========================================================
+  // RESET
+  // ==========================================================
 
-    if (capeValue) {
-      capeValue.textContent = `${currentCAPE} J/kg`;
-    }
+  function resetSimulation() {
+    readControls();
 
-    if (shearValue) {
-      shearValue.textContent = `${currentShear} m/s`;
-    }
+    initializeAtmosphere();
+    selectThermalLocation();
 
-    if (humidityValue) {
-      humidityValue.textContent = `${currentHumidity}%`;
-    }
-  }
+    // The thermal seeds air motion and moisture only.
+    // Cloud particles appear when qc is produced by the model.
+    addThermal(thermalX, thermalZ, 1.0);
 
-  capeSlider?.addEventListener("input", updateParameterLabels);
-  shearSlider?.addEventListener("input", updateParameterLabels);
-  humiditySlider?.addEventListener("input", updateParameterLabels);
-
-  updateParameterLabels();
-
-  function resetModel() {
-    simulationTime = 0;
-    stormAge = 0;
-    lastThermalTime = 0;
-
-    initializeEnvironment();
-    chooseThermalLocation();
-
-    // Seed warm, moist air. Cloud water starts at zero.
-    makeThermal(thermalX, thermalZ, 1.0);
-
-    updateCloudTexture();
+    updateCloudDisplay();
 
     if (statusElement) {
-      statusElement.textContent = "Конвекция развивается";
+      statusElement.textContent = "Модель запущена";
     }
   }
 
-  $("newStorm")?.addEventListener("click", () => {
-    resetModel();
+  $("newStorm")?.addEventListener("click", resetSimulation);
 
-    if (statusElement) {
-      statusElement.textContent = "Новый эксперимент";
-    }
-  });
-
-  $("pause")?.addEventListener("click", (event) => {
+  $("pause")?.addEventListener("click", event => {
     paused = !paused;
 
     if (event.currentTarget) {
@@ -1132,33 +973,25 @@ async function startSimulation() {
     }
   });
 
-  $("lightning")?.addEventListener(
-    "click",
-    triggerLightning
-  );
+  $("lightning")?.addEventListener("click", makeLightning);
 
   $("reset")?.addEventListener("click", () => {
-    controls.reset();
-
-    camera.position.set(34, 23, 39);
-    controls.target.set(0, DOMAIN_Y * 0.48, 0);
+    camera.position.set(32, 22, 34);
+    controls.target.set(0, 5.5, 0);
     controls.update();
   });
 
-  stormType?.addEventListener("change", () => {
-    resetModel();
-  });
+  stormType?.addEventListener("change", resetSimulation);
 
-  // ----------------------------------------------------------
-  // INITIAL CONDITIONS
-  // ----------------------------------------------------------
 
-  initializeEnvironment();
-  chooseThermalLocation();
+  // ==========================================================
+  // INITIALIZE
+  // ==========================================================
 
-  makeThermal(thermalX, thermalZ, 1.0);
-
-  updateCloudTexture();
+  initializeAtmosphere();
+  selectThermalLocation();
+  addThermal(thermalX, thermalZ, 1.0);
+  updateCloudDisplay();
 
   if (loading) {
     loading.style.display = "none";
@@ -1168,9 +1001,10 @@ async function startSimulation() {
     statusElement.textContent = "Модель работает";
   }
 
-  // ----------------------------------------------------------
+
+  // ==========================================================
   // RESIZE
-  // ----------------------------------------------------------
+  // ==========================================================
 
   function resize() {
     const width = Math.max(1, canvas.clientWidth);
@@ -1182,72 +1016,56 @@ async function startSimulation() {
     renderer.setSize(width, height, false);
 
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, 1.35)
+      Math.min(window.devicePixelRatio || 1, 1.25)
     );
   }
 
   window.addEventListener("resize", resize);
 
-  // ----------------------------------------------------------
-  // RENDER LOOP
-  // ----------------------------------------------------------
 
-  let lastFrameTime = performance.now();
-  let accumulatedTime = 0;
+  // ==========================================================
+  // ANIMATION LOOP
+  // ==========================================================
+
+  let lastTime = performance.now();
+  let accumulator = 0;
 
   function animate(now) {
     requestAnimationFrame(animate);
 
     const elapsed = Math.min(
-      (now - lastFrameTime) / 1000,
+      (now - lastTime) / 1000,
       0.05
     );
 
-    lastFrameTime = now;
+    lastTime = now;
 
     controls.update();
 
     if (!paused) {
-      accumulatedTime += elapsed;
+      accumulator += elapsed;
 
-      // Fixed simulation timestep. Limit catch-up work on phones.
+      // Limit work per frame to avoid locking mobile Safari.
       let steps = 0;
 
-      while (accumulatedTime >= DT && steps < 2) {
-        stepModel();
-
-        accumulatedTime -= DT;
+      while (accumulator >= DT && steps < 1) {
+        modelStep();
+        accumulator -= DT;
         steps++;
-      }
-
-      if (steps === 2 && accumulatedTime >= DT) {
-        accumulatedTime = 0;
       }
 
       frameNumber++;
 
-      if (frameNumber % CLOUD_UPDATE_INTERVAL === 0) {
-        updateCloudTexture();
+      if (frameNumber % 2 === 0) {
+        updateCloudDisplay();
       }
     }
 
-    // The volume shader expects camera position in local
-    // coordinates of the scaled volume mesh.
-    const localCameraPosition = volume.worldToLocal(
-      camera.position.clone()
-    );
-
-    volumeMaterial.uniforms.uCameraLocal.value.copy(
-      localCameraPosition
-    );
-
-    if (lightningLine && now > lightningExpiry) {
-      scene.remove(lightningLine);
-
-      lightningLine.geometry.dispose();
-      lightningLine.material.dispose();
-
-      lightningLine = null;
+    if (lightning && now >= lightningEnd) {
+      scene.remove(lightning);
+      lightning.geometry.dispose();
+      lightning.material.dispose();
+      lightning = null;
     }
 
     renderer.render(scene, camera);
