@@ -320,7 +320,6 @@ const cloudFragmentShader = `
 
   varying vec3 vWorldPosition;
 
-  uniform vec3 cameraPosition;
   uniform vec3 uBoxMin;
   uniform vec3 uBoxMax;
   uniform vec3 uSunDir;
