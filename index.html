@@ -8,7 +8,9 @@
   <title>Quantum Storm — 3D Simulator</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     html, body {
       width: 100%;
@@ -87,7 +89,9 @@
       touch-action: manipulation;
     }
 
-    button:active { transform: scale(.985); }
+    button:active {
+      transform: scale(.985);
+    }
 
     .primary {
       margin-top: 8px;
@@ -218,12 +222,29 @@
         padding: 12px;
       }
 
-      .brand { font-size: 16px; }
-      .subtitle { margin-bottom: 8px; }
-      .section-title { margin-top: 10px; }
-      .control { margin-top: 8px; }
-      .metric { padding: 8px; }
-      .metric-value { font-size: 15px; }
+      .brand {
+        font-size: 16px;
+      }
+
+      .subtitle {
+        margin-bottom: 8px;
+      }
+
+      .section-title {
+        margin-top: 10px;
+      }
+
+      .control {
+        margin-top: 8px;
+      }
+
+      .metric {
+        padding: 8px;
+      }
+
+      .metric-value {
+        font-size: 15px;
+      }
 
       .hint {
         left: 12px;
@@ -249,6 +270,7 @@
     <p class="subtitle">Процедурный симулятор гроз · 3D</p>
 
     <div class="section-title">Тип конвекции</div>
+
     <select id="stormType">
       <option value="random">Случайная гроза</option>
       <option value="tower">Мощная башня</option>
@@ -257,12 +279,18 @@
       <option value="squall">Шкваловая линия</option>
     </select>
 
-    <button id="newStorm" class="primary">Сгенерировать новую грозу</button>
+    <button id="newStorm" class="primary">
+      Сгенерировать новую грозу
+    </button>
 
     <div class="button-row">
       <button id="pause">Пауза</button>
       <button id="lightning">Молния: вкл.</button>
     </div>
+
+    <button id="reset" style="margin-top:8px">
+      Сбросить симуляцию
+    </button>
 
     <div class="section-title">Атмосферные параметры</div>
 
@@ -271,7 +299,14 @@
         <label for="cape">CAPE</label>
         <output id="capeValue">2200 Дж/кг</output>
       </div>
-      <input id="cape" type="range" min="200" max="5000" step="100" value="2200">
+      <input
+        id="cape"
+        type="range"
+        min="200"
+        max="5000"
+        step="100"
+        value="2200"
+      >
     </div>
 
     <div class="control">
@@ -279,7 +314,14 @@
         <label for="shear">Вертикальный сдвиг ветра</label>
         <output id="shearValue">20 м/с</output>
       </div>
-      <input id="shear" type="range" min="0" max="40" step="1" value="20">
+      <input
+        id="shear"
+        type="range"
+        min="0"
+        max="40"
+        step="1"
+        value="20"
+      >
     </div>
 
     <div class="control">
@@ -287,32 +329,47 @@
         <label for="humidity">Влажность</label>
         <output id="humidityValue">75%</output>
       </div>
-      <input id="humidity" type="range" min="20" max="100" step="1" value="75">
+      <input
+        id="humidity"
+        type="range"
+        min="20"
+        max="100"
+        step="1"
+        value="75"
+      >
     </div>
 
     <div class="metrics">
       <div class="metric">
         <div class="metric-label">Вершина облака</div>
-        <div class="metric-value" id="cloudHeight">— км</div>
+        <div class="metric-value" id="cloudHeight">0.0 км</div>
       </div>
+
       <div class="metric">
         <div class="metric-label">Ячеек</div>
-        <div class="metric-value" id="cellCount">—</div>
+        <div class="metric-value" id="cellCount">0</div>
       </div>
     </div>
 
     <div id="status">Инициализация…</div>
   </aside>
 
-  <div class="hint">Поворачивай сцену пальцем · Своди два пальца, чтобы приблизить</div>
+  <div class="hint">
+    Поворачивай сцену пальцем · Своди два пальца, чтобы приблизить
+  </div>
 
   <script>
     window.showStormError = function (error) {
       const loading = document.getElementById("loading");
+
       loading.classList.add("error");
-      document.getElementById("loadingTitle").textContent = "НЕ УДАЛОСЬ ЗАПУСТИТЬ";
+
+      document.getElementById("loadingTitle").textContent =
+        "НЕ УДАЛОСЬ ЗАПУСТИТЬ";
+
       document.getElementById("loadingText").textContent =
         "Сцена не загрузилась. Проверь интернет-соединение и открой сайт ещё раз.";
+
       document.getElementById("errorDetails").textContent =
         error && (error.stack || error.message || String(error))
           ? String(error.stack || error.message || error)
@@ -324,13 +381,19 @@
     };
 
     window.addEventListener("error", function (event) {
-      if (document.getElementById("loading").style.display !== "none") {
-        window.showStormError(event.message || "Ошибка JavaScript");
+      if (
+        document.getElementById("loading").style.display !== "none"
+      ) {
+        window.showStormError(
+          event.message || "Ошибка JavaScript"
+        );
       }
     });
 
     window.addEventListener("unhandledrejection", function (event) {
-      window.showStormError(event.reason || "Не удалось загрузить модуль");
+      window.showStormError(
+        event.reason || "Не удалось загрузить модуль"
+      );
     });
 
     import("./sim.js").catch(window.showStormError);
