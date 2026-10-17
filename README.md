@@ -1,27 +1,24 @@
-# Quantum Meteo — 3D Storm Simulator
+# Quantum Meteo — Earth & Ground Observer
 
-Standalone browser-based 3D atmosphere visualization. This is a self-contained project folder and does not modify an existing radar-map `index.html` when uploaded into a separate directory (recommended: `storm-sim/`).
+A separate GitHub Pages-ready prototype with two distinct modes:
 
-## Run locally
-Open `index.html` through a static web server. ES modules and import maps may be blocked by `file://`; GitHub Pages is suitable. Internet access is required to load Three.js from jsDelivr.
+1. `index.html` — interactive Earth map. Select a location and storm scenario, then open the ground observer.
+2. `ground.html` — ground-level 3D view with procedural terrain, distant ridges, a ray-marched cloud-volume shader, precipitation particles, lightning flashes, time controls, and diagnostic readouts.
 
-## Deploy from iPhone with GitHub mobile
-1. Open `https://github.com/ClouxJPG/Daradar` and enter the repository.
-2. Tap **Add file → Create new file**.
-3. In the filename field enter `storm-sim/index.html`, paste the contents of this project's `index.html`, and commit.
-4. Repeat for `storm-sim/sim.js`, `storm-sim/atmosphere.js`, `storm-sim/terrain.js`, `storm-sim/clouds.js`, and `storm-sim/weather.js` (copy each file's complete contents).
-5. Add `storm-sim/README.md` if desired.
-6. Open `https://clouxjpg.github.io/Daradar/storm-sim/` after GitHub Pages finishes deploying. If Pages is configured for a different repository or branch, use that repository's Pages URL instead.
+## Deploy from iPhone
 
-Do not overwrite the repository's root `index.html`. The simulator runs in its own folder. All modules use relative local paths; Three.js and OrbitControls load from jsDelivr.
+1. Unzip this archive in Files.
+2. In your GitHub repository, create a folder such as `storm-sim`.
+3. Upload **all files** from this archive into that folder, preserving the names and same-folder relationships.
+4. Enable GitHub Pages for the repository if it is not already enabled.
+5. Open `https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/storm-sim/`.
 
-## Controls
-Drag to orbit; pinch or scroll to zoom. Use the panel to select a scenario, adjust humidity/CAPE/shear/wind, pause, change time speed, and toggle rain, lightning, flow lines and diagnostics.
+No API keys or server are required. Internet is required for Leaflet, OpenStreetMap tiles, and Three.js CDN imports.
 
-## What this model is—and isn't
-The scene includes a procedural terrain, layered 3D cloud forms with animated procedural shading, moving convective cells, rain streaks, lightning flashes, and a simplified reduced-order atmospheric state. It is a visual/educational approximation. It is **not** a full CFD solver, not CM1, and not a forecasting product. CAPE, LCL and updraft diagnostics are approximate; tornado and microphysics processes are not quantitatively resolved.
+## Honest limitations
 
-## Verification performed
-- JavaScript syntax checks with Node.js.
-- ZIP integrity and required-file checks.
-- Browser launch/screenshot tests should be performed on the deployment device; a static code check alone cannot guarantee WebGL rendering on every iPhone/Safari version.
+This is a procedural real-time visual model, not a numerical weather prediction model. The cloud volume is ray-marched and designed to create a more convincing sense of scale than primitive cloud spheres, but it is not photogrammetry or physically validated cloud microphysics. The terrain is procedurally generated rather than real local elevation data. The selected latitude/longitude is shown on the Earth map and passed to the scene URL, but does not yet load real satellite weather or geospatial terrain for that location.
+
+## Checks performed
+
+Run JavaScript syntax checks with Node.js in module mode. Validate the ZIP contents. A real Safari/iPhone visual test is still required before claiming reliable operation on all devices. External CDN and map-tile availability depends on connectivity.

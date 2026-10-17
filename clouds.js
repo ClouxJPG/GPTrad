@@ -1,21 +1,30 @@
 import * as THREE from 'three';
-const vertex=`varying vec3 vPos; varying vec3 vNormal; void main(){vPos=position;vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
-const fragment=`uniform float uTime; uniform float uDensity; uniform float uLight; uniform vec3 uTint; uniform float uSeed; varying vec3 vPos; varying vec3 vNormal;
-float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
-float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
-void main(){vec3 p=vPos;float n=noise(p*2.4+vec3(uTime*.018,uTime*.009,uSeed));n+=.5*noise(p*5.2-vec3(uTime*.027,0.,uTime*.018));n/=1.5;float edge=1.-smoothstep(.48,1.0,length(p));float density=smoothstep(.17,.69,n*.72+edge*.48)*uDensity;float top=clamp(vNormal.y*.5+.5,0.,1.);vec3 lightDir=normalize(vec3(-.45,.78,.35));float diffuse=max(dot(normalize(vNormal),lightDir),0.);float silver=pow(max(dot(reflect(-lightDir,normalize(vNormal)),vec3(0.,0.,1.)),0.),3.);float shade=.42+diffuse*.62+silver*.22;vec3 color=mix(uTint,vec3(0.79,.84,.88),clamp(top*.6+diffuse*.25,0.,.9));color*=shade;float alpha=density*.72; if(alpha<.035)discard;gl_FragColor=vec4(color,alpha);}`;
-function cloudMaterial(seed,tint='#aebdca',density=1){return new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,transparent:true,depthWrite:false,side:THREE.DoubleSide,uniforms:{uTime:{value:0},uDensity:{value:density},uLight:{value:1},uTint:{value:new THREE.Color(tint)},uSeed:{value:seed}},blending:THREE.NormalBlending});}
-export class CloudSystem{
- constructor(scene,model){this.scene=scene;this.model=model;this.groups=[];this.clock=0;this.build();}
- build(){const count=3;for(let c=0;c<count;c++){const group=new THREE.Group();const meshes=[];const seed=c*31+7;const tint=c===1?'#9eacbc':'#b8c6d2';
- // broad low cloud base and many overlapping lobes produce a connected cloud volume
- const add=(x,y,z,sx,sy,sz,d=1)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,18),cloudMaterial(seed+x*3+y,tint,d));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);meshes.push(m);};
- add(0,0,0,12,2.6,8,.8);for(let i=0;i<9;i++){const a=i/9*Math.PI*2;add(Math.cos(a)*6,1+Math.sin(i*2)*.45,Math.sin(a)*4.5,4.5+Math.random()*2,3.1+Math.random()*1.7,4.2+Math.random()*1.8,.95);}
- // towering cumulonimbus turrets, plus anvil cap
- for(let t=0;t<3;t++){const x=(t-1)*3.1;for(let k=0;k<4;k++){add(x+(Math.random()-.5)*1.3,3.8+k*3.0,(Math.random()-.5)*1.5,3.5-k*.3,3.3,3.4-k*.25,1.04);} }
- add(0,14.8,-.5,9.8,1.5,5.5,.82);add(-3,15.1,-1,7,1.0,5.1,.7);add(5,14.5,-.4,7.4,1.1,4.6,.76);
- group.position.set((c-1)*24,8+(c===1?1:0),-12-c*13);group.rotation.y=c*.7;this.scene.add(group);this.groups.push({group,meshes,seed,baseX:group.position.x,baseZ:group.position.z,phase:c*2.4});}
- }
- update(dt,time){this.clock=time;this.groups.forEach((g,idx)=>{const cell=this.model.cells[idx];if(cell){g.group.position.x=THREE.MathUtils.lerp(g.group.position.x,g.baseX+cell.x*.28,Math.min(1,dt*.15));g.group.position.z=THREE.MathUtils.lerp(g.group.position.z,g.baseZ+cell.z*.18,Math.min(1,dt*.15));}g.group.position.y=8+Math.sin(time*.18+g.phase)*.22;g.group.rotation.y=Math.sin(time*.06+g.phase)*.04;g.meshes.forEach((m,i)=>{m.material.uniforms.uTime.value=time+i*.17; m.scale.x*=1;});});}
- setDensity(v){this.groups.forEach(g=>g.meshes.forEach(m=>m.material.uniforms.uDensity.value=v));}
+const vertexShader=`varying vec3 vWorld; void main(){vec4 w=modelMatrix*vec4(position,1.0);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`;
+const fragmentShader=`
+precision highp float; varying vec3 vWorld; uniform vec3 uCamera; uniform float uTime; uniform float uHumidity; uniform float uCAPE; uniform float uShear; uniform float uMode; uniform float uFlash; uniform float uStormZ;
+float hash31(vec3 p){p=fract(p*.1031);p+=dot(p,p.yxz+33.33);return fract((p.x+p.y)*p.z);}
+float noise3(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float a=.5,v=0.;for(int i=0;i<3;i++){v+=noise3(p)*a;p*=2.03;a*=.5;}return v;}
+float density(vec3 p){ // p is metres in world coordinates
+ float kmY=p.y*.001;vec3 q=p*.00019;q.x+=uTime*.003; q.z-=uTime*.002;
+ float n=fbm(q*2.0);float detail=noise3(q*7.5);
+ float centerX= uMode==3.0 ? sin(p.z*.00011)*9000. : 0.;
+ float dx=(p.x-centerX)/10000.;float dz=(p.z-uStormZ)/16000.;
+ float cell=exp(-dx*dx*1.2-dz*dz*.65);
+ if(uMode==2.0){cell=max(cell,exp(-pow((p.x-16000.)/10000.,2.)-pow((p.z+38000.)/17000.,2.)*.7));cell=max(cell,exp(-pow((p.x+16000.)/11000.,2.)-pow((p.z+28000.)/16000.,2.)*.7));}
+ float base=2.2+(1.-uHumidity)*.018;float top=8.0+uCAPE*.0019;float vertical=smoothstep(base,base+.9,kmY)*(1.-smoothstep(top-.7,top+.8,kmY));
+ float tower=exp(-pow(dx*1.25,2.)-pow(dz*.8,2.))*smoothstep(3.0,5.0,kmY)*(1.-smoothstep(10.0,top,kmY));
+ float anvilH=smoothstep(top-2.6,top-.5,kmY)*(1.-smoothstep(top+.25,top+1.4,kmY));float anvil=exp(-pow((p.x-centerX)/31000.,2.)-pow((p.z-uStormZ)/25000.,2.))*anvilH;
+ float edge=(cell*.86+tower*.8+anvil*.8)*vertical;
+ float erosion=(n-.46)*(.8+uHumidity*.006)+(detail-.5)*.32;
+ float d=smoothstep(.17,.62,edge+erosion);
+ if(uMode==0.0)d*=smoothstep(.25,.48,fbm(q*1.4));
+ return clamp(d,0.,1.);
 }
+void main(){vec3 ray=normalize(vWorld-uCamera);vec3 p=vWorld;vec3 halfBox=vec3(54000.,10500.,26000.);float stepLen=1800.;float trans=1.;vec3 accum=vec3(0.);float total=0.;
+ for(int i=0;i<32;i++){if(any(greaterThan(abs(p-vec3(0.,8500.,uStormZ)),halfBox)))break;float d=density(p);if(d>.015){float light=clamp(.34+(.000018*(p.y-2500.))+.12*noise3(p*.00024+vec3(4.)),.22,.88);vec3 lit=mix(vec3(.27,.34,.39),vec3(.91,.94,.96),light);float silver=pow(max(0.,1.-abs(p.y-10500.)/7500.),3.)*.16;lit+=vec3(.19,.22,.24)*silver;lit+=uFlash*vec3(.55,.62,.72);float a=d*.115;accum+=trans*lit*a;trans*=1.-a;total+=d;}p+=ray*stepLen;if(trans<.025)break;}
+ float alpha=1.-trans;if(alpha<.012)discard;gl_FragColor=vec4(accum/max(alpha,.01),alpha*.94);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}`;
+export function createCloudVolume(scene){const geo=new THREE.BoxGeometry(108000,21000,52000,1,1,1);const mat=new THREE.ShaderMaterial({vertexShader,fragmentShader,transparent:true,depthWrite:false,side:THREE.FrontSide,uniforms:{uCamera:{value:new THREE.Vector3()},uTime:{value:0},uHumidity:{value:.78},uCAPE:{value:2400},uShear:{value:22},uMode:{value:1},uFlash:{value:0},uStormZ:{value:-62000}},blending:THREE.NormalBlending});const mesh=new THREE.Mesh(geo,mat);mesh.position.set(0,8500,-62000);mesh.frustumCulled=false;scene.add(mesh);return {mesh,material:mat};}
