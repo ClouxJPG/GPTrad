@@ -1269,6 +1269,14 @@ function readSlider(input, fallback) {
     : fallback;
 }
 
+function cloudTop() {
+  const cape = Math.max(
+    0.1,
+    Math.min(state.cape / 4000, 1)
+  );
+
+  return (220 + (440 - 220) * cape) * state.growth;
+}
 function syncControls() {
   state.cape = readSlider(
     capeInput,
