@@ -1,24 +1,36 @@
-# Quantum Meteo — Earth & Ground Observer
+# Quantum Meteo — Earth + Ground Observer (revised)
 
-A separate GitHub Pages-ready prototype with two distinct modes:
+Two separate modes:
 
-1. `index.html` — interactive Earth map. Select a location and storm scenario, then open the ground observer.
-2. `ground.html` — ground-level 3D view with procedural terrain, distant ridges, a ray-marched cloud-volume shader, precipitation particles, lightning flashes, time controls, and diagnostic readouts.
+- `index.html`: interactive Leaflet Earth map, location selection and scenario selection.
+- `ground.html`: independent ground-level observer scene with an actual ground plane, local tree clusters, distant ridges, volumetric ray-marched cloud field, rain, lightning and generated atmospheric ambience.
 
-## Deploy from iPhone
+## What changed in this revision
 
-1. Unzip this archive in Files.
-2. In your GitHub repository, create a folder such as `storm-sim`.
-3. Upload **all files** from this archive into that folder, preserving the names and same-folder relationships.
-4. Enable GitHub Pages for the repository if it is not already enabled.
+- Lowered the observer camera to about 2.4 m above the local ground rather than placing it 1.65 km above the surface.
+- Flattened the immediate observer clearing so the camera starts above the ground instead of inside a hillside.
+- Made the anvil denser and more continuous, reduced high-altitude erosion, and added connected convective turrets.
+- Added smaller neighbouring cloud cells to create environmental context around the main storm.
+- Added clustered foreground forest, varied rolling terrain, distant ridges and a subtle road for scale.
+- Added optional procedural wind/rain/distant-thunder ambience. Audio is activated only after tapping the sound button, as required by mobile browser autoplay policies.
+- Kept the map and ground observer in separate HTML pages. The existing repository root `index.html` need not be replaced; upload this project into a subfolder.
+
+## Install on GitHub Pages from iPhone
+
+1. Unzip the archive in Files.
+2. In the repository, create a folder such as `storm-sim`.
+3. Upload every file in this folder into `storm-sim`, preserving filenames and their relative paths.
+4. Enable GitHub Pages if needed.
 5. Open `https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/storm-sim/`.
 
-No API keys or server are required. Internet is required for Leaflet, OpenStreetMap tiles, and Three.js CDN imports.
+Three.js is loaded from jsDelivr and Leaflet/map tiles from public CDN/OpenStreetMap, so an internet connection is required.
 
-## Honest limitations
+## Important limits
 
-This is a procedural real-time visual model, not a numerical weather prediction model. The cloud volume is ray-marched and designed to create a more convincing sense of scale than primitive cloud spheres, but it is not photogrammetry or physically validated cloud microphysics. The terrain is procedurally generated rather than real local elevation data. The selected latitude/longitude is shown on the Earth map and passed to the scene URL, but does not yet load real satellite weather or geospatial terrain for that location.
+This remains a procedural real-time visualization, not a photogrammetric reconstruction, physically validated cloud microphysics solver, or numerical weather prediction model. The terrain and cloud structures are generated rather than loaded from real local elevation/satellite data. The soundscape is synthesized in-browser. No claim of 100% photorealism is made.
 
-## Checks performed
+## Validation status
 
-Run JavaScript syntax checks with Node.js in module mode. Validate the ZIP contents. A real Safari/iPhone visual test is still required before claiming reliable operation on all devices. External CDN and map-tile availability depends on connectivity.
+- JavaScript syntax checked with Node.js.
+- Archive structure and file list checked after packaging.
+- Browser/WebGL rendering must still be visually checked in Safari on the target iPhone; successful syntax checks do not guarantee a realistic final image or identical rendering on every device.
