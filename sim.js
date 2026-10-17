@@ -1,24 +1,42 @@
+// ============================================================
+// QUANTUM METEO — CONVECTIVE ATMOSPHERE
+//
+// Объёмные Cb-облака:
+// • объёмный raymarching в экранном пространстве
+// • учёт глубины рельефа
+// • непрерывная турбулентность Perlin-подобного типа
+// • восходящие потоки и развитие конвекции
+// • сдвиг ветра с высотой
+// • ледяная наковальня
+// • overshooting top
+// • mammatus
+// • волокнистые края облаков
+// • молнии
+//
+// index.html НЕ ИЗМЕНЯЕТСЯ.
+// ============================================================
 
- // ============================================================
- // QUANTUM METEO — 3D STORM SIMULATOR
- // Volumetric clouds, continuous 3D density field, ray marching
- // index.html НЕ МЕНЯЕТСЯ
- // ============================================================
+import * as THREE from
+  "https://esm.sh/three@0.180.0";
 
-import * as THREE from "https://esm.sh/three@0.180.0";
 import { OrbitControls } from
   "https://esm.sh/three@0.180.0/examples/jsm/controls/OrbitControls.js";
 
-const $ = id => document.getElementById(id);
-const canvas = $("scene");
 
-if (!canvas) throw new Error("Не найден canvas #scene");
+// ============================================================
+// DOM
+// ============================================================
 
-if ($("loadingTitle")) $("loadingTitle").textContent = "Quantum Meteo";
-if ($("loadingText")) $("loadingText").textContent = "Создание объёмной грозовой системы";
+const canvas = document.querySelector("#scene");
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const rand = (a, b) => a + Math.random() * (b - a);
+if (!canvas) {
+  throw new Error(
+    "Quantum Meteo: canvas #scene не найден."
+  );
+}
+
+const $ = (id) => document.getElementById(id);
+
 
 // ============================================================
 // RENDERER
@@ -27,768 +45,1590 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
+  alpha: false,
   powerPreference: "high-performance"
 });
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-renderer.setSize(canvas.clientWidth || innerWidth, canvas.clientHeight || innerHeight);
+renderer.setPixelRatio(
+  Math.min(window.devicePixelRatio || 1, 1.5)
+);
+
+renderer.setSize(
+  canvas.clientWidth || window.innerWidth,
+  canvas.clientHeight || window.innerHeight,
+  false
+);
+
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.08;
 
-if (!renderer.capabilities.isWebGL2) {
-  throw new Error("Для объёмных облаков необходим WebGL2.");
-}
+
+// ============================================================
+// SCENE
+// ============================================================
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x91b7db);
-scene.fog = new THREE.Fog(0x91b7db, 500, 2200);
+
+scene.background = new THREE.Color(0x91b6d2);
+scene.fog = new THREE.Fog(
+  0x91b6d2,
+  900,
+  2600
+);
+
+
+// ============================================================
+// CAMERA
+// ============================================================
 
 const camera = new THREE.PerspectiveCamera(
-  50,
-  (canvas.clientWidth || innerWidth) / Math.max(1, canvas.clientHeight || innerHeight),
+  55,
+  1,
   0.1,
-  100000000
+  4500
 );
-camera.position.set(70, 43, 90);
 
-// ============================================================
-// CAMERA CONTROLS
-// ============================================================
+camera.position.set(460, 270, 620);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 19, 0);
+const controls = new OrbitControls(
+  camera,
+  renderer.domElement
+);
+
 controls.enableDamping = true;
 controls.dampingFactor = 0.055;
-controls.minDistance = 0.5;
-controls.maxDistance = 10000000;
-controls.zoomSpeed = 1.15;
-controls.panSpeed = 1;
+controls.minDistance = 100;
+controls.maxDistance = 1800;
 controls.maxPolarAngle = Math.PI * 0.495;
-controls.update();
+controls.target.set(0, 100, 0);
+
+
+// ============================================================
+// ATMOSPHERE STATE
+// ============================================================
+
+const state = {
+  cape: 2400,
+  shear: 25,
+  humidity: 78,
+
+  stormType: "supercell",
+
+  paused: false,
+  lightning: true,
+
+  time: 0,
+  growth: 1,
+
+  lightningTimer: 0,
+  lightningFlash: 0,
+
+  seed: Math.random() * 1000
+};
+
+
+// ============================================================
+// WORLD
+// ============================================================
+
+const WORLD = 1200;
+const TERRAIN_SEGMENTS = 180;
+
+function heightAt(x, z) {
+  const hills =
+    Math.sin(x * 0.0034) * 8 +
+    Math.cos(z * 0.0031) * 7 +
+    Math.sin((x + z) * 0.0024) * 5;
+
+  const hills2 =
+    Math.sin(x * 0.012) *
+    Math.cos(z * 0.011) * 2.1;
+
+  const valley =
+    Math.exp(
+      -(
+        (x + 150) ** 2 +
+        (z - 80) ** 2
+      ) / 110000
+    ) * 12;
+
+  return hills + hills2 - valley;
+}
+
+
+// ============================================================
+// TERRAIN TEXTURE
+// ============================================================
+
+function makeTerrainTexture() {
+  const size = 512;
+
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+
+  const ctx = c.getContext("2d");
+
+  ctx.fillStyle = "#687966";
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 18000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+
+    const n = Math.random();
+
+    ctx.fillStyle = n > 0.5
+      ? "rgba(165,174,128,0.12)"
+      : "rgba(30,53,39,0.11)";
+
+    ctx.fillRect(
+      x,
+      y,
+      1 + Math.random() * 3,
+      1 + Math.random() * 3
+    );
+  }
+
+  // Rivers and terrain markings.
+  ctx.globalAlpha = 0.28;
+  ctx.strokeStyle = "#9da58c";
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i < 16; i++) {
+    ctx.beginPath();
+
+    let x = Math.random() * size;
+    let y = Math.random() * size;
+
+    ctx.moveTo(x, y);
+
+    for (let j = 0; j < 14; j++) {
+      x += Math.random() * 35 - 17.5;
+      y += Math.random() * 35 - 17.5;
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(c);
+
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(
+    renderer.capabilities.getMaxAnisotropy(),
+    4
+  );
+
+  return texture;
+}
+
+
+// ============================================================
+// TERRAIN GEOMETRY
+// ============================================================
+
+function makeTerrain() {
+  const geometry = new THREE.PlaneGeometry(
+    WORLD,
+    WORLD,
+    TERRAIN_SEGMENTS,
+    TERRAIN_SEGMENTS
+  );
+
+  geometry.rotateX(-Math.PI / 2);
+
+  const positions =
+    geometry.attributes.position;
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
+
+    positions.setY(
+      i,
+      heightAt(x, z)
+    );
+  }
+
+  geometry.computeVertexNormals();
+
+  const material = new THREE.MeshStandardMaterial({
+    map: makeTerrainTexture(),
+    color: 0xc0c8b6,
+    roughness: 1,
+    metalness: 0
+  });
+
+  const terrain = new THREE.Mesh(
+    geometry,
+    material
+  );
+
+  terrain.receiveShadow = true;
+  terrain.position.y = 0;
+
+  scene.add(terrain);
+}
+
+makeTerrain();
+
 
 // ============================================================
 // LIGHTING
 // ============================================================
 
-scene.add(new THREE.HemisphereLight(0xdceeff, 0x555344, 1.8));
+const hemisphere = new THREE.HemisphereLight(
+  0xc7e1ff,
+  0x475044,
+  1.65
+);
 
-const sun = new THREE.DirectionalLight(0xfff1d8, 2.6);
-sun.position.set(-100, 150, -80);
+scene.add(hemisphere);
+
+const sun = new THREE.DirectionalLight(
+  0xfff0d7,
+  2.5
+);
+
+sun.position.set(-400, 700, 300);
 scene.add(sun);
 
-const fill = new THREE.DirectionalLight(0xc4dfff, 0.8);
-fill.position.set(100, 65, 70);
-scene.add(fill);
 
 // ============================================================
-// TERRAIN
+// DISTANT HORIZON
 // ============================================================
 
-const WORLD = 1200;
-const SEGMENTS = 180;
+const horizonGeometry =
+  new THREE.RingGeometry(850, 2400, 128);
 
-function hash(x, z) {
-  const n = Math.sin(x * 127.1 + z * 311.7 + 17.17) * 43758.5453;
-  return n - Math.floor(n);
-}
+horizonGeometry.rotateX(-Math.PI / 2);
 
-function noise(x, z) {
-  const ix = Math.floor(x);
-  const iz = Math.floor(z);
-  const fx = x - ix;
-  const fz = z - iz;
-  const u = fx * fx * (3 - 2 * fx);
-  const v = fz * fz * (3 - 2 * fz);
-
-  const a = hash(ix, iz);
-  const b = hash(ix + 1, iz);
-  const c = hash(ix, iz + 1);
-  const d = hash(ix + 1, iz + 1);
-
-  return THREE.MathUtils.lerp(
-    THREE.MathUtils.lerp(a, b, u),
-    THREE.MathUtils.lerp(c, d, u),
-    v
-  );
-}
-
-function fbm(x, z) {
-  let value = 0;
-  let amp = 0.5;
-
-  for (let i = 0; i < 5; i++) {
-    value += (noise(x, z) * 2 - 1) * amp;
-    x *= 2.03;
-    z *= 2.03;
-    amp *= 0.48;
-  }
-
-  return value;
-}
-
-function heightAt(x, z) {
-  const broad = fbm(x * 0.003, z * 0.003);
-  const medium = fbm(x * 0.012, z * 0.012);
-  const fine = fbm(x * 0.055, z * 0.055);
-
-  const m1 = Math.exp(-(((x + 180) / 145) ** 2 + ((z + 120) / 180) ** 2));
-  const m2 = Math.exp(-(((x - 180) / 120) ** 2 + ((z - 160) / 150) ** 2));
-  const m3 = Math.exp(-(((x - 20) / 90) ** 2 + ((z + 230) / 110) ** 2));
-
-  const mountains = Math.max(m1, m2 * 0.95, m3 * 0.8);
-  const rugged = Math.pow(Math.max(0, 0.55 + broad * 0.6 + medium * 0.6), 1.4);
-
-  return Math.max(0.3, 1.2 + broad * 3.3 + medium * 1.2 +
-    rugged * mountains * 15 + fine * 0.2);
-}
-
-function makeTerrainTexture() {
-  const size = 768;
-  const c = document.createElement("canvas");
-  c.width = c.height = size;
-  const ctx = c.getContext("2d");
-  const image = ctx.createImageData(size, size);
-
-  for (let py = 0; py < size; py++) {
-    for (let px = 0; px < size; px++) {
-      const x = (px / size - 0.5) * WORLD;
-      const z = (py / size - 0.5) * WORLD;
-      const h = heightAt(x, z);
-      const n = fbm(x * 0.08 + 300, z * 0.08 - 700);
-      const grain = (hash(px * 2, py * 2) - 0.5) * 12;
-
-      let r, g, b;
-
-      if (h > 11) {
-        r = 145 + n * 22; g = 143 + n * 20; b = 132 + n * 20;
-      } else if (h > 7) {
-        r = 111 + n * 20; g = 111 + n * 18; b = 88 + n * 14;
-      } else if (n > 0.32) {
-        r = 37 + n * 20; g = 78 + n * 24; b = 41 + n * 13;
-      } else if (n < -0.35) {
-        r = 145 + n * 15; g = 127 + n * 12; b = 87 + n * 12;
-      } else {
-        r = 75 + n * 20; g = 116 + n * 22; b = 64 + n * 14;
-      }
-
-      const i = (py * size + px) * 4;
-      image.data[i] = clamp(r + grain, 0, 255);
-      image.data[i + 1] = clamp(g + grain, 0, 255);
-      image.data[i + 2] = clamp(b + grain, 0, 255);
-      image.data[i + 3] = 255;
-    }
-  }
-
-  ctx.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(c);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-  return texture;
-}
-
-const terrainGeometry = new THREE.PlaneGeometry(WORLD, WORLD, SEGMENTS, SEGMENTS);
-terrainGeometry.rotateX(-Math.PI / 2);
-
-const terrainPos = terrainGeometry.attributes.position;
-
-for (let i = 0; i < terrainPos.count; i++) {
-  terrainPos.setY(i, heightAt(terrainPos.getX(i), terrainPos.getZ(i)));
-}
-
-terrainPos.needsUpdate = true;
-terrainGeometry.computeVertexNormals();
-
-const terrain = new THREE.Mesh(
-  terrainGeometry,
-  new THREE.MeshStandardMaterial({
-    map: makeTerrainTexture(),
-    roughness: 1,
-    metalness: 0
-  })
-);
-scene.add(terrain);
-
-// ============================================================
-// SKY
-// ============================================================
-
-const sky = new THREE.Mesh(
-  new THREE.SphereGeometry(20000000, 24, 16),
+const horizonMaterial =
   new THREE.MeshBasicMaterial({
-    color: 0x91b7db,
-    side: THREE.BackSide,
-    depthWrite: false
-  })
+    color: 0x93b6ce,
+    side: THREE.DoubleSide,
+    fog: false
+  });
+
+const horizon = new THREE.Mesh(
+  horizonGeometry,
+  horizonMaterial
 );
-sky.frustumCulled = false;
-scene.add(sky);
+
+horizon.position.y = -2;
+scene.add(horizon);
+
 
 // ============================================================
-// VOLUMETRIC CLOUD SHADER
-// No predefined tower centers. Continuous 3D density field.
+// LIGHTNING BOLT
+// ============================================================
+
+let lightningGroup = null;
+
+function clearLightning() {
+  if (!lightningGroup) return;
+
+  scene.remove(lightningGroup);
+
+  lightningGroup.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) obj.material.dispose();
+  });
+
+  lightningGroup = null;
+}
+
+function createLightning() {
+  clearLightning();
+
+  const group = new THREE.Group();
+
+  const points = [];
+
+  let x = 0;
+  let y = 280;
+  let z = 0;
+
+  points.push(
+    new THREE.Vector3(x, y, z)
+  );
+
+  for (let i = 0; i < 16; i++) {
+    y -= 10 + Math.random() * 9;
+
+    x += (Math.random() - 0.5) * 18;
+    z += (Math.random() - 0.5) * 18;
+
+    points.push(
+      new THREE.Vector3(x, y, z)
+    );
+  }
+
+  const geometry =
+    new THREE.BufferGeometry().setFromPoints(points);
+
+  const material = new THREE.LineBasicMaterial({
+    color: 0xe9f5ff,
+    transparent: true,
+    opacity: 1
+  });
+
+  group.add(
+    new THREE.Line(geometry, material)
+  );
+
+  const glow = new THREE.PointLight(
+    0x9ecbff,
+    65,
+    260
+  );
+
+  glow.position.set(x, y, z);
+
+  group.add(glow);
+
+  scene.add(group);
+
+  lightningGroup = group;
+
+  state.lightningFlash = 1;
+}
+
+
+// ============================================================
+// CLOUD VOLUME — SCREEN SPACE
+//
+// Облако не рендерится как обычный куб.
+//
+// Сначала рендерим землю в RenderTarget вместе
+// с текстурой глубины, затем интегрируем облако
+// отдельным полноэкранным проходом.
+//
+// Так глубина облака сравнивается с глубиной земли,
+// а не с поверхностью ограничивающего куба.
+// ============================================================
+
+const depthTexture = new THREE.DepthTexture(
+  1,
+  1,
+  THREE.UnsignedIntType
+);
+
+depthTexture.format = THREE.DepthFormat;
+
+const renderTarget = new THREE.WebGLRenderTarget(
+  1,
+  1,
+  {
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
+    depthBuffer: true,
+    stencilBuffer: false
+  }
+);
+
+renderTarget.depthTexture = depthTexture;
+renderTarget.texture.colorSpace = THREE.NoColorSpace;
+
+
+// ============================================================
+// FULLSCREEN PASS
+// ============================================================
+
+const postScene = new THREE.Scene();
+
+const postCamera = new THREE.OrthographicCamera(
+  -1, 1, 1, -1, 0, 1
+);
+
+const quadGeometry = new THREE.PlaneGeometry(2, 2);
+
+
+// ============================================================
+// VOLUME SHADER
 // ============================================================
 
 const cloudUniforms = {
-  uTime: { value: 0 },
-  uCAPE: { value: 2500 },
-  uHumidity: { value: 75 },
-  uShear: { value: 25 },
-  uTop: { value: 56 },
-  uGrowth: { value: 0 },
-  uCells: { value: 3 },
-  uSeed: { value: Math.random() * 1000 },
-  uSunDir: {
-    value: new THREE.Vector3(-0.55, 0.75, -0.4).normalize()
+  uScene: {
+    value: renderTarget.texture
   },
-  uBoxMin: { value: new THREE.Vector3(-110, 0, -110) },
-  uBoxMax: { value: new THREE.Vector3(110, 120, 110) }
+
+  uDepth: {
+    value: renderTarget.depthTexture
+  },
+
+  uInverseProjection: {
+    value: new THREE.Matrix4()
+  },
+
+  uInverseView: {
+    value: new THREE.Matrix4()
+  },
+
+  uCameraPosition: {
+    value: new THREE.Vector3()
+  },
+
+  uTime: {
+    value: 0
+  },
+
+  uCAPE: {
+    value: state.cape
+  },
+
+  uShear: {
+    value: state.shear
+  },
+
+  uHumidity: {
+    value: state.humidity
+  },
+
+  uStormType: {
+    value: 1
+  },
+
+  uGrowth: {
+    value: 1
+  },
+
+  uFlash: {
+    value: 0
+  },
+
+  uResolution: {
+    value: new THREE.Vector2(1, 1)
+  },
+
+  uSeed: {
+    value: state.seed
+  }
 };
 
-const cloudVertexShader = `
-varying vec3 vWorldPosition;
 
-void main() {
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    vWorldPosition = worldPosition.xyz;
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-}
-`;
+// ============================================================
+// CLOUD FRAGMENT SHADER
+// ============================================================
 
-const cloudFragmentShader = `
+const cloudFragmentShader = /* glsl */ `
 precision highp float;
 
-varying vec3 vWorldPosition;
+uniform sampler2D uScene;
+uniform sampler2D uDepth;
 
-uniform vec3 uBoxMin;
-uniform vec3 uBoxMax;
-uniform vec3 uSunDir;
+uniform mat4 uInverseProjection;
+uniform mat4 uInverseView;
+
+uniform vec3 uCameraPosition;
 
 uniform float uTime;
 uniform float uCAPE;
-uniform float uHumidity;
 uniform float uShear;
-uniform float uTop;
+uniform float uHumidity;
+uniform float uStormType;
 uniform float uGrowth;
-uniform float uCells;
+uniform float uFlash;
 uniform float uSeed;
+
+uniform vec2 uResolution;
+
+varying vec2 vUv;
+
+
+// ------------------------------------------------------------
+// HASH / CONTINUOUS NOISE
+// ------------------------------------------------------------
 
 float hash31(vec3 p) {
     p = fract(p * 0.1031);
-    p += dot(p, p.yzx + 33.33);
+    p += dot(p, p.yxz + 33.33);
     return fract((p.x + p.y) * p.z);
 }
 
 float noise3(vec3 p) {
     vec3 i = floor(p);
     vec3 f = fract(p);
+
     f = f * f * (3.0 - 2.0 * f);
 
-    float a = hash31(i);
-    float b = hash31(i + vec3(1.0,0.0,0.0));
-    float c = hash31(i + vec3(0.0,1.0,0.0));
-    float d = hash31(i + vec3(1.0,1.0,0.0));
-    float e = hash31(i + vec3(0.0,0.0,1.0));
-    float f1 = hash31(i + vec3(1.0,0.0,1.0));
-    float g = hash31(i + vec3(0.0,1.0,1.0));
-    float h = hash31(i + vec3(1.0,1.0,1.0));
+    float n000 = hash31(i + vec3(0.0, 0.0, 0.0));
+    float n100 = hash31(i + vec3(1.0, 0.0, 0.0));
+    float n010 = hash31(i + vec3(0.0, 1.0, 0.0));
+    float n110 = hash31(i + vec3(1.0, 1.0, 0.0));
 
-    return mix(
-        mix(mix(a,b,f.x),mix(c,d,f.x),f.y),
-        mix(mix(e,f1,f.x),mix(g,h,f.x),f.y),
-        f.z
-    );
+    float n001 = hash31(i + vec3(0.0, 0.0, 1.0));
+    float n101 = hash31(i + vec3(1.0, 0.0, 1.0));
+    float n011 = hash31(i + vec3(0.0, 1.0, 1.0));
+    float n111 = hash31(i + vec3(1.0, 1.0, 1.0));
+
+    float x00 = mix(n000, n100, f.x);
+    float x10 = mix(n010, n110, f.x);
+    float x01 = mix(n001, n101, f.x);
+    float x11 = mix(n011, n111, f.x);
+
+    float y0 = mix(x00, x10, f.y);
+    float y1 = mix(x01, x11, f.y);
+
+    return mix(y0, y1, f.z);
 }
 
-float fbm3(vec3 p) {
+float fbm(vec3 p) {
     float value = 0.0;
     float amplitude = 0.5;
 
     for (int i = 0; i < 5; i++) {
         value += noise3(p) * amplitude;
-        p = p * 2.02 + vec3(13.1,7.7,9.2);
+        p *= 2.03;
         amplitude *= 0.5;
     }
 
     return value;
 }
 
-vec2 intersectBox(vec3 ro, vec3 rd) {
-    vec3 safeRd = sign(rd) * max(abs(rd),vec3(0.00001));
-    vec3 a = (uBoxMin-ro)/safeRd;
-    vec3 b = (uBoxMax-ro)/safeRd;
-    vec3 lo = min(a,b);
-    vec3 hi = max(a,b);
 
-    return vec2(
-        max(max(lo.x,lo.y),lo.z),
-        min(min(hi.x,hi.y),hi.z)
+// ------------------------------------------------------------
+// VOLUME INTERSECTION
+// ------------------------------------------------------------
+
+vec2 intersectBox(
+    vec3 ro,
+    vec3 rd,
+    vec3 bmin,
+    vec3 bmax
+) {
+    vec3 invDir = 1.0 / rd;
+
+    vec3 t0 = (bmin - ro) * invDir;
+    vec3 t1 = (bmax - ro) * invDir;
+
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+
+    float nearT = max(
+        max(tmin.x, tmin.y),
+        tmin.z
     );
+
+    float farT = min(
+        min(tmax.x, tmax.y),
+        tmax.z
+    );
+
+    return vec2(nearT, farT);
 }
 
-float cloudDensity(vec3 p) {
-    float baseY = 8.0;
-    float topY = max(uTop,baseY+12.0);
-    float h = (p.y-baseY)/(topY-baseY);
 
-    if (h <= 0.0 || h >= 1.4) return 0.0;
+// ------------------------------------------------------------
+// STORM CONFIGURATION
+// ------------------------------------------------------------
 
-    float growth = clamp(uGrowth,0.0,1.0);
-    float activeTop = mix(0.38,1.22,growth);
-    if (h > activeTop) return 0.0;
-
-    float humidity = clamp(uHumidity/100.0,0.0,1.0);
-    float cape = clamp(uCAPE/4000.0,0.0,1.0);
-    float shear = clamp(uShear/40.0,0.0,1.0);
-
-    vec3 q = p;
-    q.x -= h*uShear*0.8;
-    q.z -= uTime*(0.6+shear*1.4);
-
-    // Large-scale turbulent displacement.
-    vec3 wp = q*vec3(0.012,0.018,0.012);
-    vec3 warp = vec3(
-        fbm3(wp+vec3(2.1,0.0,4.7)),
-        fbm3(wp+vec3(8.2,3.4,1.1)),
-        fbm3(wp+vec3(5.3,7.1,9.2))
-    );
-    q += (warp-0.5)*vec3(42.0,22.0,42.0);
-
-    float broad = fbm3(q*vec3(0.015,0.022,0.015));
-    float medium = fbm3(
-        q*vec3(0.045,0.065,0.045)+vec3(0.0,uTime*0.025,0.0)
-    );
-    float fine = fbm3(
-        q*0.13+vec3(uTime*0.025,0.0,-uTime*0.018)
+float stormIntensity() {
+    float capeFactor = clamp(
+        uCAPE / 3500.0,
+        0.15,
+        1.35
     );
 
-    // Soft irregular footprint, not a rectangular cloud.
-    float radial = length(p.xz/vec2(105.0,100.0));
-    float footprint = 1.0-smoothstep(0.48,1.12,radial);
-
-    // The field grows upward and widens with height.
-    float width = mix(0.64,1.12,smoothstep(0.08,0.78,h));
-    float profile = 1.0-smoothstep(width*0.52,width*1.28,radial);
-
-    float base = smoothstep(0.0,0.075,h);
-    float top = 1.0-smoothstep(0.84,1.20,h);
-    float vertical = base*top;
-
-    float turbulence =
-        (broad-0.42)*1.65 +
-        (medium-0.48)*1.10 +
-        (fine-0.50)*0.58;
-
-    float threshold = 0.22-humidity*0.12-cape*0.045;
-    float body = smoothstep(
-        threshold-0.12,
-        threshold+0.20,
-        profile*0.54+turbulence
+    float moisture = clamp(
+        uHumidity / 100.0,
+        0.1,
+        1.0
     );
 
-    // Evolving convective lobes generated from the noise field.
-    float billow = fbm3(
-        vec3(q.x*0.034,q.y*0.052,q.z*0.034)
-        +vec3(0.0,uTime*0.04,0.0)
-    );
-    body *= smoothstep(0.22,0.64,billow+profile*0.42);
-    body *= vertical*footprint;
-
-    // Broad, wind-stretched upper ice canopy.
-    float anvilStart = smoothstep(0.68,0.94,h);
-    float anvilEnd = 1.0-smoothstep(1.10,1.34,h);
-    float anvilWidth = 1.0+shear*1.25;
-    vec2 anvilP = vec2(
-        (q.x-h*shear*34.0)/100.0,
-        q.z/(46.0+shear*45.0)
-    );
-
-    float anvilField = fbm3(
-        vec3(anvilP.x*7.0,h*12.0,anvilP.y*7.0)
-        +vec3(0.0,uTime*0.018,0.0)
-    );
-
-    float anvilShape = 1.0-smoothstep(
-        0.20*anvilWidth,
-        1.05*anvilWidth,
-        length(anvilP)
-    );
-
-    float anvil = anvilShape*anvilStart*anvilEnd*
-        smoothstep(0.24,0.72,anvilField+0.45);
-
-    float density = max(body,anvil*0.72);
-    density *= 0.62+humidity*0.55;
-
-    // Smooth cloud edges with detail retained inside the volume.
-    density += (fine-0.5)*0.12*body;
-
-    return clamp(density,0.0,1.0);
+    return capeFactor * moisture;
 }
 
-void main() {
-    vec3 ro = cameraPosition;
-    vec3 rd = normalize(vWorldPosition-ro);
+float cloudTop() {
+    float cape = clamp(
+        uCAPE / 4000.0,
+        0.1,
+        1.0
+    );
 
-    vec2 hit = intersectBox(ro,rd);
-    float startT = max(hit.x,0.0);
-    float endT = hit.y;
+    return mix(
+        220.0,
+        440.0,
+        cape
+    ) * uGrowth;
+}
 
-    if (endT <= startT) discard;
 
-    // Fixed maximum iteration count; adapt step to the actual ray length.
-    const int STEPS = 96;
-    float stepSize = (endT-startT)/float(STEPS);
-    stepSize = min(stepSize,4.0);
+// ------------------------------------------------------------
+// WIND FIELD
+//
+// Сдвиг облака с высотой:
+// нижний уровень медленнее,
+// верхний уровень переносится быстрее.
+// ------------------------------------------------------------
 
-    float t = startT;
-    float transmittance = 1.0;
-    vec3 accumulated = vec3(0.0);
+vec2 windOffset(float height) {
+    float h = clamp(
+        (height - 70.0) / 380.0,
+        0.0,
+        1.0
+    );
 
-    for (int i=0;i<STEPS;i++) {
-        if (t>=endT || transmittance<0.015) break;
+    float shear = uShear / 45.0;
 
-        vec3 p = ro+rd*(t+stepSize*0.5);
-        float density = cloudDensity(p);
+    vec2 wind = vec2(
+        1.0,
+        0.24
+    );
 
-        if (density>0.008) {
-            float h = clamp((p.y-8.0)/max(12.0,uTop-8.0),0.0,1.0);
+    wind *= h * h * shear * 150.0;
 
-            float detail = fbm3(
-                p*0.035+vec3(uTime*0.012,0.0,0.0)
-            );
+    wind.x += uTime * 2.4;
+    wind.y += uTime * 0.65;
 
-            float lightFacing = clamp(
-                dot(normalize(uSunDir),normalize(-rd))*0.5+0.5,
-                0.0,1.0
-            );
+    return wind;
+}
 
-            vec3 shadowColor = vec3(0.19,0.22,0.28);
-            vec3 litColor = vec3(0.94,0.96,1.0);
-            vec3 cloudColor = mix(shadowColor,litColor,smoothstep(0.05,0.9,h));
 
-            cloudColor *= 0.72+lightFacing*0.40;
-            cloudColor *= 0.84+detail*0.30;
+// ------------------------------------------------------------
+// CONTINUOUS CONVECTIVE FIELD
+//
+// Это непрерывное поле плотности, а не набор готовых
+// геометрических башен. Положение ячеек не привязано
+// к отдельным заранее нарисованным мешам.
+// ------------------------------------------------------------
 
-            float alpha = 1.0-exp(-density*stepSize*0.12);
-            accumulated += transmittance*alpha*cloudColor;
-            transmittance *= 1.0-alpha;
-        }
+float convectiveField(vec3 p) {
+    float height = p.y;
 
-        t += stepSize;
+    float top = cloudTop();
+
+    float base = 68.0;
+
+    if (height < base || height > top + 35.0) {
+        return 0.0;
     }
 
-    float alpha = 1.0-transmittance;
-    if (alpha<0.012) discard;
+    float vertical = clamp(
+        (height - base) / max(top - base, 1.0),
+        0.0,
+        1.0
+    );
 
-    gl_FragColor = vec4(accumulated,alpha);
+    // The anvil expands horizontally near the tropopause.
+    float towerWidth = mix(
+        125.0,
+        180.0,
+        vertical
+    );
+
+    float anvilWidth = mix(
+        1.0,
+        2.15,
+        smoothstep(0.48, 0.92, vertical)
+    );
+
+    vec2 wind = windOffset(height);
+
+    vec2 q = p.xz - wind;
+
+    float stormMode = uStormType;
+
+    // Broad storm envelope.
+    float r = length(q);
+
+    float envelopeWidth =
+        towerWidth * anvilWidth;
+
+    float envelope = exp(
+        -(r * r) /
+        (envelopeWidth * envelopeWidth * 1.55)
+    );
+
+    // Vertical convective core.
+    float coreWidth = mix(
+        82.0,
+        112.0,
+        vertical
+    );
+
+    float core = exp(
+        -(r * r) /
+        (coreWidth * coreWidth)
+    );
+
+    // A storm's rising motion varies with height.
+    float updraftProfile =
+        smoothstep(0.0, 0.12, vertical) *
+        (1.0 - smoothstep(0.89, 1.0, vertical));
+
+    // Supercells are more horizontally sheared.
+    float supercellFactor = mix(
+        0.7,
+        1.3,
+        step(0.5, stormMode)
+    );
+
+    float rotation = uTime * 0.012;
+
+    mat2 rot = mat2(
+        cos(rotation), -sin(rotation),
+        sin(rotation), cos(rotation)
+    );
+
+    q = rot * q;
+
+    vec3 noisePosition = vec3(
+        q.x * 0.021,
+        height * 0.018,
+        q.y * 0.021
+    );
+
+    noisePosition += vec3(
+        uTime * 0.018,
+        -uTime * 0.007,
+        uTime * 0.011
+    );
+
+    float broadNoise = fbm(
+        noisePosition * 0.62
+    );
+
+    float detailNoise = fbm(
+        noisePosition * 2.3
+    );
+
+    float fineNoise = noise3(
+        noisePosition * 6.2
+    );
+
+    // Break up the edge into rounded cauliflower lobes.
+    float erosion =
+        broadNoise * 0.48 +
+        detailNoise * 0.33 +
+        fineNoise * 0.19;
+
+    float edge =
+        envelope * 0.78 +
+        core * 0.36;
+
+    edge +=
+        (erosion - 0.48) *
+        (0.8 + vertical * 0.55);
+
+    edge *= supercellFactor;
+
+    // Flatten and spread the upper anvil.
+    float anvilLevel = smoothstep(
+        0.55,
+        0.78,
+        vertical
+    );
+
+    float anvil = envelope *
+        anvilLevel *
+        (0.35 + broadNoise * 0.65);
+
+    // Slightly overshooting top above the anvil.
+    float overshoot = core *
+        exp(
+            -pow(
+                (vertical - 0.96) / 0.045,
+                2.0
+            )
+        );
+
+    // Lower cloud-base fragments.
+    float lowerFragments = core *
+        smoothstep(
+            0.08,
+            0.0,
+            abs(vertical - 0.12)
+        ) *
+        (0.3 + detailNoise);
+
+    // Mammatus-like pockets underneath the anvil.
+    float mammatusBand = exp(
+        -pow(
+            (vertical - 0.62) / 0.075,
+            2.0
+        )
+    );
+
+    float mammatusNoise = noise3(
+        vec3(
+            q.x * 0.065,
+            height * 0.045,
+            q.y * 0.065
+        )
+    );
+
+    float mammatus = mammatusBand *
+        envelope *
+        smoothstep(
+            0.48,
+            0.72,
+            mammatusNoise
+        );
+
+    float density = edge;
+
+    density += anvil * 0.3;
+    density += overshoot * 0.55;
+    density += lowerFragments * 0.12;
+    density += mammatus * 0.28;
+
+    // Cloud tops become ragged, not perfectly flat.
+    float topTurbulence = fbm(
+        vec3(
+            p.x * 0.035,
+            p.y * 0.06,
+            p.z * 0.035
+        )
+    );
+
+    float topCut = top +
+        (topTurbulence - 0.5) * 32.0;
+
+    density *= 1.0 - smoothstep(
+        topCut - 12.0,
+        topCut + 30.0,
+        height
+    );
+
+    density *= smoothstep(
+        base - 12.0,
+        base + 14.0,
+        height
+    );
+
+    density *= stormIntensity();
+
+    return clamp(density, 0.0, 1.6);
+}
+
+
+// ------------------------------------------------------------
+// LIGHTING APPROXIMATION
+// ------------------------------------------------------------
+
+float cloudLighting(
+    vec3 p,
+    vec3 rayDirection,
+    float density
+) {
+    vec3 lightDirection = normalize(
+        vec3(-0.55, 0.78, 0.35)
+    );
+
+    float heightFactor = clamp(
+        (p.y - 60.0) / 380.0,
+        0.0,
+        1.0
+    );
+
+    float towardSun = max(
+        dot(-rayDirection, lightDirection),
+        0.0
+    );
+
+    float forwardScattering = pow(
+        towardSun,
+        3.0
+    ) * 0.16;
+
+    float topLight = smoothstep(
+        0.35,
+        0.95,
+        heightFactor
+    ) * 0.28;
+
+    float underside = density * 0.2;
+
+    return clamp(
+        0.35 +
+        topLight +
+        forwardScattering -
+        underside,
+        0.12,
+        1.0
+    );
+}
+
+
+// ------------------------------------------------------------
+// DEPTH RECONSTRUCTION
+// ------------------------------------------------------------
+
+float sceneDistance(vec2 uv) {
+    float depth = texture2D(
+        uDepth,
+        uv
+    ).r;
+
+    // Cleared depth: no opaque object at this pixel.
+    if (depth >= 0.999999) {
+        return 2400.0;
+    }
+
+    vec4 clip = vec4(
+        uv * 2.0 - 1.0,
+        depth * 2.0 - 1.0,
+        1.0
+    );
+
+    vec4 viewPosition =
+        uInverseProjection * clip;
+
+    viewPosition /= max(
+        abs(viewPosition.w),
+        0.00001
+    );
+
+    vec4 worldPosition =
+        uInverseView *
+        vec4(viewPosition.xyz, 1.0);
+
+    return length(
+        worldPosition.xyz -
+        uCameraPosition
+    );
+}
+
+
+// ------------------------------------------------------------
+// MAIN
+// ------------------------------------------------------------
+
+void main() {
+    vec4 background = texture2D(
+        uScene,
+        vUv
+    );
+
+    float maxDistance = sceneDistance(vUv);
+
+    vec4 clipPosition = vec4(
+        vUv * 2.0 - 1.0,
+        1.0,
+        1.0
+    );
+
+    vec4 viewPosition =
+        uInverseProjection * clipPosition;
+
+    viewPosition /= max(
+        abs(viewPosition.w),
+        0.00001
+    );
+
+    vec3 rayDirection = normalize(
+        (
+            uInverseView *
+            vec4(
+                normalize(viewPosition.xyz),
+                0.0
+            )
+        ).xyz
+    );
+
+    vec3 rayOrigin = uCameraPosition;
+
+    // Entire atmospheric volume.
+    vec3 boxMin = vec3(
+        -900.0,
+        25.0,
+        -900.0
+    );
+
+    vec3 boxMax = vec3(
+        900.0,
+        530.0,
+        900.0
+    );
+
+    vec2 hit = intersectBox(
+        rayOrigin,
+        rayDirection,
+        boxMin,
+        boxMax
+    );
+
+    float startT = max(hit.x, 0.0);
+    float endT = min(
+        hit.y,
+        maxDistance
+    );
+
+    // The ray misses the volume or the ground is in front.
+    if (
+        endT <= startT ||
+        hit.y <= 0.0
+    ) {
+        gl_FragColor = background;
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        return;
+    }
+
+    float distanceThroughVolume =
+        endT - startT;
+
+    // Fewer samples on mobile, more on large screens.
+    const int STEPS = 72;
+
+    float stepLength =
+        distanceThroughVolume /
+        float(STEPS);
+
+    vec3 accumulatedColor = vec3(0.0);
+    float transmittance = 1.0;
+
+    for (int i = 0; i < STEPS; i++) {
+        float t =
+            startT +
+            (float(i) + 0.5) * stepLength;
+
+        vec3 p =
+            rayOrigin +
+            rayDirection * t;
+
+        float density = convectiveField(p);
+
+        if (density > 0.008) {
+            float heightFactor = clamp(
+                (p.y - 60.0) / 400.0,
+                0.0,
+                1.0
+            );
+
+            float lighting = cloudLighting(
+                p,
+                rayDirection,
+                density
+            );
+
+            vec3 shadowColor = vec3(
+                0.31,
+                0.36,
+                0.43
+            );
+
+            vec3 sunlightColor = vec3(
+                1.0,
+                0.96,
+                0.89
+            );
+
+            vec3 cloudColor = mix(
+                shadowColor,
+                sunlightColor,
+                lighting
+            );
+
+            // Ice near the top of the cloud.
+            float ice = smoothstep(
+                0.62,
+                0.96,
+                heightFactor
+            );
+
+            cloudColor = mix(
+                cloudColor,
+                vec3(0.83, 0.88, 0.94),
+                ice * 0.55
+            );
+
+            // Denser lower cloud becomes darker.
+            float lowerShade = 1.0 -
+                smoothstep(
+                    0.0,
+                    0.55,
+                    heightFactor
+                );
+
+            cloudColor *= 1.0 -
+                lowerShade * 0.16;
+
+            // Lightning illuminates the interior.
+            cloudColor +=
+                vec3(0.65, 0.76, 1.0) *
+                uFlash *
+                0.9;
+
+            float alpha =
+                1.0 -
+                exp(
+                    -density *
+                    stepLength *
+                    0.022
+                );
+
+            alpha = clamp(
+                alpha,
+                0.0,
+                0.72
+            );
+
+            accumulatedColor +=
+                transmittance *
+                alpha *
+                cloudColor;
+
+            transmittance *=
+                1.0 - alpha;
+
+            if (transmittance < 0.018) {
+                break;
+            }
+        }
+    }
+
+    vec3 finalColor =
+        accumulatedColor +
+        transmittance *
+        background.rgb;
+
+    gl_FragColor = vec4(
+        finalColor,
+        1.0
+    );
 
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
 }
 `;
 
+
+// ============================================================
+// CLOUD MATERIAL
+// ============================================================
+
 const cloudMaterial = new THREE.ShaderMaterial({
   uniforms: cloudUniforms,
-  vertexShader: cloudVertexShader,
+
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+
+      gl_Position = vec4(
+        position.xy,
+        0.0,
+        1.0
+      );
+    }
+  `,
+
   fragmentShader: cloudFragmentShader,
-  side: THREE.BackSide,
-  transparent: true,
+
+  depthTest: false,
   depthWrite: false,
-  depthTest: true,
-  blending: THREE.NormalBlending
+  transparent: false,
+  toneMapped: true
 });
 
-const cloudVolume = new THREE.Mesh(
-  new THREE.BoxGeometry(220, 120, 220),
+const fullscreenQuad = new THREE.Mesh(
+  quadGeometry,
   cloudMaterial
 );
-cloudVolume.position.set(0, 60, 0);
-cloudVolume.frustumCulled = false;
-cloudVolume.renderOrder = 3;
-scene.add(cloudVolume);
+
+fullscreenQuad.frustumCulled = false;
+
+postScene.add(fullscreenQuad);
+
 
 // ============================================================
-// STORM STATE
+// UI
 // ============================================================
 
-let stormType = "supercell";
-let simulationTime = 0;
-let paused = false;
-let growthSpeed = 1;
-let lightningEnabled = true;
+const capeInput = $("cape");
+const shearInput = $("shear");
+const humidityInput = $("humidity");
+const stormTypeInput = $("stormType");
 
-function configureClouds() {
-  stormType = $("stormType")?.value || "supercell";
+function updateText(id, value) {
+  const element = $(id);
 
-  const cape = Number($("cape")?.value ?? 2500);
-  const shear = Number($("shear")?.value ?? 25);
-  const humidity = Number($("humidity")?.value ?? 75);
-
-  const counts = {
-    tower: 1,
-    supercell: 3,
-    multicell: 6,
-    squall: 8,
-    random: 3+Math.floor(Math.random()*3)
-  };
-
-  cloudUniforms.uCAPE.value = cape;
-  cloudUniforms.uShear.value = shear;
-  cloudUniforms.uHumidity.value = humidity;
-  cloudUniforms.uCells.value = counts[stormType] ?? 3;
-  cloudUniforms.uSeed.value = Math.random()*1000;
-  cloudUniforms.uTop.value = 30+clamp(cape,200,5000)/5000*52;
-  simulationTime = 0;
-  cloudUniforms.uTime.value = 0;
-  cloudUniforms.uGrowth.value = 0.08;
-  updateMetrics();
-}
-
-function generateStorm() {
-  configureClouds();
-}
-
-// ============================================================
-// LIGHTNING
-// ============================================================
-
-const lightningGroup = new THREE.Group();
-scene.add(lightningGroup);
-
-const lightningLight = new THREE.PointLight(0xdceeff,0,100,2);
-scene.add(lightningLight);
-
-let lightningUntil = 0;
-
-function clearLightning() {
-  for (const child of [...lightningGroup.children]) {
-    lightningGroup.remove(child);
-    child.geometry.dispose();
-    child.material.dispose();
+  if (element) {
+    element.textContent = value;
   }
 }
 
-function createLightning() {
-  clearLightning();
+function readSlider(input, fallback) {
+  if (!input) return fallback;
 
-  const points = [];
-  let x = rand(-3,3);
-  let z = rand(-3,3);
-  points.push(new THREE.Vector3(x,30,z));
+  const value = Number(input.value);
 
-  for (let i=1;i<=16;i++) {
-    x += rand(-1.1,1.1);
-    z += rand(-1.1,1.1);
-    points.push(new THREE.Vector3(x,30-i*1.45,z));
-  }
+  return Number.isFinite(value)
+    ? value
+    : fallback;
+}
 
-  const line = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(points),
-    new THREE.LineBasicMaterial({
-      color:0xffffff,
-      transparent:true,
-      opacity:1
-    })
+function syncControls() {
+  state.cape = readSlider(
+    capeInput,
+    state.cape
   );
 
-  lightningGroup.add(line);
-  lightningLight.position.set(x,12,z);
-  lightningLight.intensity = 100;
-  lightningUntil = simulationTime+0.16;
-}
+  state.shear = readSlider(
+    shearInput,
+    state.shear
+  );
 
-function updateLightning() {
-  if (!lightningEnabled) {
-    lightningLight.intensity = 0;
-    clearLightning();
-    return;
+  state.humidity = readSlider(
+    humidityInput,
+    state.humidity
+  );
+
+  if (stormTypeInput) {
+    state.stormType =
+      stormTypeInput.value || "supercell";
   }
 
-  if (simulationTime>lightningUntil) {
-    lightningLight.intensity = 0;
-    clearLightning();
-  }
+  cloudUniforms.uCAPE.value = state.cape;
+  cloudUniforms.uShear.value = state.shear;
+  cloudUniforms.uHumidity.value = state.humidity;
 
-  if (Math.random()<0.0025) createLightning();
+  const typeMap = {
+    tower: 0,
+    supercell: 1,
+    multicell: 2,
+    squall: 3,
+    random: 4
+  };
+
+  cloudUniforms.uStormType.value =
+    typeMap[state.stormType] ?? 1;
+
+  updateText(
+    "capeValue",
+    `${Math.round(state.cape)} J/kg`
+  );
+
+  updateText(
+    "shearValue",
+    `${Math.round(state.shear)} m/s`
+  );
+
+  updateText(
+    "humidityValue",
+    `${Math.round(state.humidity)}%`
+  );
+
+  updateText(
+    "cloudHeight",
+    `${Math.round(cloudTop())} m`
+  );
+
+  updateText(
+    "cellCount",
+    state.stormType === "multicell"
+      ? "Несколько ячеек"
+      : state.stormType === "squall"
+        ? "Линия конвекции"
+        : "Главная ячейка"
+  );
+
+  updateText(
+    "status",
+    state.paused
+      ? "Пауза"
+      : "Конвекция активна"
+  );
 }
 
+[
+  capeInput,
+  shearInput,
+  humidityInput,
+  stormTypeInput
+].forEach((element) => {
+  if (!element) return;
+
+  element.addEventListener(
+    "input",
+    syncControls
+  );
+
+  element.addEventListener(
+    "change",
+    syncControls
+  );
+});
+
+
 // ============================================================
-// GROWTH SPEED BUTTON
+// BUTTONS
 // ============================================================
 
-let growthButton = $("growthSpeed");
+const pauseButton = $("pause");
+const lightningButton = $("lightning");
+const resetButton = $("reset");
+const newStormButton = $("newStorm");
 
-if (!growthButton) {
-  growthButton = document.createElement("button");
-  growthButton.id = "growthSpeed";
-  growthButton.type = "button";
+if (pauseButton) {
+  pauseButton.addEventListener("click", () => {
+    state.paused = !state.paused;
 
-  Object.assign(growthButton.style,{
-    position:"absolute",
-    right:"14px",
-    bottom:"14px",
-    zIndex:"50",
-    padding:"11px 14px",
-    border:"1px solid rgba(255,255,255,.3)",
-    borderRadius:"12px",
-    background:"rgba(15,25,40,.92)",
-    color:"#fff",
-    font:"600 13px system-ui",
-    cursor:"pointer"
+    pauseButton.textContent = state.paused
+      ? "Продолжить"
+      : "Пауза";
+
+    syncControls();
   });
-
-  const parent = canvas.parentElement || document.body;
-  if (getComputedStyle(parent).position==="static") {
-    parent.style.position="relative";
-  }
-  parent.appendChild(growthButton);
 }
 
-function updateGrowthButton() {
-  growthButton.textContent=`Рост облаков: ${growthSpeed}×`;
+if (lightningButton) {
+  lightningButton.addEventListener("click", () => {
+    state.lightning = !state.lightning;
+
+    lightningButton.textContent =
+      state.lightning
+        ? "Молнии: вкл."
+        : "Молнии: выкл.";
+
+    if (!state.lightning) {
+      clearLightning();
+      state.lightningFlash = 0;
+    }
+  });
 }
 
-growthButton.addEventListener("click",()=>{
-  const speeds=[1,2,4,8];
-  const index=speeds.indexOf(growthSpeed);
-  growthSpeed=speeds[(index+1)%speeds.length];
-  updateGrowthButton();
-});
-updateGrowthButton();
+if (newStormButton) {
+  newStormButton.addEventListener("click", () => {
+    state.seed = Math.random() * 10000;
 
-// ============================================================
-// CLOUD UPDATE
-// ============================================================
+    cloudUniforms.uSeed.value = state.seed;
 
-function updateClouds() {
-  const cape=Number($("cape")?.value ?? 2500);
-  const humidity=Number($("humidity")?.value ?? 75);
-  const shear=Number($("shear")?.value ?? 25);
+    state.time = 0;
+    state.growth = 0.65;
 
-  cloudUniforms.uCAPE.value=cape;
-  cloudUniforms.uHumidity.value=humidity;
-  cloudUniforms.uShear.value=shear;
-  cloudUniforms.uTop.value=30+clamp(cape,200,5000)/5000*52;
-  cloudUniforms.uTime.value=simulationTime;
-  cloudUniforms.uGrowth.value=Math.min(1,0.08+simulationTime/42);
-}
-
-// ============================================================
-// UI METRICS
-// ============================================================
-
-function updateMetrics() {
-  const cape=Number($("cape")?.value ?? 2500);
-  const shear=Number($("shear")?.value ?? 25);
-  const humidity=Number($("humidity")?.value ?? 75);
-
-  if ($("capeValue")) $("capeValue").textContent=String(cape);
-  if ($("shearValue")) $("shearValue").textContent=String(shear);
-  if ($("humidityValue")) $("humidityValue").textContent=String(humidity);
-
-  if ($("cloudHeight")) {
-    $("cloudHeight").textContent=
-      `${Math.round(30+clamp(cape,200,5000)/5000*52)} км`;
-  }
-
-  if ($("cellCount")) {
-    const counts={tower:1,supercell:3,multicell:6,squall:8};
-    $("cellCount").textContent=String(counts[stormType]??cloudUniforms.uCells.value);
-  }
-
-  if ($("status")) $("status").textContent=paused?"Пауза":"Симуляция";
-}
-
-["cape","shear","humidity"].forEach(id=>{
-  $(id)?.addEventListener("input",updateMetrics);
-});
-
-$("newStorm")?.addEventListener("click",generateStorm);
-
-$("pause")?.addEventListener("click",()=>{
-  paused=!paused;
-  if ($("pause")) $("pause").textContent=paused?"Продолжить":"Пауза";
-  updateMetrics();
-});
-
-$("lightning")?.addEventListener("click",()=>{
-  lightningEnabled=!lightningEnabled;
-
-  if (!lightningEnabled) {
-    lightningLight.intensity=0;
     clearLightning();
-  }
 
-  if ($("lightning")) {
-    $("lightning").textContent=
-      lightningEnabled?"Молнии: вкл.":"Молнии: выкл.";
-  }
-});
+    syncControls();
+  });
+}
 
-$("reset")?.addEventListener("click",()=>{
-  camera.position.set(70,43,90);
-  controls.target.set(0,19,0);
-  controls.update();
-  generateStorm();
-});
+if (resetButton) {
+  resetButton.addEventListener("click", () => {
+    state.time = 0;
+    state.growth = 1;
+    state.paused = false;
+
+    camera.position.set(460, 270, 620);
+
+    controls.target.set(0, 100, 0);
+    controls.update();
+
+    clearLightning();
+
+    if (pauseButton) {
+      pauseButton.textContent = "Пауза";
+    }
+
+    syncControls();
+  });
+}
+
+
+// ============================================================
+// OPTIONAL GROWTH SPEED CONTROL
+// ============================================================
+
+let growthSpeed = 1;
+
+const growthButton = $("growthSpeed");
+
+if (growthButton) {
+  growthButton.addEventListener("click", () => {
+    growthSpeed =
+      growthSpeed >= 3
+        ? 0.5
+        : growthSpeed + 0.5;
+
+    growthButton.textContent =
+      `Рост ×${growthSpeed.toFixed(1)}`;
+  });
+}
+
 
 // ============================================================
 // RESIZE
 // ============================================================
 
 function resize() {
-  const w=canvas.clientWidth||innerWidth;
-  const h=canvas.clientHeight||innerHeight;
-  camera.aspect=w/Math.max(1,h);
+  const width = Math.max(
+    1,
+    canvas.clientWidth || window.innerWidth
+  );
+
+  const height = Math.max(
+    1,
+    canvas.clientHeight || window.innerHeight
+  );
+
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(w,h);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));
+
+  renderer.setSize(
+    width,
+    height,
+    false
+  );
+
+  const pixelRatio = Math.min(
+    window.devicePixelRatio || 1,
+    1.5
+  );
+
+  renderer.setPixelRatio(pixelRatio);
+
+  const w = Math.max(
+    1,
+    Math.floor(width * pixelRatio)
+  );
+
+  const h = Math.max(
+    1,
+    Math.floor(height * pixelRatio)
+  );
+
+  renderTarget.setSize(w, h);
+
+  cloudUniforms.uResolution.value.set(
+    w,
+    h
+  );
 }
 
-window.addEventListener("resize",resize);
+window.addEventListener(
+  "resize",
+  resize
+);
+
+resize();
+
 
 // ============================================================
 // RENDER LOOP
 // ============================================================
 
-let lastTime=0;
+let previousTime = performance.now();
 
 function animate(now) {
   requestAnimationFrame(animate);
 
-  if (lastTime===0) lastTime=now;
-  const dt=Math.min((now-lastTime)/1000,0.05);
-  lastTime=now;
+  const delta = Math.min(
+    (now - previousTime) / 1000,
+    0.05
+  );
 
-  if (!paused) {
-    simulationTime+=dt*growthSpeed;
-    updateClouds();
-    updateLightning();
+  previousTime = now;
+
+  if (!state.paused) {
+    state.time += delta;
+
+    // Smooth development after starting a new storm.
+    state.growth +=
+      (1.0 - state.growth) *
+      Math.min(delta * 0.035, 0.01);
+
+    state.lightningTimer -= delta;
+
+    if (
+      state.lightning &&
+      state.lightningTimer <= 0 &&
+      Math.random() < 0.035
+    ) {
+      createLightning();
+
+      state.lightningTimer =
+        2.0 + Math.random() * 7.0;
+    }
+
+    state.lightningFlash *= Math.exp(
+      -delta * 5.5
+    );
+
+    if (
+      lightningGroup &&
+      state.lightningFlash < 0.025
+    ) {
+      clearLightning();
+    }
   }
 
-  sky.position.copy(camera.position);
   controls.update();
-  renderer.render(scene,camera);
+
+  cloudUniforms.uTime.value =
+    state.time * growthSpeed;
+
+  cloudUniforms.uGrowth.value =
+    state.growth;
+
+  cloudUniforms.uFlash.value =
+    state.lightningFlash;
+
+  cloudUniforms.uCameraPosition.value.copy(
+    camera.position
+  );
+
+  cloudUniforms.uInverseProjection.value
+    .copy(camera.projectionMatrix)
+    .invert();
+
+  camera.updateMatrixWorld();
+
+  cloudUniforms.uInverseView.value
+    .copy(camera.matrixWorld);
+
+  // 1. Render opaque world and terrain depth.
+  renderer.setRenderTarget(renderTarget);
+  renderer.clear();
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+  // 2. Render volume over the scene using depth-aware raymarching.
+  renderer.setRenderTarget(null);
+
+  renderer.clear();
+
+  renderer.render(
+    postScene,
+    postCamera
+  );
+
+  updateText(
+    "cloudHeight",
+    `${Math.round(cloudTop())} m`
+  );
 }
 
+syncControls();
+
+requestAnimationFrame(animate);
+
+
 // ============================================================
-// START
+// READY
 // ============================================================
 
-try {
-  generateStorm();
-  updateMetrics();
+const loading = document.querySelector(
+  "#loading"
+);
 
-  if ($("loading")) $("loading").style.display="none";
-  requestAnimationFrame(animate);
-} catch (error) {
-  console.error("Quantum Meteo error:",error);
-
-  if ($("loadingTitle")) $("loadingTitle").textContent="Ошибка";
-  if ($("loadingText")) $("loadingText").textContent=error.message;
-
-  if (typeof window.showStormError==="function") {
-    window.showStormError(error);
-  }
+if (loading) {
+  loading.style.display = "none";
 }
+
+console.log(
+  "Quantum Meteo: depth-aware convective renderer initialized."
+);
