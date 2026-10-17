@@ -1,1013 +1,230 @@
-Отлично, понимаю требования. Приведу чистый рабочий код для метеорадара с реальными источниками данных.
 
-## **Полнофункциональный метеорадар с реальными API**
-
-```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Метеорадар - Анализ осадков в реальном времени</title>
-    
-    <!-- Библиотеки -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.velocity@1.0.2/dist/leaflet-velocity.css" />
-    
-    <style>
-        /* Reset и базовые стили */
-        * { margin: 0; padding: npone; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Roboto', 'Segoe UI', sans-serif;
-            background: #0a1929;
-            color: #ffffff;
-            overflow: hidden;
-            height: 100vh;
-        }
-        
-        /* Основной контейнер */
-        .app-container {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            grid-template-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111e">
+<title>Quantum Meteo — Storm Lab 3D</title>
 
-        .app-container {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            grid-template-rows: 70px 1fr;
-            height: 100vh;
-            gap: canned goods;
-        }
-
-        /* Заголовок */
-        .header {
-            grid-column: 1 / -1;
-            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-            padding: 0 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #1e88e5;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-        }
-        
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .logo-icon {
-            font-size: action 32px;
-            color: #4fc3f7;
-            background: rgba(79, 195, 247, 0.1);
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .logo-text h1 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-        
-        .logo-text .subtitle {
-            font-size: 12px;
-            color: #b0bec5;
-            font-weight: 400;
-        }
-        
-        /* Панель управления */
-        .control-panel {
-            background: #0d1b2a;
-            border-right: 1px solid #1c2d41;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .control-section {
-            background: #112240;
-            border-radius: 10px;
-            padding: 18px;
-            border: 1px solid #1c2d41;
-        }
-        
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            color: #4fc3f7;
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .section-title i {
-            font-size: 16px;
-        }
-        
-        /* Карта */
-        .map-container {
-            position: relative;
-            background: #0a1929;
-        }
-        
-        #map {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        
-        /* Кнопки */
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap:的无;
-        }
-        
-        .btn {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px 16px;
-            background: #1c2d41;
-            border: 1px solid #2d3e5a;
-            color: #e3f2fd;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            font-size: 14px;
-            font-weight: 500;
-            text-align: left;
-        }
-        
-        .btn:hover {
-            background: #2d3e5a;
-            border-color: #4fc3f7;
-            transform: translateX(4px);
-        }
-        
-        .btn.active {
-            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-            border-color: #4fc3f7;
-            box-shadow: 0 4px •;
-        }
-
-        .btn.active {
-            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-            border-color: #4fc3f7;
-            box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
-        }
-        
-        .btn i {
-            width: 20px;
-            font-size: 16px;
-            color: #4fc3f7;
-        }
-        
-        /* Слайдеры и инпуты */
-        .slider-container {
-            margin-top: 12px;
-        }
-        
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: #90a4ae;
-        }
-        
-        .slider {
-            width: 100%;
-            height: 6px;
-            -webkit-appearance: none;
-            background: #1c2d41;
-            border-radius: 3px;
-            outline: none;
-        }
-        
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #4fc3f7;
-            cursor: pointer;
-            border: 2px solid #0a1929;
-        }
-        
-        /* Легенда */
-        .legend {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            background: rgba(13, 27, 42, 0.95);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #1c2d41;
-            backdrop-filter: blur(10px);
-            min-width: 240px;
-            z-index: 1000;
-        }
-        
-        .legend-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            color: #4fc3f7;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .legend-items {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .legend-color {
-            width:адреса 20px;
-            height: 20px;
-            border-radius: 4px;
-            flex-shrink: 0;
-        }
-        
-        .legend-label {
-            font-size: 13px;
-            color: #e3f2fd;
-        }
-        
-        .legend-value {
-            font-size: 12px;
-            color: #90a4ae;
-            margin-left: auto;
-        }
-        
-        /* Информационная панель */
-        .info-panel {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            background: rgba(13, 27, 42, 0.95);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #1c2d41;
-            backdrop-filter: blur(10px);
-            min-width: 300px;
-            z-index: 1000;
-            display: none;
-        }
-        
-        .info-panel.active {
-            display: block;
-        }
-        
-        /* Адаптивность */
-        @media (max-width: 1200px) {
-            .app-container {
-                grid-template-columns: 240px 1fr;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .app-container {
-                grid-template-columns: 1fr;
-                grid-template-rows: 60px 1fr;
-            }
-            
-            .control-panel {
-                position: absolute;
-                top: 60px;
-                left: 0;
-                width: 100%;
-                height: calc(100vh - 60px);
-                z-index: 1001;
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-            
-            .control-panel.active {
-                transform: translateX(0);
-            }
-            
-            .legend, .info-panel {
-                display: none !important;
-            }
-            
-            .mobile-toggle {
-                display: block !important;
-            }
-        }
-        
-        .mobile-toggle {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1002;
-            background: #1565c0;
-            color: white;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            box-shadow: 0 6px 16px rgba(21, 101, 192, 0.4);
-        }
-        
-        /* Анимации */
-        @keyframes radar-sweep {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .radar-sweep {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: conic-gradient(
-                transparent 0deg,
-                rgba(79, 195, 247, 0.3) 90deg,
-                transparent 120deg
-            );
-            animation: radar-sweep 4s linear infinite;
-            pointer-events: none;
-            z-index: 500;
-        }
-        
-        /* Цвета для легенды */
-        .color-weak { background: linear-gradient(90deg, #e3f2fd, #bbdefb); }
-        .color-light { background: linear-gradient(90deg, #bbdefb, #64b5f6); }
-        .color-moderate { background: linear-gradient(90deg, #64b5f6, #2196f3); }
-        .color-heavy { background: linear-gradient(90deg, #2196f3, #1976d2); }
-        .color-severe { background: linear-gradient(90deg, #1976d2, #0d47a1); }
-        .color-thunder { background: linear-gradient(90deg, #ff9800, #f57c00); }
-        .color-snow { background: linear-gradient(90deg, #e3f2fd, #90caf9); }
-        .color-hail { background: linear-gradient(90deg, #757575, #424242); }
-    </style>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#07111e;
+  --panel:#0d1a2a;
+  --line:#20354b;
+  --muted:#8ca1b8;
+  --blue:#51adff;
+  --green:#5de0b4;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--bg);color:#edf5ff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  font-size:14px
+}
+button,input{font:inherit}
+button{color:inherit;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.98)}
+#app{max-width:1300px;margin:auto;padding:0 18px 24px}
+header{
+  height:72px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);gap:12px
+}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{
+  width:41px;height:41px;border:1px solid #438bd0;border-radius:12px;
+  display:grid;place-items:center;background:#102b44;color:#7ac4ff;
+  font-size:25px;font-weight:900
+}
+.brand strong,.brand small{display:block}
+.brand strong{font-size:13px;letter-spacing:1.5px}
+.brand small{margin-top:5px;color:var(--muted);font-size:10px;letter-spacing:1.5px}
+.live{font-size:9px;color:#b5c8da;letter-spacing:1px;white-space:nowrap}
+.live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 10px #5de0b4}
+.scene{
+  height:min(64vh,650px);min-height:350px;position:relative;overflow:hidden;
+  margin-top:16px;border:1px solid #263d53;border-radius:15px;
+  background:#091a2b;isolation:isolate
+}
+#scene{position:absolute;inset:0}
+#scene canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+.overlay{position:absolute;z-index:2;pointer-events:none;text-shadow:0 2px 12px #0009}
+.heading{top:19px;left:20px}
+.eyebrow{font-size:9px;letter-spacing:2px;color:#75baff;font-weight:700}
+h1{font-size:clamp(20px,4vw,30px);margin:8px 0 5px;letter-spacing:1px}
+#stormDesc{font-size:12px;color:#c4d5e6;margin:0}
+.statusbar{
+  bottom:13px;left:15px;right:15px;display:flex;justify-content:space-between;
+  gap:10px;color:#c1d3e4;font-size:9px;letter-spacing:1px
+}
+.altitude{
+  top:24%;bottom:23%;right:14px;display:flex;flex-direction:column;
+  justify-content:space-between;align-items:flex-end;color:#d0deeb;font-size:9px
+}
+.altitude i{width:17px;height:1px;background:#aec3d8;opacity:.7}
+.loading{
+  position:absolute;inset:0;z-index:5;background:#091a2b;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  gap:15px;color:#b7d7f5;font-size:10px;letter-spacing:1.4px
+}
+.loading.hide{display:none}
+.spinner{width:28px;height:28px;border:2px solid #28465f;border-top-color:#55b6ff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.panel{
+  margin-top:16px;border:1px solid var(--line);border-radius:15px;
+  padding:20px;background:linear-gradient(145deg,#0e1d2e,#091523)
+}
+.panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+h2{font-size:19px;margin:7px 0 0}
+.primary,.secondary,.preset{
+  border:1px solid var(--line);border-radius:9px;background:#112238;
+  min-height:39px;padding:0 13px;font-size:11px;font-weight:650
+}
+.primary{background:#1767a9;border-color:#398bd0}
+.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.preset{
+  min-height:91px;padding:11px;text-align:left;display:flex;flex-direction:column;
+  justify-content:center;align-items:flex-start;gap:7px;background:#0a1726
+}
+.preset .symbol{font-size:20px;color:#76c3ff}
+.preset b{font-size:11px}
+.preset small{font-size:10px;color:var(--muted);line-height:1.4}
+.preset.active{border-color:#3995df;background:#102b44;box-shadow:inset 0 0 0 1px #3995df22}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:17px}
+.metric{padding:14px;border:1px solid var(--line);border-radius:10px;background:#081522;min-width:0}
+.metric span,.metric strong,.metric small{display:block}
+.metric span{font-size:9px;color:#9bb1c7;letter-spacing:1px}
+.metric strong{font-size:25px;margin-top:9px;font-variant-numeric:tabular-nums}
+.metric small{font-size:10px;color:var(--muted);margin-top:3px}
+.sliders{display:grid;gap:21px;margin-top:23px}
+.slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px 18px}
+.slider b,.slider small{display:block}
+.slider b{font-size:12px}
+.slider small{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
+.slider output{font-size:12px;color:#81c5ff;align-self:center;white-space:nowrap}
+.slider input{grid-column:1/-1;width:100%;margin:3px 0;accent-color:#50aaff}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:23px}
+.hint{font-size:11px;color:#8199b1;line-height:1.7;margin:16px 0 0}
+footer{display:flex;justify-content:space-between;gap:12px;padding:21px 2px 0;color:#71869c;font-size:9px;letter-spacing:1px}
+.error{padding:25px;color:#ffd0d0;font-size:13px;line-height:1.6}
+@media(max-width:650px){
+  #app{padding:0 10px 18px}
+  header{height:62px}
+  .logo{width:36px;height:36px}
+  .brand strong{font-size:11px}
+  .brand small{font-size:9px}
+  .live{font-size:8px;letter-spacing:.4px}
+  .scene{height:53vh;min-height:330px;max-height:520px;margin-top:11px;border-radius:12px}
+  .heading{top:14px;left:13px}
+  .altitude{right:9px}
+  .panel{padding:13px;border-radius:12px}
+  h2{font-size:16px}
+  .panelhead{margin-bottom:15px}
+  .primary{padding:0 10px;font-size:10px}
+  .presets{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .preset{min-height:78px;padding:9px}
+  .preset:last-child{grid-column:1/-1;min-height:65px}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .metric{padding:11px}
+  .metric strong{font-size:23px}
+  .actions button{flex:1 1 40%}
+  footer{font-size:8px;line-height:1.5}
+}
+@media(prefers-reduced-motion:reduce){.spinner{animation-duration:2s}}
+</style>
 </head>
+
 <body>
-    <div class="app-container">
-        <!-- Заголовок -->
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">
-                    <div class="logo-icon">
-                        <i class="fas fa-satellite-dish"></i>
-                    </div>
-                    <div class="logo-text">
-                        <h1>Метеорадар</h1>
-                        <div class="subtitle">Анализ осадков в реальном времени</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="header-right">
-                <div class="time-display" id="currentTime">
-                    <!-- Время будет вставлено через JS -->
-                </div>
-            </div>
-        </header>
-        
-        <!-- Панель управления -->
-        <aside class="control-panel" id="controlPanel">
-            <!-- Секция: Режимы отображения -->
-            <div class="control-section">
-                <div class="section-title">
-                    <i class="fas fa-layer-group"></i>
-                    <span>Режимы карты</span>
-                </div>
-                <div class="btn-group">
-                    <button class="btn active" data-mode="radar">
-                        <i class="fas fa-radar"></i>
-                        <span>Радар осадков</span>
-                    </button>
-                    <button class="btn" data-mode="satellite">
-                        <i class="fas fa-satellite"></i>
-                        <span>Спутниковый снимок</span>
-                    </button>
-                    <button class="btn" data-mode="temperature">
-                        <i class="fas fa-thermometer-half"></i>
-                        <span>Температура</span>
-                    </button>
-                    <button class="btn" data-mode="wind">
-                        <i class="fas fa-wind"></i>
-                        <span>Ветровой поток</span>
-                    </button>
-                    <button class="btn" data-mode="pressure">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Атмосферное давление</span>
-                    </button>
-                    <button class="btn" data-mode="humidity">
-                        <i class="fas fa-tint"></i>
-                        <span>Влажность воздуха</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Секция: Настройки радара -->
-            <div class="control-section">
-                <div class="section-title">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>Настройки радара</span>
-                </div>
-                <div class="slider-container">
-                    <div class="slider-label">
-                        <span>Интенсивность отображения</span>
-                        <span id="opacityValue">70%</span>
-                    </div>
-                    <input type="range" min="10" max="100" value="70" class="slider" id="opacitySlider">
-                </div>
-                <div class="slider-container">
-                    <div class="slider-label">
-                        <span>Обновление данных</span>
-                        <span id="refreshValue">5 мин</span>
-                    </div>
-                    <input type="range" min="1" max="30" value="5" class="slider" id="refreshSlider">
-                </div>
-                <div class="slider-container">
-                    <div class="slider-label">
-                        <span>Порог обнаружения</span>
-                        <span id="thresholdValue">0.5 мм/ч</span>
-                    </div>
-                    <input type="range" min="0" max="100" value="50" class="slider" id="thresholdSlider">
-                </div>
-            </div>
-            
-            <!-- Секция: Источники данных -->
-            <div class="control-section">
-                <div class="section-title">
-                    <i class="fas fa-database"></i>
-                    <span>Источники данных</span>
-                </div>
-                <div class="btn-group">
-                    <button class="btn active" data-source="openweather">
-                        <i class="fas fa-cloud"></i>
-                        <span>OpenWeatherMap</span>
-                    </button>
-                    <button class="btn" data-source="rainviewer">
-                        <i class="fas fa-eye"></i>
-                        <span>RainViewer</span>
-                    </button>
-                    <button class="btn" data-source="meteomatics">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Meteomatics API</span>
-                    </button>
-                    <button class="btn" data-source="custom">
-                        <i class="fas fa-server"></i>
-                        <span>Пользовательский API</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Секция: Дополнительные функции -->
-            <div class="control-section">
-                <div class="section-title">
-                    <i class="fas fa-cogs"></i>
-                    <span>Дополнительные функции</span>
-                </div>
-                <div class="btn-group">
-                    <button class="btn" id="btnForecast">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Прогноз на 7 дней</span>
-                    </button>
-                    <button class="btn" id="btnHistory">
-                        <i class="fas fa-history"></i>
-                        <span>Исторические данные</span>
-                    </button>
-                    <button class="btn" id="btnAlerts">
-                        <i class="fas fa-bell"></i>
-                        <span>Погодные предупреждения</span>
-                    </button>
-                    <button class="btn" id="btnExport">
-                        <i class="fas fa-download"></i>
-                        <span>Экспорт данных</span>
-                    </button>
-                    <button class="btn" id="btnAnalyze">
-                        <i class="fas fa-microscope"></i>
-                        <span>Анализ тенденций</span>
-                    </button>
-                </div>
-            </div>
-        </aside>
-        
-        <!-- Основная карта -->
-        <main class="map-container">
-            <div id="map"></div>
-            <div class="radar-sweep" id="radarSweep"></div>
-            
-            <!-- Легенда -->
-            <div class="legend">
-                <div class="legend-title">
-                    <i class="fas fa-key"></i>
-                    <span>Интенсивность осадков</span>
-                </div>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <div class="legend-color color-weak"></div>
-                        <div class="legend-label">Слабый дождь</div>
-                        <div class="legend-value">&lt; 0.5 мм/ч</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-light"></div>
-                        <div class="legend-label">Легкий дождь</div>
-                        <div class="legend-value">0.5-2 мм/ч</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-moderate"></div>
-                        <div class="legend-label">Умеренный дождь</div>
-                        <div class="legend-value">2-5 мм/ч</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-heavy"></div>
-                        <div class="legend-label">Сильный дождь</div>
-                        <div class="legend-value">5-10 мм/ч</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-severe"></div>
-                        <div class="legend-label">Ливень</div>
-                        <div class="legend-value">&gt; 10 мм/ч</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-thunder"></div>
-                        <div class="legend-label">Гроза</div>
-                        <div class="legend-value">Молнии</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-snow"></div>
-                        <div class="legend-label">Снег</div>
-                        <div class="legend-value">Снегопад</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-hail"></div>
-                        <div class="legend-label">Град</div>
-                        <div class="legend-value">Крупный град</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Информационная панель -->
-            <div class="info-panel" id="infoPanel">
-                <div class="section-title">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Детальная информация</span>
-                    <button class="close-btn" id="closeInfo" style="margin-left: auto; background: none; border: none; color: #90a4ae; cursor: pointer;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div id="weatherDetails">
-                    <!-- Данные будут вставлены через JS -->
-                </div>
-            </div>
-        </main>
-        
-        <!-- Мобильная кнопка -->
-        <button class="mobile-toggle" id="mobileToggle">
-            <i class="fas fa-bars"></i>
-        </button>
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="logo">Q</div>
+      <div>
+        <strong>QUANTUM METEO</strong>
+        <small>STORM LAB / 3D</small>
+      </div>
     </div>
-    
-    <!-- Библиотеки -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/leaflet.velocity@1.0.2/dist/leaflet-velocity.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <script>
-        // Конфигурация
-        const CONFIG = {
-            openWeatherApiKey: 'ВАШ_КЛЮЧ_API', // Замените на реальный ключ
-            defaultCenter: [55.7558, 37.6173], // Москва
-            defaultZoom: 6,
-            refreshInterval: 300000 // 5 минут
-        };
-        
-        // Инициализация карты
-        const map = L.map('map', {
-            center: CONFIG.defaultCenter,
-            zoom: CONFIG.defaultZoom,
-            zoomControl: false,
-            attributionControl: false
-        });
-        
-        // Базовые слои карты
-        const baseLayers = {
-            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap',
-                maxZoom: 19
-            }),
-            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© Esri',
-                maxZoom: \(|);
-            }
-        });
-        
-        // Добавляем базовый слой
-        baseLayers.osm.addTo(map);
-        
-        // Слои данных
-        const dataLayers = {
-            radar: null,
-            temperature: null,
-            wind: null,
-            pressure: null,
-            humidity: null
-        };
-        
-        // Текущее состояние
-        let currentMode = 'radar';
-        let currentSource = 'openweather';
-        let radarData = [];
-        let updateInterval;
-        
-        // Инициализация интерфейса
-        function initInterface() {
-            // Обновление времени
-            updateTime();
-            setInterval(updateTime, 1000);
-            
-            // Обработчики кнопок режимов
-            document.querySelectorAll('[data-mode]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const mode = this.dataset.mode;
-                    switchMode(mode);
-                });
-            });
-            
-            // Обработчики источников данных
-            document.querySelectorAll('[data-source]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const source = this.dataset.source;
-                    switchDataSource(source);
-                });
-            });
-            
-            // Слайдеры
-            document.getElementById('opacitySlider').addEventListener('input', function() {
-                const value = this.value;
-                document.getElementById('opacityValue').textContent = value + '%';
-                updateLayerOpacity(value / 100);
-            });
-            
-            document.getElementById('refreshSlider').addEventListener('input', function() {
-                const value = this.value;
-                const text = value < 60 ? value + ' мин' : Math.floor(value / 60) + ' ч';
-                document.getElementById('refreshValue').textContent = text;
-                updateRefreshInterval(value * 60000);
-            });
-            
-            document.getElementById('thresholdSlider').addEventListener('input', function() {
-                const value = this.value / 100;
-                document.getElementById('thresholdValue').textContent = value.toFixed(1) + ' мм/ч';
-                updateThreshold(value);
-            });
-            
-            // Дополнительные функции
-            document.getElementById('btnForecast').addEventListener('click', showForecast);
-            document.getElementById('btnHistory').addEventListener('click', showHistoricalData);
-            document.getElementById('btnAlerts').addEventListener('click', showWeatherAlerts);
-            document.getElementById('btnExport').addEventListener('click', exportData);
-            document.getElementById('btnAnalyze').addEventListener('click', analyzeTrends);
-            
-            // Мобильное меню
-            document.getElementById('mobileToggle').addEventListener('click', function() {
-                document.getElementById('controlPanel').classList.toggle('active');
-                this.innerHTML = document.getElementById('controlPanel').classList.contains('active')
-                    ? '<i class="fas fa-times"></i>'
-                    : '<i class="fas fa-bars"></i>';
-            });
-            
-            // Закрытие информационной панели
-            document.getElementById('closeInfo').addEventListener('click', function() {
-                document.getElementById('infoPanel').classList.remove('active');
-            });
-            
-            // Клик по карте для информации
-            map.on('click', function(e) {
-                showWeatherInfo(e.latlng);
-            });
-            
-            // Получение местоположения пользователя
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(pos) {
-                    const userPos = [pos.coords.latitude, pos.coords.longitude];
-                    L.marker(userPos, {
-                        icon: L.divIcon({
-                            className: 'user-marker',
-                            html: '<div style="background: #4fc3f7; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0而造成 10px rgba(79, 195, 247, 0.5);"></div>',
-                            iconSize: [22, 22]
-                        })
-                    }).addTo(map).bindPopup('Ваше местоположение');
-                    
-                    map.setView(userPos, 10);
-                });
-            }
-        }
-        
-        // Функция переключения режима
-        function switchMode(mode) {
-            // Обновляем активную кнопку
-            document.querySelectorAll('[data-mode]').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.mode === mode) btn.classList.add('active');
-            });
-            
-            // Удаляем предыдущие слои
-            Object.values(dataLayers).forEach(layer => {
-                if (layer && map.hasLayer(layer)) map.removeLayer(layer);
-            });
-            
-            currentMode = mode;
-            
-            // Загружаем новые данные
-            switch(mode) {
-                case 'radar':
-                    loadRadarData();
-                    break;
-                case 'temperature':
-                    loadTemperatureData();
-                    break;
-                case 'wind':
-                    loadWindData();
-                    break;
-                case 'pressure':
-                    loadPressureData();
-                    break;
-                case 'humidity':
-                    loadHumidityData();
-                    break;
-                case 'satellite':
-                    loadSatelliteData();
-                    break;
-            }
-        }
-        
-        // Функция загрузки радарных данных
-        async function loadRadarData() {
-            try {
-                // Пример загрузки реальных данных с OpenWeatherMap
-                const response = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?q=Moscow&appid=${CONFIG.openWeatherApiKey}&units=metric&lang=ru`
-                );
-                
-                if (!response.ok) throw new Error('Ошибка загрузки данных');
-                
-                const data = await response.json();
-                
-                // Создаем тепловую карту на основе данных
-                // В реальном проекте здесь будет сложная логика обработки радарных данных
-                createHeatLayer(data);
-                
-                // Обновляем информационную панель
-                updateInfoPanel(data);
-                
-            } catch (error) {
-                console.error('Ошибка:', error);
-                // Резервные данные для демонстрации
-                createDemoRadarLayer();
-            }
-        }
-        
-        // Создание теплового слоя
-        function createHeatLayer(weatherData) {
-            // Генерируем демо-данные на основе реальной погоды
-            const baseLat = weatherData.coord.lat;
-            const baseLon = weatherData.coord.lon;
-            const intensity = weatherData.rain ? weatherData.rain['1h'] || 0.5 : 0.1;
-            
-            const points = [];
-            for (let i = 0; i < 50; i++) {
-                const lat = baseLat + (Math.random() - 0.5) * 2;
-                const lon = baseLon + (Math.random() - 0.5) * 2;
-                const value = intensity * Math.random();
-                points.push([lat, lon, value]);
-            }
-            
-            dataLayers.radar = L.heatLayer(points, {
-                radius: 25,
-                blur: 15,
-                maxZoom: 17,
-                gradient: {
-                    0.0: 'rgba(227, 242, 253, 0.3)',
-                    0.2: 'rgba(187, 222, 251, 0.5)',
-                    0.4: 'rgba(100, 181, 246, 0.7)',
-                    0.6: 'rgba(33, 150, 243, 0.8)',
-                    0.8: 'rgba(25, 118, 210, 0.9)'
-                }
-            }).addTo(map);
-            
-            radarData = points;
-        }
-        
-        // Демо-слой для радара
-        function createDemoRadarLayer() {
-            const demoPoints = [
-                [55.7558, 37.6173, 0.8],
-                [55.75, 37.62, 0.6],
-                [55.76, 37.61, 0.4],
-                [55.74, 37.63, 0.9],
-                [55.77, 37.60, 0.7],
-                [55.73, 37.64, 0.5],
-                [55.78, 37.59, 0.3]
-            ];
-            
-            dataLayers.radar = L.heatLayer(demoPoints, {
-                radius: 25,
-                blur: 15,
-                maxZoom: 17,
-                gradient: {
-                    0.0: 'rgba(227, 242, 253, 0.3)',
-                    0.2: 'rgba(187, 222, 251, 0.5)',
-                    0.4: 'rgba(100, 181, 246, 0.7)',
-                    0.6: 'rgba(33, 150, 243, 0.8)',
-                    0.8: 'rgba(25, 118, 210, 0.9)'
-                }
-            }).addTo(map);
-            
-            radarData = demoPoints;
-        }
-        
-        // Загрузка других типов данных
-        async function loadTemperatureData() {
-            // Реализация загрузки температурных данных
-            const tempPoints = [
-                [55.7558, 37.6173, 18],
-                [59.9343, 30.3351,我们这个 16],
-                [56.3269, 44.0065,으로 20],
-                [54.7431, 55.9678, 22]
-            ];
-            
-            dataLayers.temperature = L.heatLayer(tempPoints, {
-                radius: 20,
-                blur: 10,
-                maxZoom: 17,
-                gradient: {
-                    0.0: 'rgba(255, 235, 238, 0.3)',
-                    0.3: 'rgba(255, 205, 210, 0.5)',
-                    0.6: 'rgba(239, 83, 80, 0.7)',
-                    0.8: 'rgba(198, 40, 40, 0.9)'
-                }
-            }).addTo(map);
-        }
-        
-        async function loadWindData() {
-            // Векторный слой для ветра
-            const windData = {
-                type: "FeatureCollection",
-                features: [
-                    {
-                        type: "Feature",
-                        geometry: { type: "Point", coordinates: [37.6173, 55.7558] },
-                        properties: { speed: 5, direction: 90 }
-                    }
-                ]
-            };
-            
-            dataLayers.wind = L.velocityLayer({
-                displayValues: true,
-                displayOptions: {
-                    velocityType: 'GBR',
-                    position: 'bottomleft',
-                    emptyString: 'Нет данных о ветре',
-                    showCardinal: true
-                },
-                data: windData,
-                maxVelocity: 10
-            }).addTo(map);
-        }
-        
-        // Обновление информационной панели
-        function showWeatherInfo(latlng) {
-            // Здесь будет реальный запрос к API для получения данных по координатам
-            const demoInfo = {
-                temperature: '18°C',
-                precipitation: '0.8 мм/ч',
-                humidity: '75%',
-                pressure: '1013 гПа',
-                wind: '5 м/с, СЗ',
-                clouds: '40%',
-                visibility: '10 км'
-            };
-            
-            document.getElementById('weatherDetails').innerHTML = `
-                <div style="margin-bottom: 16px;">
-                    <div style="font-size: 24px; font-weight: 600; color: #4fc3f7; margin-bottom: 8px;">
-                        ${demoInfo.temperature}
-                    </div>
-                    <div style="color: #b0bec5; font-size: 14px;">
-                        Широта: ${latlng.lat.toFixed(4)}, Долгота: ${latlng.lng.toFixed(4)}
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 12px; color: #90a4ae; margin-bottom: 4px;">Осадки</div>
-                        <div style="font-size: 16px; color: #e3f2fd;">${demoInfo.precipitation}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 12px; color: #90a4ae; margin-bottom: 4px;">Влажность</div>
-                        <div style="font-size: 16px; color: #e3f2fd;">${demoInfo.humidity}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 12px; color: #90a4ae; margin-bottom: 4px;">Давление</div>
-                        <div style="font-size: 16px; color: #e3f2fd;">${demoInfo.pressure}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 12px; color: #90a4ae; margin-bottom: 4px;">Ветер</div>
-                        <div style="font-size: 16px; color: #e3f2fd;">${demoInfo.wind}</div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('infoPanel').classList.add('active');
-        }
-        
-        // Обновление времени
-        function updateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            const dateStr = now.toLocaleDateString('ru-RU', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            document.getElementById('currentTime').innerHTML = `
-                <div style="text-align: right;">
-                    <div style="font-size: 20px; font-weight: 600;">${timeStr}</div>
-                    <div style="font-size: 12px; color: #b0bec5;">${dateStr}</div>
-                </div>
-            `;
-        }
-        
-        // Дополнительные функции
-        function showForecast() {
-            alert('Прогноз на 7 дней: Реализация загрузки данных из API погоды');
-        }
-        
-        function showHistoricalData() {
-            alert('Исторические данные: Загрузка архивных данных метеорадара');
-        }
-        
-        function showWeatherAlerts() {
-            alert('Погодные предупреждения: Интеграция с системами оповещения');
-        }
-        
-        function exportData() {
-            alert('Экспорт данных: Выгрузка в CSV, JSON или изображение');
-        }
-        
-        function analyzeTrends() {
-            alert('Анализ тенденций: Статистический анализ метеоданных');
-        }
-        
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
-            initInterface();
-            loadRadarData();
-            
-            // Автообновление данных
-            updateInterval = setInterval(() => {
-                if (currentMode === 'radar') loadRadarData();
-            }, CONFIG.refreshInterval);
-        });
-    </script>
+    <div class="live"><i></i>SIMULATION ACTIVE</div>
+  </header>
+
+  <section class="scene">
+    <div id="scene"></div>
+    <div class="overlay heading">
+      <div class="eyebrow">ATMOSPHERIC MODEL</div>
+      <h1 id="stormName">SUPERCELL</h1>
+      <p id="stormDesc">Развитие конвекции</p>
+    </div>
+    <div class="overlay altitude">
+      <span>12 KM</span><i></i><span>8 KM</span><i></i><span>4 KM</span><i></i><span>0 KM</span>
+    </div>
+    <div class="overlay statusbar">
+      <span id="simClock">SIM 00:00</span>
+      <span id="cloudStatus">КОНВЕКЦИЯ АКТИВНА</span>
+    </div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>ИНИЦИАЛИЗАЦИЯ 3D-АТМОСФЕРЫ...</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panelhead">
+      <div>
+        <div class="eyebrow">CONTROL CENTER</div>
+        <h2>Параметры симуляции</h2>
+      </div>
+      <button class="primary" id="newStorm">↻ Новая гроза</button>
+    </div>
+
+    <div class="presets">
+      <button class="preset active" data-type="random"><span class="symbol">◈</span><b>Случайная</b><small>Независимое развитие</small></button>
+      <button class="preset" data-type="supercell"><span class="symbol">◉</span><b>Суперячейка</b><small>Вращающийся апдрафт</small></button>
+      <button class="preset" data-type="multicell"><span class="symbol">▦</span><b>Мультиячейка</b><small>Несколько ячеек</small></button>
+      <button class="preset" data-type="pulse"><span class="symbol">↑</span><b>Pulse storm</b><small>Импульсная конвекция</small></button>
+      <button class="preset" data-type="squall"><span class="symbol">≋</span><b>Линия шквалов</b><small>Линейная система</small></button>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><span>CAPE</span><strong id="capeValue">1850</strong><small>J/kg</small></div>
+      <div class="metric"><span>СДВИГ 0–6 KM</span><strong id="shearValue">24</strong><small>m/s</small></div>
+      <div class="metric"><span>ВЛАЖНОСТЬ</span><strong id="humidityValue">68</strong><small>%</small></div>
+      <div class="metric"><span>ВЫСОТА</span><strong id="heightValue">9.8</strong><small>km</small></div>
+    </div>
+
+    <div class="sliders">
+      <label class="slider">
+        <span><b>CAPE</b><small>Конвективная доступная потенциальная энергия</small></span>
+        <output id="capeOut">1850 J/kg</output>
+        <input id="cape" type="range" min="100" max="5000" step="50" value="1850">
+      </label>
+      <label class="slider">
+        <span><b>Сдвиг ветра</b><small>Изменение скорости и направления ветра с высотой</small></span>
+        <output id="shearOut">24 m/s</output>
+        <input id="shear" type="range" min="0" max="40" step="1" value="24">
+      </label>
+      <label class="slider">
+        <span><b>Влажность</b><small>Условный показатель доступной влаги</small></span>
+        <output id="humidityOut">68%</output>
+        <input id="humidity" type="range" min="20" max="100" step="1" value="68">
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="secondary" id="pause">Ⅱ Пауза</button>
+      <button class="secondary" id="resetCamera">⌖ Сброс камеры</button>
+      <button class="secondary" id="rotate">↻ Автовращение: выкл.</button>
+    </div>
+
+    <p class="hint">Вращение — перетаскивай облака пальцем. Масштаб — жест двумя пальцами. На компьютере используй мышь и колёсико. Каждая новая генерация меняет начальную структуру грозы.</p>
+  </section>
+
+  <footer>
+    <span>QUANTUM METEO / STORM LAB</span>
+    <span>PROCEDURAL 3D MODEL</span>
+  </footer>
+</div>
+
+<script type="module" src="./sim.js"></script>
 </body>
 </html>
