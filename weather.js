@@ -1,18 +1,6 @@
-import * as THREE from 'three';
-export function createWeather(scene){
- const count=3000,positions=new Float32Array(count*3),vel=new Float32Array(count*3);
- for(let i=0;i<count;i++){const j=i*3;positions[j]=(Math.random()-.5)*30000;positions[j+1]=Math.random()*9000+100;positions[j+2]=-42000+(Math.random()-.5)*24000;vel[j]=(Math.random()-.5)*5;vel[j+1]=-20-Math.random()*42;vel[j+2]=Math.random()*5;}
- const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
- const mat=new THREE.PointsMaterial({color:0xc7dbe7,size:18,sizeAttenuation:true,transparent:true,opacity:.4,depthWrite:false});const rain=new THREE.Points(geo,mat);scene.add(rain);
- const boltMat=new THREE.LineBasicMaterial({color:0xd7eeff,transparent:true,opacity:0});const bolt=new THREE.Line(new THREE.BufferGeometry(),boltMat);bolt.frustumCulled=false;scene.add(bolt);
- let flash=0,nextBolt=4+Math.random()*8;
- function update(dt,t,rainEnabled=true,lightningEnabled=true,stormDistance=42000){
-  const stormZ=-stormDistance;
-  if(rainEnabled){for(let i=0;i<count;i++){const j=i*3;positions[j]+=vel[j]*dt*5;positions[j+1]+=vel[j+1]*dt;positions[j+2]+=vel[j+2]*dt*4;if(positions[j+1]<10||Math.abs(positions[j+2]-stormZ)>23000){positions[j]=(Math.random()-.5)*28000;positions[j+1]=5500+Math.random()*4300;positions[j+2]=stormZ+(Math.random()-.5)*22000;}}geo.attributes.position.needsUpdate=true;}
-  rain.visible=rainEnabled;
-  if(lightningEnabled&&t>nextBolt){const pts=[];let x=(Math.random()-.5)*10000,z=stormZ+(Math.random()-.5)*14000,y=11200;pts.push(new THREE.Vector3(x,y,z));for(let i=0;i<15;i++){x+=(Math.random()-.5)*900;y-=420+Math.random()*520;z+=(Math.random()-.5)*520;pts.push(new THREE.Vector3(x,y,z));}bolt.geometry.dispose();bolt.geometry=new THREE.BufferGeometry().setFromPoints(pts);flash=.95;nextBolt=t+5+Math.random()*13;}
-  if(!lightningEnabled){flash=0;boltMat.opacity=0;}else{flash=Math.max(0,flash-dt*2.6);boltMat.opacity=flash;}
-  return flash;
- }
- return {rain,update};
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+export function createWeather(scene){const rainGroup=new THREE.Group(),lightGroup=new THREE.Group();scene.add(rainGroup,lightGroup);const count=1400,positions=new Float32Array(count*3),vel=new Float32Array(count);for(let i=0;i<count;i++){positions[i*3]=(Math.random()-.5)*420;positions[i*3+1]=Math.random()*850+5;positions[i*3+2]=-820-Math.random()*260;vel[i]=2+Math.random()*4}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));const mat=new THREE.PointsMaterial({color:'#d3e3ed',size:1.25,transparent:true,opacity:.52,depthWrite:false});const rain=new THREE.Points(geo,mat);rainGroup.add(rain);rainGroup.visible=true;let lightningOn=true,elapsed=0,nextFlash=3+Math.random()*7,flash=0;
+ function makeBolt(){lightGroup.clear();const pts=[];let x=(Math.random()-.5)*170,y=980,z=-970;pts.push(new THREE.Vector3(x,y,z));for(let i=0;i<9;i++){x+=(Math.random()-.5)*28;y-=35+Math.random()*35;pts.push(new THREE.Vector3(x,y,z+(Math.random()-.5)*5))}const g=new THREE.BufferGeometry().setFromPoints(pts);const m=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xeaf7ff,transparent:true,opacity:.95}));lightGroup.add(m);const glow=new THREE.PointLight(0xc4e6ff,7,260,2);glow.position.set(x,y,z);lightGroup.add(glow);flash=.13}
+ function update(dt,scale=1){elapsed+=dt*scale;const p=geo.attributes.position;for(let i=0;i<count;i++){let y=p.getY(i)-vel[i]*dt*scale;if(y<2)y=75+Math.random()*20;p.setY(i,y)}p.needsUpdate=true;if(lightningOn&&elapsed>nextFlash){makeBolt();nextFlash=elapsed+4+Math.random()*9}if(flash>0){flash-=dt;lightGroup.children.forEach(o=>{if(o.material)o.material.opacity=Math.max(0,flash*8)});if(flash<=0)lightGroup.clear()}}
+ return {rainGroup,lightGroup,update,setLightning(v){lightningOn=v;lightGroup.visible=v},setRain(v){rainGroup.visible=v}};
 }
